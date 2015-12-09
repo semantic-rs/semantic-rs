@@ -18,7 +18,12 @@ fn example_history() -> String {
 #[test]
 fn convert_git_history_into_object_model() {
     let log_entries = git_history::parse_log(example_history());
-    println!("{:?}", log_entries);
     assert_eq!(log_entries.len(), 5);
 }
 
+#[test]
+fn history_item_has_title() {
+    let log_entries = git_history::parse_log(example_history());
+    let log_entry = log_entries.first().unwrap();
+    assert_eq!(log_entry.title, "Merge remote-tracking branch 'origin/master'");
+}
