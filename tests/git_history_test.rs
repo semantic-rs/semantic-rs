@@ -27,3 +27,10 @@ fn history_item_has_title() {
     let log_entry = log_entries.first().unwrap();
     assert_eq!(log_entry.title, "Merge remote-tracking branch 'origin/master'");
 }
+
+#[test]
+fn history_item_has_revision() {
+    let log_entries = git_history::parse_log(example_history());
+    let log_entry = log_entries.first().unwrap();
+    assert_eq!(log_entry.revision, "1ef4c7432745a7d4d06cde325a89afb45fbd587a");
+}

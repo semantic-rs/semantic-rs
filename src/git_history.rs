@@ -1,15 +1,22 @@
 pub struct LogEntry {
-    pub title: String
+    pub title: String,
+    pub revision: String
 }
 
 impl LogEntry {
     pub fn new(log_string: String) -> LogEntry {
-        let title = log_string.split("==SPLIT==").last()
+        let mut splitted = log_string.split("==SPLIT==");
+        let revision = splitted.next()
             .unwrap()
             .trim()
             .to_string();
 
-        LogEntry { title: title }
+        let title = splitted.next()
+            .unwrap()
+            .trim()
+            .to_string();
+
+        LogEntry { revision: revision, title: title }
     }
 }
 
