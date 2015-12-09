@@ -24,7 +24,7 @@ impl LogEntry {
 pub fn parse_log(history: String) -> Vec<LogEntry> {
     history.split("==END==")
         .map(|st| st.to_string())
-        .filter(|st| st.len() > 0)
+        .filter(|st| st.trim().len() > 0)
         .map(|st| LogEntry::new(st))
         .collect::<Vec<_>>()
 }

@@ -2,3 +2,5 @@
 name = "semantic-rs"
 version = "0.1.0"
 authors = ["Jan Schulte <hello@unexpected-co.de>"]
+[dependencies]
+term = "0.2"
