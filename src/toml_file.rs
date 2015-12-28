@@ -5,6 +5,7 @@ use std::fs::File;
 use std::io::Error;
 use std::fs::OpenOptions;
 
+#[derive(Debug)]
 pub enum TomlError {
     parseError(&'static str),
     ioError(Error)
