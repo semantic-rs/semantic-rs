@@ -62,4 +62,5 @@ fn main() {
     };
 
     logger::stdout(format!("New version: {}", new_version.to_string()));
+    toml_file::write_new_version(new_version.to_string());
 }
