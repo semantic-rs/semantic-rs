@@ -61,7 +61,7 @@ dependencies = [
 [[package]]
 name = "commit_walker"
 version = "0.1.0"
-source = "git+https://github.com/semantic-rs/commit-walker#8c3110e8300533a05fbc86a577094563a6583bac"
+source = "git+https://github.com/semantic-rs/commit-walker#5b1c936e146a806b11f25953d9fde4c16f604a59"
 dependencies = [
  "commit_analyzer 0.1.0 (git+https://github.com/semantic-rs/commit-analyzer)",
  "git2 0.3.3 (registry+https://github.com/rust-lang/crates.io-index)",
