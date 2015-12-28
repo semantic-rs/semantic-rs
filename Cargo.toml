@@ -3,6 +3,7 @@ name = "semantic-rs"
 version = "0.1.0"
 authors = ["Jan Schulte <hello@unexpected-co.de>", "Jan-Erik Rediger <janerik@fnordig.de>"]
 description = "Automatic crate publishing"
+license = "MIT"
 
 [dependencies]
 term = "0.2"
