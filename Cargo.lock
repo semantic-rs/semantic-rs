@@ -2,6 +2,7 @@
 name = "semantic-rs"
 version = "0.1.0"
 dependencies = [
+ "argparse 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "commit_analyzer 0.1.0 (git+https://github.com/semantic-rs/commit-analyzer)",
  "commit_walker 0.1.0 (git+https://github.com/semantic-rs/commit-walker)",
  "regex 0.1.44 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -26,6 +27,11 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "memchr 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
+
+[[package]]
+name = "argparse"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "bitflags"

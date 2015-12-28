@@ -3,9 +3,11 @@ mod toml_file;
 extern crate toml;
 extern crate regex;
 extern crate semver;
+extern crate argparse;
 extern crate commit_walker;
 extern crate commit_analyzer;
 
+use argparse::{ArgumentParser, StoreTrue, Store};
 use commit_analyzer::CommitType;
 
 fn version_bump(version: Version, bump: CommitType) -> Option<Version> {
@@ -23,10 +25,23 @@ fn version_bump(version: Version, bump: CommitType) -> Option<Version> {
 use std::process;
 use semver::Version;
 
+fn get_repository_path() -> String {
+    let mut path = ".".to_string();
+    {
+        let mut ap = ArgumentParser::new();
+        ap.refer(&mut path)
+            .add_option(&["-p", "--path"], Store,
+                        "Specifies the repository path. If ommitted it defaults to current directory");
+        ap.parse_args_or_exit();
+    }
+    path
+}
+
 fn main() {
     println!("semantic.rs 🚀");
 
     logger::stdout("Analyzing your repository");
+    let repository_path = get_repository_path();
 
     let version = match toml_file::read_from_file() {
         Ok(toml) => toml,
@@ -41,7 +56,7 @@ fn main() {
 
     logger::stdout("Analyzing commits");
 
-    let bump = commit_walker::version_bump_since_latest(".");
+    let bump = commit_walker::version_bump_since_latest(&repository_path);
     logger::stdout(format!("Commits analyzed. Bump will be {:?}", bump));
 
     let new_version = match version_bump(version, bump) {
