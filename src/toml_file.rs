@@ -11,7 +11,6 @@ pub enum TomlError {
 
 pub fn read_version(file: String) -> Option<String> {
    let file_map = Parser::new(&file).parse().unwrap();
-   println!("{:?}", file_map);
    let package = file_map.get("package").unwrap();
    let version = package.as_table()
        .unwrap()
