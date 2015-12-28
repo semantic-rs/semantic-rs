@@ -1,7 +1,9 @@
 [package]
 name = "semantic-rs"
 version = "0.1.0"
-authors = ["Jan Schulte <hello@unexpected-co.de>"]
+authors = ["Jan Schulte <hello@unexpected-co.de>", "Jan-Erik Rediger <janerik@fnordig.de>"]
+description = "Automatic crate publishing"
+
 [dependencies]
 term = "0.2"
 toml = "0.1"
