@@ -3,6 +3,7 @@ use regex::Regex;
 use std::io::prelude::*;
 use std::fs::File;
 use std::io::Error;
+use std::fs::OpenOptions;
 
 pub enum TomlError {
     parseError(&'static str),
@@ -40,23 +41,10 @@ pub fn read_from_file() -> Result<String, TomlError> {
 }
 
 pub fn write_new_version(new_version: String) -> Result<(), Error> {
-    let cargo_toml = match read_cargo_toml() {
-        Ok(file) => file,
-        Err(err) => return Err(err)
-    };
+    let cargo_toml = try!(read_cargo_toml());
     let new_cargo_toml = file_with_new_version(cargo_toml, &new_version);
-
-    let mut handle = match File::open("Cargo.toml") {
-        Ok(handle) => handle,
-        Err(err) => {
-            return Err(err)
-        }
-    };
-
-    match handle.write_all(new_cargo_toml.as_bytes()) {
-        Ok(_) => Ok(()),
-        Err(err) => Err(err)
-    }
+    let mut handle = try!(OpenOptions::new().read(true).write(true).open("Cargo.toml"));
+    handle.write_all(new_cargo_toml.as_bytes())
 }
 
 fn read_cargo_toml() -> Result<String, Error> {
