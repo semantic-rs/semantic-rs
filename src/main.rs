@@ -1,6 +1,7 @@
 mod git_history;
 mod git_client;
 mod logger;
+extern crate toml;
 
 fn print_log(log_entries: Vec<git_history::LogEntry>) {
     for entry in log_entries {
