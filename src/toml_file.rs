@@ -1,16 +1,17 @@
 use toml::Parser;
 use regex::Regex;
 
-pub fn read_version(file: String) -> String {
+pub fn read_version(file: String) -> Option<String> {
    let file_map = Parser::new(&file).parse().unwrap();
    println!("{:?}", file_map);
    let package = file_map.get("package").unwrap();
-   package.as_table()
+   let version = package.as_table()
        .unwrap()
-       .get("version").unwrap()
-       .as_str()
-       .unwrap()
-       .into()
+       .get("version");
+   match version {
+       Some(v) => Some(v.as_str().unwrap().into()),
+       None => None
+   }
 }
 
 pub fn file_with_new_version(file: String, new_version: &str) -> String {
@@ -35,10 +36,25 @@ mod tests {
     toml = \"0.1\"".to_string()
     }
 
+    fn example_file_without_version() -> String {
+        "[package]
+    name = \"semantic-rs\"
+    authors = [\"Jan Schulte <hello@unexpected-co.de>\"]
+    [dependencies]
+    term = \"0.2\"
+    toml = \"0.1\"".to_string()
+    }
+
     #[test]
     fn read_version_number() {
         let version_str = read_version(example_file());
-        assert_eq!(version_str, "0.1.0");
+        assert_eq!(version_str, Some("0.1.0".into()));
+    }
+
+    #[test]
+    fn read_file_without_version_number() {
+        let version_str = read_version(example_file_without_version());
+        assert_eq!(version_str, None);
     }
 
     #[test]
