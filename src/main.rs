@@ -1,5 +1,3 @@
-mod git_history;
-mod git_client;
 mod logger;
 mod toml_file;
 extern crate toml;
@@ -24,13 +22,6 @@ fn version_bump(version: Version, bump: CommitType) -> Option<Version> {
 
 use std::process;
 use semver::Version;
-
-fn print_log(log_entries: Vec<git_history::LogEntry>) {
-    for entry in log_entries {
-        logger::stdout(entry.revision);
-        logger::stdout(entry.title);
-    }
-}
 
 fn main() {
     println!("semantic.rs 🚀");
