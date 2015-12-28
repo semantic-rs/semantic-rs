@@ -53,5 +53,8 @@ fn main() {
     };
 
     logger::stdout(format!("New version: {}", new_version.to_string()));
-    toml_file::write_new_version(new_version.to_string());
+    match toml_file::write_new_version(new_version.to_string()) {
+        Ok(_)    => { },
+        Err(err) => logger::stderr(format!("Writing `Cargo.toml` failed: {:?}", err))
+    }
 }

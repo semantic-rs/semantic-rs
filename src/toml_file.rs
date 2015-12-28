@@ -7,8 +7,8 @@ use std::fs::OpenOptions;
 
 #[derive(Debug)]
 pub enum TomlError {
-    parseError(&'static str),
-    ioError(Error)
+    ParseError(&'static str),
+    IoError(Error)
 }
 
 pub fn read_version(file: String) -> Option<String> {
@@ -32,12 +32,12 @@ pub fn file_with_new_version(file: String, new_version: &str) -> String {
 pub fn read_from_file() -> Result<String, TomlError> {
     let cargo_file = match read_cargo_toml() {
         Ok(buffer) => buffer,
-        Err(err) => return Err(TomlError::ioError(err))
+        Err(err) => return Err(TomlError::IoError(err))
     };
 
     match read_version(cargo_file) {
         Some(version) => Ok(version),
-        None => Err(TomlError::parseError("No version field found"))
+        None => Err(TomlError::ParseError("No version field found"))
     }
 }
 
