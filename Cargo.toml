@@ -13,3 +13,4 @@ semver = "0.2.1"
 commit_walker = { git = "https://github.com/semantic-rs/commit-walker" }
 commit_analyzer = { git = "https://github.com/semantic-rs/commit-analyzer" }
 argparse = "0.2.1"
+git2-commit = { git = "https://github.com/badboy/git2-commit-rs" }
