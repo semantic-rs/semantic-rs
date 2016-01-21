@@ -116,7 +116,7 @@ dependencies = [
 [[package]]
 name = "git2-commit"
 version = "0.1.0"
-source = "git+https://github.com/badboy/git2-commit-rs#c98c91410e97811e3a3f6fbb7066a3a2e3724968"
+source = "git+https://github.com/badboy/git2-commit-rs#63ee6081993e61e3f0336a823ae4e6497a2160d9"
 dependencies = [
  "docopt 0.6.78 (registry+https://github.com/rust-lang/crates.io-index)",
  "git2 0.3.4 (registry+https://github.com/rust-lang/crates.io-index)",
