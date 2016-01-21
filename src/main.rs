@@ -1,5 +1,6 @@
 mod logger;
 mod toml_file;
+mod git;
 extern crate toml;
 extern crate regex;
 extern crate semver;
@@ -10,7 +11,6 @@ extern crate git2_commit;
 
 use argparse::{ArgumentParser, StoreTrue, Store};
 use commit_analyzer::CommitType;
-use std::error::Error;
 
 fn version_bump(version: Version, bump: CommitType) -> Option<Version> {
     let mut version = version.clone();
@@ -37,27 +37,6 @@ fn get_repository_path() -> String {
         ap.parse_args_or_exit();
     }
     path
-}
-
-fn generate_commit_message(new_version: String) -> String {
-    format!("Bump version to {}", new_version).into()
-}
-
-fn commit_files(repository_path: &String, new_version: String) -> Result<(), String> {
-    let files = vec!["Cargo.toml", "Cargo.lock"];
-    match git2_commit::add(&repository_path, &files[..]) {
-        Ok(_) => {},
-        Err(err) => return Err(err.description().into())
-    }
-    let author = match git2_commit::get_signature() {
-        Ok(author) => author,
-        Err(err) => return Err(err.description().into())
-    };
-
-    match git2_commit::commit(repository_path, &author.name, &author.email, &generate_commit_message(new_version)) {
-        Ok(_) => Ok(()),
-        Err(err) => Err(err.description().into())
-    }
 }
 
 fn main() {
@@ -96,7 +75,7 @@ fn main() {
         Err(err) => logger::stderr(format!("Writing `Cargo.toml` failed: {:?}", err))
     }
 
-    match commit_files(&repository_path, new_version.to_string()) {
+    match git::commit_files(&repository_path, new_version.to_string()) {
         Ok(_)    => { },
         Err(err) => logger::stderr(format!("Committing `Cargo.toml` and `Cargo.lock` failed: {:?}", err))
     }
