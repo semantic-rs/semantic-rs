@@ -4,6 +4,7 @@ use std::io::prelude::*;
 use std::fs::File;
 use std::io::Error;
 use std::fs::OpenOptions;
+use std::path::Path;
 
 #[derive(Debug)]
 pub enum TomlError {
@@ -12,18 +13,18 @@ pub enum TomlError {
 }
 
 pub fn read_version(file: String) -> Option<String> {
-   let file_map = Parser::new(&file).parse().unwrap();
-   let package = match file_map.get("package") {
-       Some(package) => package,
-       None => return None
-   };
-   let version = package.as_table()
-       .unwrap()
-       .get("version");
-   match version {
-       Some(v) => Some(v.as_str().unwrap().into()),
-       None => None
-   }
+    let file_map = Parser::new(&file).parse().unwrap();
+    let package = match file_map.get("package") {
+        Some(package) => package,
+        None => return None
+    };
+    let version = package.as_table()
+        .unwrap()
+        .get("version");
+    match version {
+        Some(v) => Some(v.as_str().unwrap().into()),
+        None => None
+    }
 }
 
 pub fn file_with_new_version(file: String, new_version: &str) -> String {
@@ -32,8 +33,9 @@ pub fn file_with_new_version(file: String, new_version: &str) -> String {
     re.replace(&file, &new_version[..])
 }
 
-pub fn read_from_file() -> Result<String, TomlError> {
-    let cargo_file = match read_cargo_toml() {
+pub fn read_from_file(repository_path: &String) -> Result<String, TomlError> {
+    let file_path = Path::new(&repository_path).join("Cargo.toml");
+    let cargo_file = match read_cargo_toml(&file_path) {
         Ok(buffer) => buffer,
         Err(err) => return Err(TomlError::IoError(err))
     };
@@ -44,15 +46,16 @@ pub fn read_from_file() -> Result<String, TomlError> {
     }
 }
 
-pub fn write_new_version(new_version: String) -> Result<(), Error> {
-    let cargo_toml = try!(read_cargo_toml());
+pub fn write_new_version(repository_path: &String, new_version: String) -> Result<(), Error> {
+    let file_path = Path::new(&repository_path).join("Cargo.toml");
+    let cargo_toml = try!(read_cargo_toml(&file_path));
     let new_cargo_toml = file_with_new_version(cargo_toml, &new_version);
-    let mut handle = try!(OpenOptions::new().read(true).write(true).open("Cargo.toml"));
+    let mut handle = try!(OpenOptions::new().read(true).write(true).open(file_path));
     handle.write_all(new_cargo_toml.as_bytes())
 }
 
-fn read_cargo_toml() -> Result<String, Error> {
-    let mut handle = match File::open("Cargo.toml") {
+fn read_cargo_toml(file_path: &Path) -> Result<String, Error> {
+    let mut handle = match File::open(file_path) {
         Ok(handle) => handle,
         Err(err) => {
             return Err(err)

@@ -43,7 +43,7 @@ fn main() {
     logger::stdout("Analyzing your repository");
     let repository_path = get_repository_path();
 
-    let version = match toml_file::read_from_file() {
+    let version = match toml_file::read_from_file(&repository_path) {
         Ok(toml) => toml,
         Err(e) => {
             logger::stderr(format!("Reading `Cargo.toml` failed: {:?}", e));
@@ -68,7 +68,7 @@ fn main() {
     };
 
     logger::stdout(format!("New version: {}", new_version.to_string()));
-    match toml_file::write_new_version(new_version.to_string()) {
+    match toml_file::write_new_version(&repository_path, new_version.to_string()) {
         Ok(_)    => { },
         Err(err) => logger::stderr(format!("Writing `Cargo.toml` failed: {:?}", err))
     }
