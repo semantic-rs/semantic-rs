@@ -5,7 +5,8 @@ dependencies = [
  "argparse 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "commit_analyzer 0.1.0 (git+https://github.com/semantic-rs/commit-analyzer)",
  "commit_walker 0.1.0 (git+https://github.com/semantic-rs/commit-walker)",
- "regex 0.1.44 (registry+https://github.com/rust-lang/crates.io-index)",
+ "git2-commit 0.1.0 (git+https://github.com/badboy/git2-commit-rs)",
+ "regex 0.1.47 (registry+https://github.com/rust-lang/crates.io-index)",
  "semver 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "term 0.2.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "toml 0.1.25 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -43,7 +44,7 @@ name = "clog"
 version = "0.9.0"
 source = "git+https://github.com/semantic-rs/clog-lib?branch=public-raw-parsing#387d502460d353db520ed99a59c373d168c0e411"
 dependencies = [
- "regex 0.1.44 (registry+https://github.com/rust-lang/crates.io-index)",
+ "regex 0.1.47 (registry+https://github.com/rust-lang/crates.io-index)",
  "time 0.1.34 (registry+https://github.com/rust-lang/crates.io-index)",
  "toml 0.1.25 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -67,11 +68,21 @@ dependencies = [
 [[package]]
 name = "commit_walker"
 version = "0.1.0"
-source = "git+https://github.com/semantic-rs/commit-walker#a42918a38f2d4102a6658a28291d91eec66a8081"
+source = "git+https://github.com/semantic-rs/commit-walker#481c95b33df1c51c3a1d80ca07476edd67af0715"
 dependencies = [
  "commit_analyzer 0.1.0 (git+https://github.com/semantic-rs/commit-analyzer)",
- "git2 0.3.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "git2 0.3.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "semver 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "docopt"
+version = "0.6.78"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "regex 0.1.47 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rustc-serialize 0.3.16 (registry+https://github.com/rust-lang/crates.io-index)",
+ "strsim 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -93,13 +104,23 @@ dependencies = [
 
 [[package]]
 name = "git2"
-version = "0.3.3"
+version = "0.3.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "bitflags 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "libc 0.2.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "libgit2-sys 0.3.8 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libgit2-sys 0.3.9 (registry+https://github.com/rust-lang/crates.io-index)",
  "url 0.2.38 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "git2-commit"
+version = "0.1.0"
+source = "git+https://github.com/badboy/git2-commit-rs#63ee6081993e61e3f0336a823ae4e6497a2160d9"
+dependencies = [
+ "docopt 0.6.78 (registry+https://github.com/rust-lang/crates.io-index)",
+ "git2 0.3.4 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rustc-serialize 0.3.16 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -118,7 +139,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "libgit2-sys"
-version = "0.3.8"
+version = "0.3.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "cmake 0.1.12 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -176,7 +197,7 @@ dependencies = [
 
 [[package]]
 name = "nom"
-version = "1.0.1"
+version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
@@ -206,7 +227,7 @@ dependencies = [
 
 [[package]]
 name = "rand"
-version = "0.3.12"
+version = "0.3.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "advapi32-sys 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -216,7 +237,7 @@ dependencies = [
 
 [[package]]
 name = "regex"
-version = "0.1.44"
+version = "0.1.47"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "aho-corasick 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -239,15 +260,20 @@ name = "semver"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "nom 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "nom 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
+
+[[package]]
+name = "strsim"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "tempdir"
 version = "0.3.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "rand 0.3.12 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rand 0.3.13 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -301,7 +327,7 @@ name = "uuid"
 version = "0.1.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "rand 0.3.12 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rand 0.3.13 (registry+https://github.com/rust-lang/crates.io-index)",
  "rustc-serialize 0.3.16 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 

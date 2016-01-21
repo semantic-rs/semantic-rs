@@ -1,11 +1,13 @@
 mod logger;
 mod toml_file;
+mod git;
 extern crate toml;
 extern crate regex;
 extern crate semver;
 extern crate argparse;
 extern crate commit_walker;
 extern crate commit_analyzer;
+extern crate git2_commit;
 
 use argparse::{ArgumentParser, StoreTrue, Store};
 use commit_analyzer::CommitType;
@@ -71,5 +73,10 @@ fn main() {
     match toml_file::write_new_version(&repository_path, new_version.to_string()) {
         Ok(_)    => { },
         Err(err) => logger::stderr(format!("Writing `Cargo.toml` failed: {:?}", err))
+    }
+
+    match git::commit_files(&repository_path, new_version.to_string()) {
+        Ok(_)    => { },
+        Err(err) => logger::stderr(format!("Committing `Cargo.toml` and `Cargo.lock` failed: {:?}", err))
     }
 }
