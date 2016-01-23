@@ -74,15 +74,15 @@ fn main() {
     logger::stdout(format!("Commits analyzed. Bump will be {:?}", bump));
 
     let new_version = match version_bump(&version, bump) {
-        Some(new_version) => new_version,
+        Some(new_version) => new_version.to_string(),
         None => {
             logger::stdout("No version bump. Nothing to do.");
             process::exit(0);
         }
     };
 
-    logger::stdout(format!("New version: {}", new_version.to_string()));
-    match toml_file::write_new_version(&repository_path, new_version.to_string()) {
+    logger::stdout(format!("New version: {}", new_version));
+    match toml_file::write_new_version(&repository_path, &new_version) {
         Ok(_)    => { },
         Err(err) => {
             logger::stderr(format!("Writing `Cargo.toml` failed: {:?}", err));
@@ -99,7 +99,7 @@ fn main() {
         }
     }
 
-    match git::commit_files(&repository_path, new_version.to_string()) {
+    match git::commit_files(&repository_path, &new_version) {
         Ok(_)    => { },
         Err(err) => {
             logger::stderr(format!("Committing `Cargo.toml` failed: {:?}", err));

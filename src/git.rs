@@ -2,11 +2,11 @@ use std::error::Error;
 use git2_commit;
 use time;
 
-pub fn generate_commit_message(new_version: String) -> String {
+pub fn generate_commit_message(new_version: &str) -> String {
     format!("Bump version to {}", new_version).into()
 }
 
-pub fn commit_files(repository_path: &String, new_version: String) -> Result<(), String> {
+pub fn commit_files(repository_path: &str, new_version: &str) -> Result<(), String> {
     let files = vec!["Cargo.toml"];
     match git2_commit::add(&repository_path, &files[..]) {
         Ok(_) => {},
