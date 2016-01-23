@@ -9,6 +9,7 @@ extern crate commit_walker;
 extern crate commit_analyzer;
 extern crate git2_commit;
 extern crate git2;
+extern crate time;
 
 use argparse::{ArgumentParser, StoreTrue, Store};
 use commit_analyzer::CommitType;
@@ -87,5 +88,11 @@ fn main() {
     match git::commit_files(&repository_path, new_version.to_string()) {
         Ok(_)    => { },
         Err(err) => logger::stderr(format!("Committing `Cargo.toml` and `Cargo.lock` failed: {:?}", err))
+    }
+
+    logger::stdout("Creating annotated git tag");
+    match git::tag(&repository_path, &new_version.to_string()) {
+        Ok(_) => { },
+        Err(err) => logger::stderr(format!("Failed to create git tag: {:?}", err))
     }
 }
