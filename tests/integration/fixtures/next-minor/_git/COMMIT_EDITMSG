@@ -1,0 +1,19 @@
+feat: It works
+# Please enter the commit message for your changes. Lines starting
+# with '#' will be ignored, and an empty message aborts the commit.
+# On branch master
+# Changes to be committed:
+#	new file:   src/lib.rs
+#
+# ------------------------ >8 ------------------------
+# Do not touch the line above.
+# Everything below will be removed.
+diff --git c/src/lib.rs i/src/lib.rs
+new file mode 100644
+index 0000000..0fdea1b
+--- /dev/null
++++ i/src/lib.rs
+@@ -0,0 +1,3 @@
++#[test]
++fn works() {
++}

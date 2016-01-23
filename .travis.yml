@@ -16,13 +16,20 @@ rust:
 
 before_script:
   - |
-      pip install 'travis-cargo<0.2' --user &&
-      export PATH=$HOME/.local/bin:$PATH
+      pip install git+https://github.com/huonw/travis-cargo --user &&
+      git clone https://github.com/sstephenson/bats/ &&
+      export WORKSPACE=$HOME/workspace &&
+      mkdir $WORKSPACE &&
+      cp -ar $TRAVIS_BUILD_DIR/tests/integration/fixtures/* $WORKSPACE &&
+      export PATH=$HOME/.local/bin:$(pwd)/bats/bin:$TRAVIS_BUILD_DIR/target/debug:$PATH &&
+      git config --global user.name semantic-rs &&
+      git config --global user.email semantic@rs
 
 script:
   - |
       travis-cargo build &&
       travis-cargo test &&
+      pushd tests/integration && bats integration.bats && popd &&
       travis-cargo --only stable doc
 after_success:
   - travis-cargo coveralls --no-sudo
