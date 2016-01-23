@@ -90,7 +90,7 @@ fn main() {
     match git::commit_files(&repository_path, new_version.to_string()) {
         Ok(_)    => { },
         Err(err) => {
-            logger::stderr(format!("Committing `Cargo.toml` and `Cargo.lock` failed: {:?}", err));
+            logger::stderr(format!("Committing `Cargo.toml` failed: {:?}", err));
             process::exit(1);
         }
     }
