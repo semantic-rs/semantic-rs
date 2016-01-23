@@ -13,7 +13,7 @@ extern crate git2;
 extern crate time;
 extern crate clog;
 
-use argparse::{ArgumentParser, StoreTrue, Store};
+use argparse::{ArgumentParser, Store};
 use commit_analyzer::CommitType;
 
 fn version_bump(version: &Version, bump: CommitType) -> Option<Version> {
