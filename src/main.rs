@@ -1,6 +1,7 @@
 mod logger;
 mod toml_file;
 mod git;
+mod changelog;
 extern crate toml;
 extern crate regex;
 extern crate semver;
@@ -9,11 +10,12 @@ extern crate commit_walker;
 extern crate commit_analyzer;
 extern crate git2_commit;
 extern crate git2;
+extern crate clog;
 
 use argparse::{ArgumentParser, StoreTrue, Store};
 use commit_analyzer::CommitType;
 
-fn version_bump(version: Version, bump: CommitType) -> Option<Version> {
+fn version_bump(version: &Version, bump: CommitType) -> Option<Version> {
     let mut version = version.clone();
     match bump {
         CommitType::Unknown => return None,
@@ -70,7 +72,7 @@ fn main() {
     let bump = commit_walker::version_bump_since_latest(&repository_path);
     logger::stdout(format!("Commits analyzed. Bump will be {:?}", bump));
 
-    let new_version = match version_bump(version, bump) {
+    let new_version = match version_bump(&version, bump) {
         Some(new_version) => new_version,
         None => {
             logger::stdout("No version bump. Nothing to do.");
@@ -83,6 +85,15 @@ fn main() {
         Ok(_)    => { },
         Err(err) => {
             logger::stderr(format!("Writing `Cargo.toml` failed: {:?}", err));
+            process::exit(1);
+        }
+    }
+
+    logger::stdout(format!("Writing Changelog"));
+    match changelog::write(&repository_path, &version.to_string(), &new_version.to_string()) {
+        Ok(_)    => { },
+        Err(err) => {
+            logger::stderr(format!("Writing Changelog failed: {:?}", err));
             process::exit(1);
         }
     }

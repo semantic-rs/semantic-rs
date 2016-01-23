@@ -3,11 +3,12 @@ name = "semantic-rs"
 version = "0.1.0"
 dependencies = [
  "argparse 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "clog 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "commit_analyzer 0.1.0 (git+https://github.com/semantic-rs/commit-analyzer)",
  "commit_walker 0.1.0 (git+https://github.com/semantic-rs/commit-walker)",
  "git2 0.3.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "git2-commit 0.1.0 (git+https://github.com/badboy/git2-commit-rs)",
- "regex 0.1.47 (registry+https://github.com/rust-lang/crates.io-index)",
+ "regex 0.1.48 (registry+https://github.com/rust-lang/crates.io-index)",
  "semver 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "term 0.2.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "toml 0.1.25 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -45,7 +46,17 @@ name = "clog"
 version = "0.9.0"
 source = "git+https://github.com/semantic-rs/clog-lib?branch=public-raw-parsing#387d502460d353db520ed99a59c373d168c0e411"
 dependencies = [
- "regex 0.1.47 (registry+https://github.com/rust-lang/crates.io-index)",
+ "regex 0.1.48 (registry+https://github.com/rust-lang/crates.io-index)",
+ "time 0.1.34 (registry+https://github.com/rust-lang/crates.io-index)",
+ "toml 0.1.25 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "clog"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "regex 0.1.48 (registry+https://github.com/rust-lang/crates.io-index)",
  "time 0.1.34 (registry+https://github.com/rust-lang/crates.io-index)",
  "toml 0.1.25 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -81,7 +92,7 @@ name = "docopt"
 version = "0.6.78"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "regex 0.1.47 (registry+https://github.com/rust-lang/crates.io-index)",
+ "regex 0.1.48 (registry+https://github.com/rust-lang/crates.io-index)",
  "rustc-serialize 0.3.16 (registry+https://github.com/rust-lang/crates.io-index)",
  "strsim 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -147,7 +158,7 @@ dependencies = [
  "libc 0.2.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "libssh2-sys 0.1.34 (registry+https://github.com/rust-lang/crates.io-index)",
  "libz-sys 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "openssl-sys 0.7.4 (registry+https://github.com/rust-lang/crates.io-index)",
+ "openssl-sys 0.7.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "pkg-config 0.3.6 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -167,7 +178,7 @@ dependencies = [
  "cmake 0.1.12 (registry+https://github.com/rust-lang/crates.io-index)",
  "libc 0.2.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "libz-sys 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "openssl-sys 0.7.4 (registry+https://github.com/rust-lang/crates.io-index)",
+ "openssl-sys 0.7.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "pkg-config 0.3.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "winapi 0.2.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "ws2_32-sys 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -203,7 +214,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "openssl-sys"
-version = "0.7.4"
+version = "0.7.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "gdi32-sys 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -238,7 +249,7 @@ dependencies = [
 
 [[package]]
 name = "regex"
-version = "0.1.47"
+version = "0.1.48"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "aho-corasick 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
