@@ -33,7 +33,7 @@ pub fn file_with_new_version(file: String, new_version: &str) -> String {
     re.replace(&file, &new_version[..])
 }
 
-pub fn read_from_file(repository_path: &String) -> Result<String, TomlError> {
+pub fn read_from_file(repository_path: &str) -> Result<String, TomlError> {
     let file_path = Path::new(&repository_path).join("Cargo.toml");
     let cargo_file = match read_cargo_toml(&file_path) {
         Ok(buffer) => buffer,
@@ -46,10 +46,10 @@ pub fn read_from_file(repository_path: &String) -> Result<String, TomlError> {
     }
 }
 
-pub fn write_new_version(repository_path: &String, new_version: String) -> Result<(), Error> {
+pub fn write_new_version(repository_path: &str, new_version: &str) -> Result<(), Error> {
     let file_path = Path::new(&repository_path).join("Cargo.toml");
     let cargo_toml = try!(read_cargo_toml(&file_path));
-    let new_cargo_toml = file_with_new_version(cargo_toml, &new_version);
+    let new_cargo_toml = file_with_new_version(cargo_toml, new_version);
     let mut handle = try!(OpenOptions::new().read(true).write(true).open(file_path));
     handle.write_all(new_cargo_toml.as_bytes())
 }
