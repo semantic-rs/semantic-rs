@@ -9,7 +9,6 @@ dependencies = [
  "regex 0.1.48 (registry+https://github.com/rust-lang/crates.io-index)",
  "semver 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "term 0.2.14 (registry+https://github.com/rust-lang/crates.io-index)",
- "time 0.1.34 (registry+https://github.com/rust-lang/crates.io-index)",
  "toml 0.1.25 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 

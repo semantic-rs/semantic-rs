@@ -9,7 +9,6 @@ extern crate semver;
 extern crate argparse;
 extern crate git2_commit;
 extern crate git2;
-extern crate time;
 extern crate clog;
 
 use argparse::{ArgumentParser, Store};
@@ -107,8 +106,20 @@ fn main() {
     }
 
     logger::stdout("Creating annotated git tag");
-    match git::tag(&repository_path, &new_version.to_string()) {
+    let tag_message = match changelog::generate(&repository_path, &version.to_string(), &new_version) {
+        Ok(msg) => msg,
+        Err(err) => {
+            logger::stderr(format!("Can't geneate changelog: {:?}", err));
+            process::exit(1);
+        }
+    };
+
+    let tag_name = format!("v{}", new_version);
+    match git::tag(&repository_path, &tag_name, &tag_message) {
         Ok(_) => { },
-        Err(err) => logger::stderr(format!("Failed to create git tag: {:?}", err))
+        Err(err) => {
+            logger::stderr(format!("Failed to create git tag: {:?}", err));
+            process::exit(1);
+        }
     }
 }
