@@ -1,4 +1,3 @@
-use std::error::Error;
 use clog::Clog;
 
 pub fn write(repository_path: &str, old_version: &str, new_version: &str) -> Result<(), String> {
