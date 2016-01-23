@@ -81,11 +81,17 @@ fn main() {
     logger::stdout(format!("New version: {}", new_version.to_string()));
     match toml_file::write_new_version(&repository_path, new_version.to_string()) {
         Ok(_)    => { },
-        Err(err) => logger::stderr(format!("Writing `Cargo.toml` failed: {:?}", err))
+        Err(err) => {
+            logger::stderr(format!("Writing `Cargo.toml` failed: {:?}", err));
+            process::exit(1);
+        }
     }
 
     match git::commit_files(&repository_path, new_version.to_string()) {
         Ok(_)    => { },
-        Err(err) => logger::stderr(format!("Committing `Cargo.toml` and `Cargo.lock` failed: {:?}", err))
+        Err(err) => {
+            logger::stderr(format!("Committing `Cargo.toml` and `Cargo.lock` failed: {:?}", err));
+            process::exit(1);
+        }
     }
 }
