@@ -1,4 +1,3 @@
-use time;
 use git2_commit;
 use semver::Version;
 use std::error::Error;
@@ -77,13 +76,7 @@ pub fn commit_files(repository_path: &str, new_version: &str) -> Result<(), Stri
     }
 }
 
-pub fn tag(repository_path: &str, new_version: &str) -> Result<(), String> {
-    let tag_name = format!("v{}", new_version);
-
-    let date = time::now_utc();
-    let now = date.strftime("%Y-%m-%d").expect("Can't format a simple date");
-    let tag_message = format!("v{} - {}", new_version, now);
-
+pub fn tag(repository_path: &str, tag_name: &str, tag_message: &str) -> Result<(), String> {
     let author = match git2_commit::get_signature() {
         Ok(author) => author,
         Err(err) => return Err(err.description().into())
