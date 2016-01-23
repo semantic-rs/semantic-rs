@@ -8,6 +8,7 @@ extern crate argparse;
 extern crate commit_walker;
 extern crate commit_analyzer;
 extern crate git2_commit;
+extern crate git2;
 
 use argparse::{ArgumentParser, StoreTrue, Store};
 use commit_analyzer::CommitType;
@@ -44,6 +45,14 @@ fn main() {
 
     logger::stdout("Analyzing your repository");
     let repository_path = get_repository_path();
+
+    match git2::Repository::open(&repository_path) {
+        Ok(_) => { },
+        Err(e) => {
+            logger::stderr(format!("Could not open the git repository: {:?}", e));
+            process::exit(1);
+        }
+    };
 
     let version = match toml_file::read_from_file(&repository_path) {
         Ok(toml) => toml,
