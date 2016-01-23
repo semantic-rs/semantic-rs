@@ -2,12 +2,11 @@ mod logger;
 mod toml_file;
 mod git;
 mod changelog;
+mod commit_analyzer;
 extern crate toml;
 extern crate regex;
 extern crate semver;
 extern crate argparse;
-extern crate commit_walker;
-extern crate commit_analyzer;
 extern crate git2_commit;
 extern crate git2;
 extern crate time;
@@ -70,7 +69,7 @@ fn main() {
 
     logger::stdout("Analyzing commits");
 
-    let bump = commit_walker::version_bump_since_latest(&repository_path);
+    let bump = git::version_bump_since_latest(&repository_path);
     logger::stdout(format!("Commits analyzed. Bump will be {:?}", bump));
 
     let new_version = match version_bump(&version, bump) {
