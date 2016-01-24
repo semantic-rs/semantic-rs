@@ -89,3 +89,16 @@ setup_dirs() {
 
   semantic-rs
 }
+
+@test "It creates a new tag with message" {
+  cd new-tag
+  setup_dirs
+
+  run git tag -l
+  [ "$output" = "v1.0.0" ]
+
+  run semantic-rs
+  run git tag -l
+  [ "${lines[0]}" = "v1.0.0" ]
+  [ "${lines[1]}" = "v1.1.0" ]
+}
