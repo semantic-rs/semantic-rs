@@ -63,6 +63,9 @@ setup_dirs() {
 
   run grep -q 'version = "1.1.0"' Cargo.toml
   [ "$status" -eq 0 ]
+
+  run git log --oneline --format=format:%s
+  [ "${lines[0]}" = "Bump version to 1.1.0" ]
 }
 
 @test "No bump when no new commits" {
