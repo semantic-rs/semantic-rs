@@ -15,6 +15,8 @@ extern crate clog;
 
 use docopt::Docopt;
 use commit_analyzer::CommitType;
+use std::process;
+use semver::Version;
 
 const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 const USAGE: &'static str = "
@@ -49,9 +51,6 @@ fn version_bump(version: &Version, bump: CommitType) -> Option<Version> {
 
     Some(version)
 }
-
-use std::process;
-use semver::Version;
 
 fn main() {
     let args: Args = Docopt::new(USAGE)
