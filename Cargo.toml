@@ -10,7 +10,8 @@ term = "0.2"
 toml = "0.1"
 regex = "0.1"
 semver = "0.2.1"
-argparse = "0.2.1"
+docopt = "0.6.78"
+rustc-serialize = "0.3.16"
 git2-commit = { git = "https://github.com/badboy/git2-commit-rs" }
 git2 = "0.3.4"
 clog = { git = "https://github.com/semantic-rs/clog-lib", branch = "public-raw-parsing" }
