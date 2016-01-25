@@ -16,7 +16,7 @@ extern crate clog;
 use docopt::Docopt;
 use commit_analyzer::CommitType;
 
-
+const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 const USAGE: &'static str = "
 semantic.rs 🚀
 
@@ -35,6 +35,7 @@ Options:
 struct Args {
     flag_path: String,
     flag_dry_run: bool,
+    flag_version: bool,
 }
 
 fn version_bump(version: &Version, bump: CommitType) -> Option<Version> {
@@ -56,6 +57,11 @@ fn main() {
     let args: Args = Docopt::new(USAGE)
         .and_then(|d| d.decode())
         .unwrap_or_else(|e| e.exit());
+
+    if args.flag_version {
+        println!("semantic.rs 🚀 -- v{}", VERSION);
+        process::exit(0);
+    }
 
     println!("semantic.rs 🚀");
 
