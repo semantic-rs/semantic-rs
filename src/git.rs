@@ -60,7 +60,7 @@ pub fn generate_commit_message(new_version: &str) -> String {
 }
 
 pub fn commit_files(repository_path: &str, new_version: &str) -> Result<(), String> {
-    let files = vec!["Cargo.toml"];
+    let files = vec!["Cargo.toml", "Changelog.md"];
     match git2_commit::add(&repository_path, &files[..]) {
         Ok(_) => {},
         Err(err) => return Err(err.description().into())

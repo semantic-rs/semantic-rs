@@ -100,7 +100,7 @@ fn main() {
     match git::commit_files(&repository_path, &new_version) {
         Ok(_)    => { },
         Err(err) => {
-            logger::stderr(format!("Committing `Cargo.toml` failed: {:?}", err));
+            logger::stderr(format!("Committing `Cargo.toml` and `Changelog.md` failed: {:?}", err));
             process::exit(1);
         }
     }
