@@ -109,7 +109,7 @@ fn main() {
     let tag_message = match changelog::generate(&repository_path, &version.to_string(), &new_version) {
         Ok(msg) => msg,
         Err(err) => {
-            logger::stderr(format!("Can't geneate changelog: {:?}", err));
+            logger::stderr(format!("Can't generate changelog: {:?}", err));
             process::exit(1);
         }
     };
