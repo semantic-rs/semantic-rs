@@ -120,7 +120,7 @@ fn main() {
     match git::commit_files(repository_path, &new_version) {
         Ok(_)    => { },
         Err(err) => {
-            logger::stderr(format!("Committing `Cargo.toml` failed: {:?}", err));
+            logger::stderr(format!("Committing `Cargo.toml` and `Changelog.md` failed: {:?}", err));
             process::exit(1);
         }
     }
@@ -129,7 +129,7 @@ fn main() {
     let tag_message = match changelog::generate(repository_path, &version.to_string(), &new_version) {
         Ok(msg) => msg,
         Err(err) => {
-            logger::stderr(format!("Can't geneate changelog: {:?}", err));
+            logger::stderr(format!("Can't generate changelog: {:?}", err));
             process::exit(1);
         }
     };
