@@ -105,7 +105,17 @@ fn main() {
 
     if args.flag_dry_run {
         logger::stdout(format!("New version would be: {}", new_version));
-        logger::stdout("Would write Changelog");
+        logger::stdout("Would write the following Changelog:");
+        let changelog = match changelog::generate(repository_path, &version.to_string(), &new_version.to_string()) {
+            Ok(log) => log,
+            Err(err) => {
+                logger::stderr(format!("Generating Changelog failed: {:?}", err));
+                process::exit(1);
+            }
+        };
+        logger::stdout("====================================");
+        logger::stdout(changelog);
+        logger::stdout("====================================");
         logger::stdout("Would create annotated git tag");
     }
     else {
