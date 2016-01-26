@@ -17,6 +17,7 @@ use docopt::Docopt;
 use commit_analyzer::CommitType;
 use std::process;
 use semver::Version;
+use std::env;
 
 const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 const USAGE: &'static str = "
@@ -52,6 +53,10 @@ fn version_bump(version: &Version, bump: CommitType) -> Option<Version> {
     Some(version)
 }
 
+fn ci_env_set() -> bool {
+    env::var("CI").is_ok()
+}
+
 fn main() {
     let args: Args = Docopt::new(USAGE)
         .and_then(|d| d.decode())
@@ -62,7 +67,12 @@ fn main() {
         process::exit(0);
     }
 
-    let is_dry_run = !args.flag_write;
+    let is_dry_run = if ci_env_set() {
+        false
+    }
+    else {
+        !args.flag_write
+    };
 
     println!("semantic.rs 🚀");
 
