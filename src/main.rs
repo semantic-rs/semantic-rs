@@ -3,16 +3,42 @@ mod toml_file;
 mod git;
 mod changelog;
 mod commit_analyzer;
+
+extern crate rustc_serialize;
 extern crate toml;
 extern crate regex;
 extern crate semver;
-extern crate argparse;
+extern crate docopt;
 extern crate git2_commit;
 extern crate git2;
 extern crate clog;
 
-use argparse::{ArgumentParser, Store};
+use docopt::Docopt;
 use commit_analyzer::CommitType;
+use std::process;
+use semver::Version;
+
+const VERSION: &'static str = env!("CARGO_PKG_VERSION");
+const USAGE: &'static str = "
+semantic.rs 🚀
+
+Usage:
+  semantic-rs [options]
+  semantic-rs --version
+
+Options:
+  -h --help              Show this screen.
+  --version              Show version.
+  -p PATH, --path=PATH   Specifies the repository path. [default: .]
+  -n, --dry-run          Run without writing, committing, pushing or publishing anything.
+";
+
+#[derive(Debug, RustcDecodable)]
+struct Args {
+    flag_path: String,
+    flag_dry_run: bool,
+    flag_version: bool,
+}
 
 fn version_bump(version: &Version, bump: CommitType) -> Option<Version> {
     let mut version = version.clone();
@@ -26,28 +52,22 @@ fn version_bump(version: &Version, bump: CommitType) -> Option<Version> {
     Some(version)
 }
 
-use std::process;
-use semver::Version;
-
-fn get_repository_path() -> String {
-    let mut path = ".".to_string();
-    {
-        let mut ap = ArgumentParser::new();
-        ap.refer(&mut path)
-            .add_option(&["-p", "--path"], Store,
-                        "Specifies the repository path. If ommitted it defaults to current directory");
-        ap.parse_args_or_exit();
-    }
-    path
-}
-
 fn main() {
+    let args: Args = Docopt::new(USAGE)
+        .and_then(|d| d.decode())
+        .unwrap_or_else(|e| e.exit());
+
+    if args.flag_version {
+        println!("semantic.rs 🚀 -- v{}", VERSION);
+        process::exit(0);
+    }
+
     println!("semantic.rs 🚀");
 
     logger::stdout("Analyzing your repository");
-    let repository_path = get_repository_path();
+    let repository_path = &args.flag_path;
 
-    match git2::Repository::open(&repository_path) {
+    match git2::Repository::open(repository_path) {
         Ok(_) => { },
         Err(e) => {
             logger::stderr(format!("Could not open the git repository: {:?}", e));
@@ -55,7 +75,7 @@ fn main() {
         }
     };
 
-    let version = match toml_file::read_from_file(&repository_path) {
+    let version = match toml_file::read_from_file(repository_path) {
         Ok(toml) => toml,
         Err(e) => {
             logger::stderr(format!("Reading `Cargo.toml` failed: {:?}", e));
@@ -68,7 +88,7 @@ fn main() {
 
     logger::stdout("Analyzing commits");
 
-    let bump = git::version_bump_since_latest(&repository_path);
+    let bump = git::version_bump_since_latest(repository_path);
     logger::stdout(format!("Commits analyzed. Bump will be {:?}", bump));
 
     let new_version = match version_bump(&version, bump) {
@@ -80,7 +100,7 @@ fn main() {
     };
 
     logger::stdout(format!("New version: {}", new_version));
-    match toml_file::write_new_version(&repository_path, &new_version) {
+    match toml_file::write_new_version(repository_path, &new_version) {
         Ok(_)    => { },
         Err(err) => {
             logger::stderr(format!("Writing `Cargo.toml` failed: {:?}", err));
@@ -89,7 +109,7 @@ fn main() {
     }
 
     logger::stdout(format!("Writing Changelog"));
-    match changelog::write(&repository_path, &version.to_string(), &new_version.to_string()) {
+    match changelog::write(repository_path, &version.to_string(), &new_version.to_string()) {
         Ok(_)    => { },
         Err(err) => {
             logger::stderr(format!("Writing Changelog failed: {:?}", err));
@@ -97,7 +117,7 @@ fn main() {
         }
     }
 
-    match git::commit_files(&repository_path, &new_version) {
+    match git::commit_files(repository_path, &new_version) {
         Ok(_)    => { },
         Err(err) => {
             logger::stderr(format!("Committing `Cargo.toml` failed: {:?}", err));
@@ -106,7 +126,7 @@ fn main() {
     }
 
     logger::stdout("Creating annotated git tag");
-    let tag_message = match changelog::generate(&repository_path, &version.to_string(), &new_version) {
+    let tag_message = match changelog::generate(repository_path, &version.to_string(), &new_version) {
         Ok(msg) => msg,
         Err(err) => {
             logger::stderr(format!("Can't geneate changelog: {:?}", err));
@@ -115,7 +135,7 @@ fn main() {
     };
 
     let tag_name = format!("v{}", new_version);
-    match git::tag(&repository_path, &tag_name, &tag_message) {
+    match git::tag(repository_path, &tag_name, &tag_message) {
         Ok(_) => { },
         Err(err) => {
             logger::stderr(format!("Failed to create git tag: {:?}", err));
