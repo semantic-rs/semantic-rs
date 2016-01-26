@@ -30,13 +30,13 @@ Options:
   -h --help              Show this screen.
   --version              Show version.
   -p PATH, --path=PATH   Specifies the repository path. [default: .]
-  -n, --dry-run          Run without writing, committing, pushing or publishing anything.
+  -w, --write            Run with writing the changes afterwards.
 ";
 
 #[derive(Debug, RustcDecodable)]
 struct Args {
     flag_path: String,
-    flag_dry_run: bool,
+    flag_write: bool,
     flag_version: bool,
 }
 
@@ -61,6 +61,8 @@ fn main() {
         println!("semantic.rs 🚀 -- v{}", VERSION);
         process::exit(0);
     }
+
+    let is_dry_run = !args.flag_write;
 
     println!("semantic.rs 🚀");
 
@@ -89,7 +91,7 @@ fn main() {
     logger::stdout("Analyzing commits");
 
     let bump = git::version_bump_since_latest(repository_path);
-    if args.flag_dry_run {
+    if is_dry_run {
         logger::stdout(format!("Commits analyzed. Bump would be {:?}", bump));
     }
     else {
@@ -103,7 +105,7 @@ fn main() {
         }
     };
 
-    if args.flag_dry_run {
+    if is_dry_run {
         logger::stdout(format!("New version would be: {}", new_version));
         logger::stdout("Would write the following Changelog:");
         let changelog = match changelog::generate(repository_path, &version.to_string(), &new_version.to_string()) {
