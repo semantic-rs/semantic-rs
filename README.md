@@ -25,6 +25,10 @@ $ cargo run
 
 This analyzes the current git repository and updates the project's `Cargo.toml`.
 
+## Run semantic-rs in CI environment
+
+Make sure to set the `CI=true` environment variable to disable dry-run mode.
+
 ## Contributing
 
 Bug reports and pull requests are welcome on [GitHub](https://github.com/semantic-rs/semantic-rs).
