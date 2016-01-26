@@ -28,52 +28,26 @@ pub fn analyze_single(commit: &str) -> Result<CommitType, Error> {
     Ok(commit_type)
 }
 
-pub fn analyze(commits: &[&str]) -> Result<CommitType, Error> {
-    let commit_type = commits.into_iter()
-        .map(|commit| analyze_single(commit).expect("Can't analyze commit"))
-        .map(|commit| {
-            commit
-        })
-    .max();
-
-    Ok(commit_type.unwrap_or(Unknown))
-}
-
 #[test]
 fn unknown_type() {
-    let commits = vec!["0\nThis commit message has no type"];
-    assert_eq!(Unknown, analyze(&commits).unwrap());
+    let commit = "0\nThis commit message has no type";
+    assert_eq!(Unknown, analyze_single(commit).unwrap());
 }
 
 #[test]
 fn patch_commit() {
-    let commits = vec!["0\nfix: This commit fixes a bug"];
-    assert_eq!(Patch, analyze(&commits).unwrap());
-    assert_eq!(Patch, analyze_single(commits[0]).unwrap());
+    let commit = "0\nfix: This commit fixes a bug";
+    assert_eq!(Patch, analyze_single(commit).unwrap());
 }
 
 #[test]
 fn minor_commit() {
-    let commits = vec!["0\nfeat: This commit introduces a new feature"];
-    assert_eq!(Minor, analyze(&commits).unwrap());
+    let commit = "0\nfeat: This commit introduces a new feature";
+    assert_eq!(Minor, analyze_single(commit).unwrap());
 }
 
 #[test]
 fn major_commit() {
-    let commits = vec!["0\nfeat: This commits breaks something\nBREAKING CHANGE: breaks things"];
-    assert_eq!(Major, analyze(&commits).unwrap());
+    let commit = "0\nfeat: This commits breaks something\nBREAKING CHANGE: breaks things";
+    assert_eq!(Major, analyze_single(commit).unwrap());
 }
-
-#[test]
-fn major_commit_multiple() {
-    let commits = vec!["0\nfeat: This commits breaks something\n\nBREAKING CHANGE: breaks things",
-    "0\nfix: Simple fix"];
-    assert_eq!(Major, analyze(&commits).unwrap());
-}
-
-#[test]
-fn minor_commit_multiple() {
-    let commits = vec!["0\nfeat: This commits introduces a new feature", "fix: Simple fix"];
-    assert_eq!(Minor, analyze(&commits).unwrap());
-}
-
