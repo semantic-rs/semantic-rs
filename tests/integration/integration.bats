@@ -47,8 +47,7 @@ setup_dirs() {
 
   run semantic-rs -w
   [ "$status" -eq 0 ]
-  run grep -q 'version = "1.0.0"' Cargo.toml
-  [ "$status" -eq 0 ]
+  grep -q 'version = "1.0.0"' Cargo.toml
 }
 
 @test "Bumps to next minor" {
@@ -79,8 +78,7 @@ setup_dirs() {
   [ "$status" -eq 0 ]
   [[ "$output" =~ "No version bump. Nothing to do" ]]
 
-  run grep -q 'version = "1.1.0"' Cargo.toml
-  [ "$status" -eq 0 ]
+  grep -q 'version = "1.1.0"' Cargo.toml
 }
 
 @test "No crash with malformed tags" {
@@ -109,8 +107,7 @@ setup_dirs() {
 
   run semantic-rs
   [ "$status" -eq 0 ]
-  run grep -q 'version = "0.1.0"' Cargo.toml
-  [ "$status" -eq 0 ]
+  grep -q 'version = "0.1.0"' Cargo.toml
 }
 
 @test "Runs in write-mode with CI=true" {
@@ -120,6 +117,5 @@ setup_dirs() {
   export CI=true
   run semantic-rs
   [ "$status" -eq 0 ]
-  run grep -q 'version = "1.0.0"' Cargo.toml
-  [ "$status" -eq 0 ]
+  grep -q 'version = "1.0.0"' Cargo.toml
 }
