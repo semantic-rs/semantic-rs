@@ -17,6 +17,7 @@ use docopt::Docopt;
 use commit_analyzer::CommitType;
 use std::process;
 use semver::Version;
+use std::env;
 
 const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 const USAGE: &'static str = "
@@ -30,13 +31,13 @@ Options:
   -h --help              Show this screen.
   --version              Show version.
   -p PATH, --path=PATH   Specifies the repository path. [default: .]
-  -n, --dry-run          Run without writing, committing, pushing or publishing anything.
+  -w, --write            Run with writing the changes afterwards.
 ";
 
 #[derive(Debug, RustcDecodable)]
 struct Args {
     flag_path: String,
-    flag_dry_run: bool,
+    flag_write: bool,
     flag_version: bool,
 }
 
@@ -52,6 +53,10 @@ fn version_bump(version: &Version, bump: CommitType) -> Option<Version> {
     Some(version)
 }
 
+fn ci_env_set() -> bool {
+    env::var("CI").is_ok()
+}
+
 fn main() {
     let args: Args = Docopt::new(USAGE)
         .and_then(|d| d.decode())
@@ -61,6 +66,13 @@ fn main() {
         println!("semantic.rs 🚀 -- v{}", VERSION);
         process::exit(0);
     }
+
+    let is_dry_run = if ci_env_set() {
+        false
+    }
+    else {
+        !args.flag_write
+    };
 
     println!("semantic.rs 🚀");
 
@@ -89,8 +101,12 @@ fn main() {
     logger::stdout("Analyzing commits");
 
     let bump = git::version_bump_since_latest(repository_path);
-    logger::stdout(format!("Commits analyzed. Bump will be {:?}", bump));
-
+    if is_dry_run {
+        logger::stdout(format!("Commits analyzed. Bump would be {:?}", bump));
+    }
+    else {
+        logger::stdout(format!("Commits analyzed. Bump will be {:?}", bump));
+    }
     let new_version = match version_bump(&version, bump) {
         Some(new_version) => new_version.to_string(),
         None => {
@@ -99,47 +115,65 @@ fn main() {
         }
     };
 
-    logger::stdout(format!("New version: {}", new_version));
-    match toml_file::write_new_version(repository_path, &new_version) {
-        Ok(_)    => { },
-        Err(err) => {
-            logger::stderr(format!("Writing `Cargo.toml` failed: {:?}", err));
-            process::exit(1);
-        }
+    if is_dry_run {
+        logger::stdout(format!("New version would be: {}", new_version));
+        logger::stdout("Would write the following Changelog:");
+        let changelog = match changelog::generate(repository_path, &version.to_string(), &new_version.to_string()) {
+            Ok(log) => log,
+            Err(err) => {
+                logger::stderr(format!("Generating Changelog failed: {:?}", err));
+                process::exit(1);
+            }
+        };
+        logger::stdout("====================================");
+        logger::stdout(changelog);
+        logger::stdout("====================================");
+        logger::stdout("Would create annotated git tag");
     }
+    else {
+        logger::stdout(format!("New version: {}", new_version));
 
-    logger::stdout(format!("Writing Changelog"));
-    match changelog::write(repository_path, &version.to_string(), &new_version.to_string()) {
-        Ok(_)    => { },
-        Err(err) => {
-            logger::stderr(format!("Writing Changelog failed: {:?}", err));
-            process::exit(1);
+        match toml_file::write_new_version(repository_path, &new_version) {
+            Ok(_)    => { },
+            Err(err) => {
+                logger::stderr(format!("Writing `Cargo.toml` failed: {:?}", err));
+                process::exit(1);
+            }
         }
-    }
 
-    match git::commit_files(repository_path, &new_version) {
-        Ok(_)    => { },
-        Err(err) => {
-            logger::stderr(format!("Committing `Cargo.toml` and `Changelog.md` failed: {:?}", err));
-            process::exit(1);
+        logger::stdout(format!("Writing Changelog"));
+        match changelog::write(repository_path, &version.to_string(), &new_version.to_string()) {
+            Ok(_)    => { },
+            Err(err) => {
+                logger::stderr(format!("Writing Changelog failed: {:?}", err));
+                process::exit(1);
+            }
         }
-    }
 
-    logger::stdout("Creating annotated git tag");
-    let tag_message = match changelog::generate(repository_path, &version.to_string(), &new_version) {
-        Ok(msg) => msg,
-        Err(err) => {
-            logger::stderr(format!("Can't generate changelog: {:?}", err));
-            process::exit(1);
+        match git::commit_files(repository_path, &new_version) {
+            Ok(_)    => { },
+            Err(err) => {
+                logger::stderr(format!("Committing `Cargo.toml` and `Changelog.md` failed: {:?}", err));
+                process::exit(1);
+            }
         }
-    };
 
-    let tag_name = format!("v{}", new_version);
-    match git::tag(repository_path, &tag_name, &tag_message) {
-        Ok(_) => { },
-        Err(err) => {
-            logger::stderr(format!("Failed to create git tag: {:?}", err));
-            process::exit(1);
+        logger::stdout("Creating annotated git tag");
+        let tag_message = match changelog::generate(repository_path, &version.to_string(), &new_version) {
+            Ok(msg) => msg,
+            Err(err) => {
+                logger::stderr(format!("Can't generate changelog: {:?}", err));
+                process::exit(1);
+            }
+        };
+
+        let tag_name = format!("v{}", new_version);
+        match git::tag(repository_path, &tag_name, &tag_message) {
+            Ok(_) => { },
+            Err(err) => {
+                logger::stderr(format!("Failed to create git tag: {:?}", err));
+                process::exit(1);
+            }
         }
     }
 }
