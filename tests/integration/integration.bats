@@ -102,3 +102,24 @@ setup_dirs() {
   [ "${lines[0]}" = "v1.0.0" ]
   [ "${lines[1]}" = "v1.1.0" ]
 }
+
+@test "Runs a dry-run by default" {
+  cd dry-run
+  setup_dirs
+
+  run semantic-rs
+  [ "$status" -eq 0 ]
+  run grep -q 'version = "0.1.0"' Cargo.toml
+  [ "$status" -eq 0 ]
+}
+
+@test "Runs in write-mode with CI=true" {
+  cd write-mode
+  setup_dirs
+
+  export CI=true
+  run semantic-rs
+  [ "$status" -eq 0 ]
+  run grep -q 'version = "1.0.0"' Cargo.toml
+  [ "$status" -eq 0 ]
+}
