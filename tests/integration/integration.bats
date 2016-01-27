@@ -2,6 +2,7 @@
 
 setup() {
   cd $WORKSPACE
+  unset CI
 }
 
 setup_dirs() {
@@ -114,8 +115,7 @@ setup_dirs() {
   cd write-mode
   setup_dirs
 
-  export CI=true
-  run semantic-rs
+  CI=true run semantic-rs
   [ "$status" -eq 0 ]
   grep -q 'version = "1.0.0"' Cargo.toml
 }
