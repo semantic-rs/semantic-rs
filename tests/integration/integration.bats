@@ -45,7 +45,7 @@ setup_dirs() {
   cd initial-release
   setup_dirs
 
-  run semantic-rs
+  run semantic-rs -w
   [ "$status" -eq 0 ]
   run grep -q 'version = "1.0.0"' Cargo.toml
   [ "$status" -eq 0 ]
@@ -58,7 +58,7 @@ setup_dirs() {
   run grep -q 'version = "1.0.0"' Cargo.toml
   [ "$status" -eq 0 ]
 
-  run semantic-rs
+  run semantic-rs -w
   [ "$status" -eq 0 ]
 
   run grep -q 'version = "1.1.0"' Cargo.toml
@@ -97,7 +97,7 @@ setup_dirs() {
   run git tag -l
   [ "$output" = "v1.0.0" ]
 
-  run semantic-rs
+  run semantic-rs -w
   run git tag -l
   [ "${lines[0]}" = "v1.0.0" ]
   [ "${lines[1]}" = "v1.1.0" ]
