@@ -1,4 +1,3 @@
-use git2_commit;
 use std::path::Path;
 use semver::Version;
 use std::error::Error;
@@ -55,6 +54,15 @@ fn commit(repo: &str, name: &str, email: &str, message: &str) -> Result<(), git2
 
     repo
         .commit(update_ref, &signature, &signature, message, &tree, &parents)
+        .map(|_| ())
+}
+
+fn create_tag(repo: &str, name: &str, email: &str, tag_name: &str, message: &str) -> Result<(), git2::Error> {
+    let repo = try!(Repository::open(repo));
+    let obj = try!(repo.revparse_single("HEAD"));
+    let signature = try!(Signature::now(name, email));
+
+    repo.tag(tag_name, &obj, &signature, message, false)
         .map(|_| ())
 }
 
@@ -128,6 +136,6 @@ pub fn tag(repository_path: &str, tag_name: &str, tag_message: &str) -> Result<(
         Err(err) => return Err(err.description().into())
     };
 
-    git2_commit::tag(repository_path, &author.name, &author.email, &tag_name, &tag_message)
+    create_tag(repository_path, &author.name, &author.email, &tag_name, &tag_message)
         .map_err(|err| err.description().into())
 }
