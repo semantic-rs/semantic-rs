@@ -16,6 +16,55 @@ semantic-rs automates all these steps for you so you can focus more on developin
 - Based on your changes it calculates the next version number, generates a changelog, commits it and creates a new tag
 - Done.
 
+## Usage
+
+If you run semantic-rs without any arguments, it operates on your current working directory:
+
+```bash
+$ semantic-rs
+semantic.rs 🚀
+Analyzing your repository
+Current version: 0.5.0
+Analyzing commits
+Commits analyzed. Bump would be Minor
+New version would be: 0.6.0
+Would write the following Changelog:
+====================================
+## v0.6.0 (2016-01-30)
+
+
+#### Features
+
+*   Improve user interface ([497485a0](497485a0))
+
+====================================
+Would create annotated git tag
+```
+
+By default it runs in dry-run mode. This means it doens't perform changes automatically. You seed which changes would be performed and also the resulting changelog.
+
+To perform the changes, pass `-w` as an argument:
+
+```bash
+$ semantic-rs -w
+semantic.rs 🚀
+Analyzing your repository
+Current version: 0.5.0
+Analyzing commits
+Commits analyzed. Bump will be Minor
+New version: 0.6.0
+Writing Changelog
+Creating annotated git tag
+```
+This performs the following operations:
+- Create or update `Changelog.md` containing everything that changed
+- It creates a new commit containing the following changes:
+  - `Changelog.md`
+  - An updated `Cargo.toml` with the new version number
+- A new tag pointing to the last commit created recently
+
+Note that commits and tags are created with your configured git user and email.
+
 ## Development
 
 Requirements:
