@@ -1,7 +1,8 @@
 use git2_commit;
+use std::path::Path;
 use semver::Version;
 use std::error::Error;
-use git2::{Repository, Commit};
+use git2::{self, Repository, Commit};
 use commit_analyzer::{self, CommitType};
 
 fn range_to_head(commit: &str) -> String {
@@ -11,6 +12,18 @@ fn range_to_head(commit: &str) -> String {
 fn format_commit(commit: Commit) -> String {
     format!("{}\n{}", commit.id(), commit.message().unwrap_or(""))
 }
+
+fn add<P: AsRef<Path>>(repo: &str, files: &[P]) -> Result<(), git2::Error> {
+    let repo = try!(Repository::open(repo));
+    let mut index = try!(repo.index());
+
+    for path in files {
+        let _ = try!(index.add_path(path.as_ref()));
+    }
+
+    index.write()
+}
+
 
 pub fn latest_tag(path: &str) -> Option<Version> {
     let repo = match Repository::open(path) {
@@ -61,7 +74,7 @@ pub fn generate_commit_message(new_version: &str) -> String {
 
 pub fn commit_files(repository_path: &str, new_version: &str) -> Result<(), String> {
     let files = vec!["Cargo.toml", "Changelog.md"];
-    match git2_commit::add(&repository_path, &files[..]) {
+    match add(&repository_path, &files[..]) {
         Ok(_) => {},
         Err(err) => return Err(err.description().into())
     }
