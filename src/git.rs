@@ -2,7 +2,7 @@ use git2_commit;
 use std::path::Path;
 use semver::Version;
 use std::error::Error;
-use git2::{self, Repository, Commit, Config};
+use git2::{self, Repository, Commit, Config, Signature};
 use commit_analyzer::{self, CommitType};
 
 struct Author {
@@ -39,6 +39,24 @@ fn get_signature() -> Result<Author, git2::Error> {
     })
 }
 
+fn commit(repo: &str, name: &str, email: &str, message: &str) -> Result<(), git2::Error> {
+    let signature = try!(Signature::now(name, email));
+    let update_ref = Some("HEAD");
+
+    let repo = try!(Repository::open(repo));
+
+    let oid = try!(repo.refname_to_id("HEAD"));
+    let parent_commit = try!(repo.find_commit(oid));
+    let parents = vec![&parent_commit];
+
+    let mut index = try!(repo.index());
+    let tree_oid = try!(index.write_tree());
+    let tree = try!(repo.find_tree(tree_oid));
+
+    repo
+        .commit(update_ref, &signature, &signature, message, &tree, &parents)
+        .map(|_| ())
+}
 
 pub fn latest_tag(path: &str) -> Option<Version> {
     let repo = match Repository::open(path) {
@@ -98,7 +116,7 @@ pub fn commit_files(repository_path: &str, new_version: &str) -> Result<(), Stri
         Err(err) => return Err(err.description().into())
     };
 
-    match git2_commit::commit(repository_path, &author.name, &author.email, &generate_commit_message(new_version)) {
+    match commit(repository_path, &author.name, &author.email, &generate_commit_message(new_version)) {
         Ok(_) => Ok(()),
         Err(err) => Err(err.description().into())
     }
