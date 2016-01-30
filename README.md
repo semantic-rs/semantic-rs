@@ -9,6 +9,9 @@ Right now publishing crates manually is fairly error prone and a high amount of 
 
 Requirements:
 - cmake
+- OpenSSL development package
+  - Ubuntu: `libssl-dev`
+  - Mac Homebrew: `openssl`
 - Rust 1.5
 
 Clone this project:
