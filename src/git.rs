@@ -2,8 +2,13 @@ use git2_commit;
 use std::path::Path;
 use semver::Version;
 use std::error::Error;
-use git2::{self, Repository, Commit};
+use git2::{self, Repository, Commit, Config};
 use commit_analyzer::{self, CommitType};
+
+struct Author {
+    pub name: String,
+    pub email: String
+}
 
 fn range_to_head(commit: &str) -> String {
     format!("{}..HEAD", commit)
@@ -22,6 +27,16 @@ fn add<P: AsRef<Path>>(repo: &str, files: &[P]) -> Result<(), git2::Error> {
     }
 
     index.write()
+}
+
+fn get_signature() -> Result<Author, git2::Error> {
+    let config = try!(Config::open_default());
+    let author = try!(config.get_string("user.name"));
+    let email = try!(config.get_string("user.email"));
+    Ok(Author {
+        name: author.to_string(),
+        email: email.to_string()
+    })
 }
 
 
@@ -78,7 +93,7 @@ pub fn commit_files(repository_path: &str, new_version: &str) -> Result<(), Stri
         Ok(_) => {},
         Err(err) => return Err(err.description().into())
     }
-    let author = match git2_commit::get_signature() {
+    let author = match get_signature() {
         Ok(author) => author,
         Err(err) => return Err(err.description().into())
     };
@@ -90,7 +105,7 @@ pub fn commit_files(repository_path: &str, new_version: &str) -> Result<(), Stri
 }
 
 pub fn tag(repository_path: &str, tag_name: &str, tag_message: &str) -> Result<(), String> {
-    let author = match git2_commit::get_signature() {
+    let author = match get_signature() {
         Ok(author) => author,
         Err(err) => return Err(err.description().into())
     };
