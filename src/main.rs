@@ -9,7 +9,6 @@ extern crate toml;
 extern crate regex;
 extern crate semver;
 extern crate docopt;
-extern crate git2_commit;
 extern crate git2;
 extern crate clog;
 
