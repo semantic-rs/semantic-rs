@@ -10,10 +10,10 @@ semantic-rs automates all these steps for you so you can focus more on developin
 
 ## Workflow
 
-- Install semantic-rs on your machine. 
+- Install semantic-rs on your machine.
 - Follow the [Angular.js commit message conventions](https://docs.google.com/document/d/1QrDFcIiPjSLDn3EL15IJygNPiHORgU1_OOAqWjiDU5Y/edit?pref=2&pli=1) when you commit changes to your repository
 - When you're done with development, run semantic-rs
-- Based on your changes it calculates the next version number, generates a changelog, commits it and creates a new tag
+- Based on your changes it determines the next version number, generates a changelog, commits it and creates a new tag
 - Done.
 
 ## Usage
@@ -41,7 +41,7 @@ Would write the following Changelog:
 Would create annotated git tag
 ```
 
-By default it runs in dry-run mode. This means it doens't perform changes automatically. You seed which changes would be performed and also the resulting changelog.
+By default it runs in dry-run mode. This means it doens't perform changes automatically. You see which changes would be performed and also the resulting changelog.
 
 To perform the changes, pass `-w` as an argument:
 
@@ -58,10 +58,10 @@ Creating annotated git tag
 ```
 This performs the following operations:
 - Create or update `Changelog.md` containing everything that changed
-- It creates a new commit containing the following changes:
+- Create a new commit containing the following changes:
   - `Changelog.md`
   - An updated `Cargo.toml` with the new version number
-- A new tag pointing to the last commit created recently
+- Create a new annotated git tag pointing to the last commit created recently and including the Changelog for the new version
 
 Note that commits and tags are created with your configured git user and email.
 
