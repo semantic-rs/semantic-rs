@@ -17,6 +17,7 @@ use commit_analyzer::CommitType;
 use std::process;
 use semver::Version;
 use std::env;
+use std::error::Error;
 
 const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 const USAGE: &'static str = "
@@ -78,14 +79,35 @@ fn main() {
     logger::stdout("Analyzing your repository");
     let repository_path = &args.flag_path;
 
-    match git2::Repository::open(repository_path) {
-        Ok(_) => { },
-        Err(ref e) if e.code() == git2::ErrorCode::NotFound => {
-            logger::stderr(format!("Could not find git repository at {}", repository_path));
-            process::exit(1);
-        },
+    let repo = match git2::Repository::open(repository_path) {
+        Ok(repo) => repo,
         Err(e) => {
             logger::stderr(format!("Could not open the git repository: {:?}", e));
+            process::exit(1);
+        }
+    };
+
+    let _signature = match git::get_signature(&repo) {
+        Ok(sig) => sig,
+        Err(e) => {
+            logger::stderr(format!("Failed to get the committer's name and email address: {}", e.description()));
+            logger::stderr(r"
+A release commit needs a committer name and email address.
+We tried fetching it from different locations, but couldn't find one.
+Make sure to specify it in one of the following locations:
+
+Environment Variable GIT_AUTHOR_NAME
+Environment Variable GIT_COMMITTER_NAME
+A `user.name` in the repository config.
+A `user.name` in the user config.
+A `user.name` in the global config.
+
+Environment Variable GIT_AUTHOR_EMAIL
+Environment Variable GIT_COMMITTER_EMAIL
+A `user.name` in the repository config.
+A `user.name` in the user config.
+A `user.name` in the global config.
+                           ");
             process::exit(1);
         }
     };

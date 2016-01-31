@@ -1,12 +1,40 @@
 use std::path::Path;
 use semver::Version;
+use std::env;
 use std::error::Error;
-use git2::{self, Repository, Commit, Config, Signature};
+use git2::{self, Repository, Commit, Signature, Error as GitError};
 use commit_analyzer::{self, CommitType};
 
-struct Author {
-    pub name: String,
-    pub email: String
+pub fn get_signature(repo: &Repository) -> Result<Signature, GitError> {
+    let author = {
+        let mut author = env::var("GIT_AUTHOR_NAME").map_err(|err| GitError::from_str(err.description()));
+
+        if author.is_err() {
+            author = env::var("GIT_COMMITTER_NAME").map_err(|err| GitError::from_str(err.description()));
+        }
+
+        if author.is_err() {
+            let config = try!(repo.config());
+            author = config.get_string("user.name").map_err(|err| GitError::from_str(err.description()));
+        }
+        try!(author)
+    };
+
+    let email = {
+        let mut email = env::var("GIT_AUTHOR_EMAIL").map_err(|err| GitError::from_str(err.description()));
+
+        if email.is_err() {
+            email = env::var("GIT_COMMITTER_EMAIL").map_err(|err| GitError::from_str(err.description()));
+        }
+
+        if email.is_err() {
+            let config = try!(repo.config());
+            email = config.get_string("user.email").map_err(|err| GitError::from_str(err.description()));
+        }
+        try!(email)
+    };
+
+    Signature::now(&author, &email)
 }
 
 fn range_to_head(commit: &str) -> String {
@@ -17,8 +45,7 @@ fn format_commit(commit: Commit) -> String {
     format!("{}\n{}", commit.id(), commit.message().unwrap_or(""))
 }
 
-fn add<P: AsRef<Path>>(repo: &str, files: &[P]) -> Result<(), git2::Error> {
-    let repo = try!(Repository::open(repo));
+fn add<P: AsRef<Path>>(repo: &Repository, files: &[P]) -> Result<(), git2::Error> {
     let mut index = try!(repo.index());
 
     for path in files {
@@ -28,21 +55,8 @@ fn add<P: AsRef<Path>>(repo: &str, files: &[P]) -> Result<(), git2::Error> {
     index.write()
 }
 
-fn get_signature() -> Result<Author, git2::Error> {
-    let config = try!(Config::open_default());
-    let author = try!(config.get_string("user.name"));
-    let email = try!(config.get_string("user.email"));
-    Ok(Author {
-        name: author.to_string(),
-        email: email.to_string()
-    })
-}
-
-fn commit(repo: &str, name: &str, email: &str, message: &str) -> Result<(), git2::Error> {
-    let signature = try!(Signature::now(name, email));
+fn commit(repo: &Repository, signature: &Signature, message: &str) -> Result<(), git2::Error> {
     let update_ref = Some("HEAD");
-
-    let repo = try!(Repository::open(repo));
 
     let oid = try!(repo.refname_to_id("HEAD"));
     let parent_commit = try!(repo.find_commit(oid));
@@ -53,14 +67,12 @@ fn commit(repo: &str, name: &str, email: &str, message: &str) -> Result<(), git2
     let tree = try!(repo.find_tree(tree_oid));
 
     repo
-        .commit(update_ref, &signature, &signature, message, &tree, &parents)
+        .commit(update_ref, signature, signature, message, &tree, &parents)
         .map(|_| ())
 }
 
-fn create_tag(repo: &str, name: &str, email: &str, tag_name: &str, message: &str) -> Result<(), git2::Error> {
-    let repo = try!(Repository::open(repo));
+fn create_tag(repo: &Repository, signature: &Signature, tag_name: &str, message: &str) -> Result<(), git2::Error> {
     let obj = try!(repo.revparse_single("HEAD"));
-    let signature = try!(Signature::now(name, email));
 
     repo.tag(tag_name, &obj, &signature, message, false)
         .map(|_| ())
@@ -114,28 +126,39 @@ pub fn generate_commit_message(new_version: &str) -> String {
 }
 
 pub fn commit_files(repository_path: &str, new_version: &str) -> Result<(), String> {
-    let files = vec!["Cargo.toml", "Changelog.md"];
-    match add(&repository_path, &files[..]) {
-        Ok(_) => {},
-        Err(err) => return Err(err.description().into())
-    }
-    let author = match get_signature() {
-        Ok(author) => author,
+    let repo = match Repository::open(repository_path) {
+        Ok(repo) => repo,
         Err(err) => return Err(err.description().into())
     };
 
-    match commit(repository_path, &author.name, &author.email, &generate_commit_message(new_version)) {
+    let files = vec!["Cargo.toml", "Changelog.md"];
+    match add(&repo, &files[..]) {
+        Ok(_) => {},
+        Err(err) => return Err(err.description().into())
+    }
+
+    let signature = match get_signature(&repo) {
+        Ok(sig) => sig,
+        Err(e) => return Err(e.description().into())
+    };
+
+    match commit(&repo, &signature, &generate_commit_message(new_version)) {
         Ok(_) => Ok(()),
         Err(err) => Err(err.description().into())
     }
 }
 
 pub fn tag(repository_path: &str, tag_name: &str, tag_message: &str) -> Result<(), String> {
-    let author = match get_signature() {
-        Ok(author) => author,
+    let repo = match Repository::open(repository_path) {
+        Ok(repo) => repo,
         Err(err) => return Err(err.description().into())
     };
 
-    create_tag(repository_path, &author.name, &author.email, &tag_name, &tag_message)
+    let signature = match get_signature(&repo) {
+        Ok(sig) => sig,
+        Err(e) => return Err(e.description().into())
+    };
+
+    create_tag(&repo, &signature, &tag_name, &tag_message)
         .map_err(|err| err.description().into())
 }
