@@ -81,12 +81,12 @@ fn main() {
 
     match git2::Repository::open(repository_path) {
         Ok(_) => { },
+        Err(ref e) if e.code() == git2::ErrorCode::NotFound => {
+            logger::stderr(format!("Could not find git repository at {}", repository_path));
+            process::exit(1);
+        },
         Err(e) => {
-            if e.code() == git2::ErrorCode::NotFound {
-                logger::stderr(format!("Could not find git repository at {}", repository_path));
-            } else {
-                logger::stderr(format!("Could not open the git repository: {:?}", e));
-            }
+            logger::stderr(format!("Could not open the git repository: {:?}", e));
             process::exit(1);
         }
     };
