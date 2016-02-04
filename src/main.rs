@@ -7,6 +7,7 @@ mod toml_file;
 mod git;
 mod changelog;
 mod commit_analyzer;
+mod error;
 
 extern crate rustc_serialize;
 extern crate toml;

@@ -1,40 +1,40 @@
 use std::path::Path;
 use semver::Version;
 use std::env;
-use std::error::Error;
-use git2::{self, Repository, Commit, Signature, Error as GitError};
+use git2::{self, Repository, Commit, Signature};
 use commit_analyzer::{self, CommitType};
+use error::Error;
 
-pub fn get_signature(repo: &Repository) -> Result<Signature, GitError> {
+pub fn get_signature(repo: &Repository) -> Result<Signature, Error> {
     let author = {
-        let mut author = env::var("GIT_AUTHOR_NAME").map_err(|err| GitError::from_str(err.description()));
+        let mut author = env::var("GIT_AUTHOR_NAME").map_err(Error::from);
 
         if author.is_err() {
-            author = env::var("GIT_COMMITTER_NAME").map_err(|err| GitError::from_str(err.description()));
+            author = env::var("GIT_COMMITTER_NAME").map_err(Error::from);
         }
 
         if author.is_err() {
             let config = try!(repo.config());
-            author = config.get_string("user.name").map_err(|err| GitError::from_str(err.description()));
+            author = config.get_string("user.name").map_err(Error::from);
         }
         try!(author)
     };
 
     let email = {
-        let mut email = env::var("GIT_AUTHOR_EMAIL").map_err(|err| GitError::from_str(err.description()));
+        let mut email = env::var("GIT_AUTHOR_EMAIL").map_err(Error::from);
 
         if email.is_err() {
-            email = env::var("GIT_COMMITTER_EMAIL").map_err(|err| GitError::from_str(err.description()));
+            email = env::var("GIT_COMMITTER_EMAIL").map_err(Error::from);
         }
 
         if email.is_err() {
             let config = try!(repo.config());
-            email = config.get_string("user.email").map_err(|err| GitError::from_str(err.description()));
+            email = config.get_string("user.email").map_err(Error::from);
         }
         try!(email)
     };
 
-    Signature::now(&author, &email)
+    Signature::now(&author, &email).map_err(From::from)
 }
 
 fn range_to_head(commit: &str) -> String {
@@ -125,40 +125,20 @@ pub fn generate_commit_message(new_version: &str) -> String {
     format!("Bump version to {}", new_version).into()
 }
 
-pub fn commit_files(repository_path: &str, new_version: &str) -> Result<(), String> {
-    let repo = match Repository::open(repository_path) {
-        Ok(repo) => repo,
-        Err(err) => return Err(err.description().into())
-    };
+pub fn commit_files(repository_path: &str, new_version: &str) -> Result<(), Error> {
+    let repo = try!(Repository::open(repository_path));
 
     let files = vec!["Cargo.toml", "Changelog.md"];
-    match add(&repo, &files[..]) {
-        Ok(_) => {},
-        Err(err) => return Err(err.description().into())
-    }
+    try!(add(&repo, &files[..]));
 
-    let signature = match get_signature(&repo) {
-        Ok(sig) => sig,
-        Err(e) => return Err(e.description().into())
-    };
-
-    match commit(&repo, &signature, &generate_commit_message(new_version)) {
-        Ok(_) => Ok(()),
-        Err(err) => Err(err.description().into())
-    }
+    let signature = try!(get_signature(&repo));
+    commit(&repo, &signature, &generate_commit_message(new_version)).map_err(Error::from)
 }
 
-pub fn tag(repository_path: &str, tag_name: &str, tag_message: &str) -> Result<(), String> {
-    let repo = match Repository::open(repository_path) {
-        Ok(repo) => repo,
-        Err(err) => return Err(err.description().into())
-    };
-
-    let signature = match get_signature(&repo) {
-        Ok(sig) => sig,
-        Err(e) => return Err(e.description().into())
-    };
+pub fn tag(repository_path: &str, tag_name: &str, tag_message: &str) -> Result<(), Error> {
+    let repo = try!(Repository::open(repository_path));
+    let signature = try!(get_signature(&repo));
 
     create_tag(&repo, &signature, &tag_name, &tag_message)
-        .map_err(|err| err.description().into())
+        .map_err(Error::from)
 }
