@@ -49,7 +49,7 @@ fn add<P: AsRef<Path>>(repo: &Repository, files: &[P]) -> Result<(), git2::Error
     let mut index = try!(repo.index());
 
     for path in files {
-        let _ = try!(index.add_path(path.as_ref()));
+        try!(index.add_path(path.as_ref()));
     }
 
     index.write()
@@ -114,7 +114,7 @@ pub fn version_bump_since_tag(path: &str, tag: &str) -> CommitType {
     walker.push_range(&tag).expect("Adding a range failed");
 
     let tag = walker.map(|c| repo.find_commit(c).expect("No commit found"))
-        .map(|c| format_commit(c))
+        .map(format_commit)
         .map(|c| commit_analyzer::analyze_single(&c).expect("Analyzing commit failed"))
         .max().unwrap_or(CommitType::Unknown);
 

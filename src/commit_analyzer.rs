@@ -15,7 +15,7 @@ pub fn analyze_single(commit: &str) -> Result<CommitType, Error> {
     let clog = Clog::new().expect("Clog initialization failed");
     let commit = clog.parse_raw_commit(commit);
 
-    if commit.breaks.len() > 0 {
+    if !commit.breaks.is_empty() {
         return Ok(Major);
     }
 

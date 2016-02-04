@@ -147,7 +147,7 @@ A `user.name` in the global config.
     if is_dry_run {
         logger::stdout(format!("New version would be: {}", new_version));
         logger::stdout("Would write the following Changelog:");
-        let changelog = match changelog::generate(repository_path, &version.to_string(), &new_version.to_string()) {
+        let changelog = match changelog::generate(repository_path, &version.to_string(), &new_version) {
             Ok(log) => log,
             Err(err) => {
                 logger::stderr(format!("Generating Changelog failed: {:?}", err));
@@ -171,7 +171,7 @@ A `user.name` in the global config.
         }
 
         logger::stdout(format!("Writing Changelog"));
-        match changelog::write(repository_path, &version.to_string(), &new_version.to_string()) {
+        match changelog::write(repository_path, &version.to_string(), &new_version) {
             Ok(_)    => { },
             Err(err) => {
                 logger::stderr(format!("Writing Changelog failed: {:?}", err));
