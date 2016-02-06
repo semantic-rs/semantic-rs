@@ -103,8 +103,6 @@ Make sure to specify it in one of the following locations:
 
 Committer information is taken from the following environment variables, if set:
 
-GIT_AUTHOR_NAME
-GIT_AUTHOR_EMAIL
 GIT_COMMITTER_NAME
 GIT_COMMITTER_EMAIL
 

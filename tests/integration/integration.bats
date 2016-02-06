@@ -124,7 +124,7 @@ setup_dirs() {
   cd env-vars
  setup_dirs
 
-  export GIT_AUTHOR_NAME=semantic-rs
+  export GIT_COMMITTER_NAME=semantic-rs
   export GIT_COMMITTER_EMAIL=semantic@rs
 
   run semantic-rs -w

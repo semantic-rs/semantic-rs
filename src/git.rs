@@ -7,11 +7,7 @@ use error::Error;
 
 pub fn get_signature(repo: &Repository) -> Result<Signature, Error> {
     let author = {
-        let mut author = env::var("GIT_AUTHOR_NAME").map_err(Error::from);
-
-        if author.is_err() {
-            author = env::var("GIT_COMMITTER_NAME").map_err(Error::from);
-        }
+        let mut author = env::var("GIT_COMMITTER_NAME").map_err(Error::from);
 
         if author.is_err() {
             let config = try!(repo.config());
@@ -21,11 +17,7 @@ pub fn get_signature(repo: &Repository) -> Result<Signature, Error> {
     };
 
     let email = {
-        let mut email = env::var("GIT_AUTHOR_EMAIL").map_err(Error::from);
-
-        if email.is_err() {
-            email = env::var("GIT_COMMITTER_EMAIL").map_err(Error::from);
-        }
+        let mut email = env::var("GIT_COMMITTER_EMAIL").map_err(Error::from);
 
         if email.is_err() {
             let config = try!(repo.config());
