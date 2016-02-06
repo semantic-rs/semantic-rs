@@ -99,7 +99,6 @@ fn main() {
             logger::stderr(r"
 A release commit needs a committer name and email address.
 We tried fetching it from different locations, but couldn't find one.
-Make sure to specify it in one of the following locations:
 
 Committer information is taken from the following environment variables, if set:
 
@@ -110,8 +109,7 @@ If none is set the normal git config is tried in the following order:
 
 Local repository config
 User config
-Global config
-                           ");
+Global config");
             process::exit(1);
         }
     };
