@@ -101,17 +101,18 @@ A release commit needs a committer name and email address.
 We tried fetching it from different locations, but couldn't find one.
 Make sure to specify it in one of the following locations:
 
-Environment Variable GIT_AUTHOR_NAME
-Environment Variable GIT_COMMITTER_NAME
-A `user.name` in the repository config.
-A `user.name` in the user config.
-A `user.name` in the global config.
+Committer information is taken from the following environment variables, if set:
 
-Environment Variable GIT_AUTHOR_EMAIL
-Environment Variable GIT_COMMITTER_EMAIL
-A `user.name` in the repository config.
-A `user.name` in the user config.
-A `user.name` in the global config.
+GIT_AUTHOR_NAME
+GIT_AUTHOR_EMAIL
+GIT_COMMITTER_NAME
+GIT_COMMITTER_EMAIL
+
+If none is set the normal git config is tried in the following order:
+
+Local repository config
+User config
+Global config
                            ");
             process::exit(1);
         }
