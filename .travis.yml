@@ -10,9 +10,9 @@ addons:
 
 # run builds for both all the trains
 rust:
-  - nightly
-  - beta
   - stable
+  - beta
+  - nightly
 
 before_script:
   - |
