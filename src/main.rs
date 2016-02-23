@@ -184,6 +184,12 @@ Global config");
             }
         }
 
+        logger::stdout("Package crate");
+        if !cargo::package(repository_path) {
+            logger::stderr("`cargo package` failed. See above for the cargo error message");
+            process::exit(1);
+        }
+
         match git::commit_files(repository_path, &new_version) {
             Ok(_)    => { },
             Err(err) => {
