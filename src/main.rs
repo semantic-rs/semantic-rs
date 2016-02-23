@@ -169,12 +169,6 @@ Global config");
             }
         }
 
-        logger::stdout("Updating lockfile");
-        if !cargo::update_lockfile(repository_path) {
-            logger::stderr("`cargo fetch` failed. See above for the cargo error message");
-            process::exit(1);
-        }
-
         logger::stdout(format!("Writing Changelog"));
         match changelog::write(repository_path, &version.to_string(), &new_version) {
             Ok(_)    => { },
@@ -182,6 +176,12 @@ Global config");
                 logger::stderr(format!("Writing Changelog failed: {:?}", err));
                 process::exit(1);
             }
+        }
+
+        logger::stdout("Updating lockfile");
+        if !cargo::update_lockfile(repository_path) {
+            logger::stderr("`cargo fetch` failed. See above for the cargo error message");
+            process::exit(1);
         }
 
         logger::stdout("Package crate");
