@@ -7,6 +7,7 @@ mod toml_file;
 mod git;
 mod changelog;
 mod commit_analyzer;
+mod cargo;
 mod error;
 
 extern crate rustc_serialize;
@@ -166,6 +167,12 @@ Global config");
                 logger::stderr(format!("Writing `Cargo.toml` failed: {:?}", err));
                 process::exit(1);
             }
+        }
+
+        logger::stdout("Updating lockfile");
+        if !cargo::update_lockfile(repository_path) {
+            logger::stderr("`cargo fetch` failed. See above for the cargo error message");
+            process::exit(1);
         }
 
         logger::stdout(format!("Writing Changelog"));
