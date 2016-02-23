@@ -180,13 +180,13 @@ Global config");
 
         logger::stdout("Updating lockfile");
         if !cargo::update_lockfile(repository_path) {
-            logger::stderr("`cargo fetch` failed. See above for the cargo error message");
+            logger::stderr("`cargo fetch` failed. See above for the cargo error message.");
             process::exit(1);
         }
 
         logger::stdout("Package crate");
         if !cargo::package(repository_path) {
-            logger::stderr("`cargo package` failed. See above for the cargo error message");
+            logger::stderr("`cargo package` failed. See above for the cargo error message.");
             process::exit(1);
         }
 

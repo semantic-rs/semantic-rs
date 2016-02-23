@@ -25,6 +25,7 @@ fn print_message<P: AsRef<str>>(message: P, message_type: MessageType) {
             error_terminal.fg(term::color::RED).unwrap();
             writeln!(error_terminal, "{}", message.as_ref()).unwrap();
             error_terminal.reset().unwrap();
+            error_terminal.flush().unwrap();
         }
     }
 }
