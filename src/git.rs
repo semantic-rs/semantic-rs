@@ -126,8 +126,6 @@ pub fn commit_files(repository_path: &str, new_version: &str) -> Result<(), Erro
         !repo.status_should_ignore(path).expect("Determining ignore status of file failed")
     }).collect::<Vec<_>>();
 
-    println!("These files will be added: {:?}", files);
-
     try!(add(&repo, &files[..]));
 
     let signature = try!(get_signature(&repo));
