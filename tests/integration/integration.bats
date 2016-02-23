@@ -119,3 +119,20 @@ setup_dirs() {
   [ "$status" -eq 0 ]
   grep -q 'version = "1.0.0"' Cargo.toml
 }
+
+@test "Respects Git environment variables" {
+  cd env-vars
+ setup_dirs
+
+  export GIT_COMMITTER_NAME=semantic-rs
+  export GIT_COMMITTER_EMAIL=semantic@rs
+
+  run semantic-rs -w
+  [ "$status" -eq 0 ]
+
+  run git log --oneline --format=format:'%an %ae'
+  [ "${lines[0]}" = "semantic-rs semantic@rs" ]
+
+  unset GIT_AUTHOR_NAME
+  unset GIT_COMMITTER_EMAIL
+}

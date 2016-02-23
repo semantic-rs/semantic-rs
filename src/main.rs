@@ -1,8 +1,13 @@
+#![cfg_attr(feature = "dev", allow(unstable_features))]
+#![cfg_attr(feature = "dev", feature(plugin))]
+#![cfg_attr(feature = "dev", plugin(clippy))]
+
 mod logger;
 mod toml_file;
 mod git;
 mod changelog;
 mod commit_analyzer;
+mod error;
 
 extern crate rustc_serialize;
 extern crate toml;
@@ -17,6 +22,7 @@ use commit_analyzer::CommitType;
 use std::process;
 use semver::Version;
 use std::env;
+use std::error::Error;
 
 const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 const USAGE: &'static str = "
@@ -78,14 +84,32 @@ fn main() {
     logger::stdout("Analyzing your repository");
     let repository_path = &args.flag_path;
 
-    match git2::Repository::open(repository_path) {
-        Ok(_) => { },
-        Err(ref e) if e.code() == git2::ErrorCode::NotFound => {
-            logger::stderr(format!("Could not find git repository at {}", repository_path));
-            process::exit(1);
-        },
+    let repo = match git2::Repository::open(repository_path) {
+        Ok(repo) => repo,
         Err(e) => {
             logger::stderr(format!("Could not open the git repository: {:?}", e));
+            process::exit(1);
+        }
+    };
+
+    let _signature = match git::get_signature(&repo) {
+        Ok(sig) => sig,
+        Err(e) => {
+            logger::stderr(format!("Failed to get the committer's name and email address: {}", e.description()));
+            logger::stderr(r"
+A release commit needs a committer name and email address.
+We tried fetching it from different locations, but couldn't find one.
+
+Committer information is taken from the following environment variables, if set:
+
+GIT_COMMITTER_NAME
+GIT_COMMITTER_EMAIL
+
+If none is set the normal git config is tried in the following order:
+
+Local repository config
+User config
+Global config");
             process::exit(1);
         }
     };
@@ -121,7 +145,7 @@ fn main() {
     if is_dry_run {
         logger::stdout(format!("New version would be: {}", new_version));
         logger::stdout("Would write the following Changelog:");
-        let changelog = match changelog::generate(repository_path, &version.to_string(), &new_version.to_string()) {
+        let changelog = match changelog::generate(repository_path, &version.to_string(), &new_version) {
             Ok(log) => log,
             Err(err) => {
                 logger::stderr(format!("Generating Changelog failed: {:?}", err));
@@ -145,7 +169,7 @@ fn main() {
         }
 
         logger::stdout(format!("Writing Changelog"));
-        match changelog::write(repository_path, &version.to_string(), &new_version.to_string()) {
+        match changelog::write(repository_path, &version.to_string(), &new_version) {
             Ok(_)    => { },
             Err(err) => {
                 logger::stderr(format!("Writing Changelog failed: {:?}", err));
