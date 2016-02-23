@@ -187,7 +187,7 @@ Global config");
         match git::commit_files(repository_path, &new_version) {
             Ok(_)    => { },
             Err(err) => {
-                logger::stderr(format!("Committing `Cargo.toml` and `Changelog.md` failed: {:?}", err));
+                logger::stderr(format!("Committing files failed: {:?}", err));
                 process::exit(1);
             }
         }
