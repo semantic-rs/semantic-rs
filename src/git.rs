@@ -120,7 +120,14 @@ pub fn generate_commit_message(new_version: &str) -> String {
 pub fn commit_files(repository_path: &str, new_version: &str) -> Result<(), Error> {
     let repo = try!(Repository::open(repository_path));
 
-    let files = vec!["Cargo.toml", "Changelog.md"];
+    let files = ["Cargo.toml", "Cargo.lock", "Changelog.md"];
+    let files = files.iter().filter(|filename| {
+        let path = Path::new(filename);
+        !repo.status_should_ignore(path).expect("Determining ignore status of file failed")
+    }).collect::<Vec<_>>();
+
+    println!("These files will be added: {:?}", files);
+
     try!(add(&repo, &files[..]));
 
     let signature = try!(get_signature(&repo));
