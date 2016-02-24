@@ -23,7 +23,9 @@ use commit_analyzer::CommitType;
 use std::process;
 use semver::Version;
 use std::env;
+use std::path::PathBuf;
 use std::error::Error;
+use git2::{Repository, Signature};
 
 const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 const USAGE: &'static str = "
@@ -45,6 +47,28 @@ struct Args {
     flag_path: String,
     flag_write: bool,
     flag_version: bool,
+}
+
+struct Config {
+    repository_path: PathBuf,
+    repository: Repository,
+    write_mode: bool,
+    old_version: Version,
+    new_version: Option<Version>,
+    signature: Signature<'static>,
+}
+
+impl Config {
+    fn old_version_string(&self) -> String {
+        self.old_version.to_string()
+    }
+
+    fn new_version_string(&self) -> String {
+        self.new_version
+            .as_ref()
+            .map(|s| s.to_string())
+            .unwrap_or("".into())
+    }
 }
 
 fn version_bump(version: &Version, bump: CommitType) -> Option<Version> {
@@ -93,7 +117,7 @@ fn main() {
         }
     };
 
-    let _signature = match git::get_signature(&repo) {
+    let signature = match git::get_signature(&repo) {
         Ok(sig) => sig,
         Err(e) => {
             logger::stderr(format!("Failed to get the committer's name and email address: {}", e.description()));
@@ -124,7 +148,17 @@ Global config");
     };
 
     let version = Version::parse(&version).expect("Not a valid version");
-    logger::stdout(format!("Current version: {}", version.to_string()));
+
+    let mut config = Config {
+        repository_path: PathBuf::from(repository_path),
+        repository: repo,
+        write_mode: !is_dry_run,
+        old_version: version.clone(),
+        new_version: None,
+        signature: signature,
+    };
+
+    logger::stdout(format!("Current version: {}", config.old_version_string()));
 
     logger::stdout("Analyzing commits");
 
@@ -136,12 +170,14 @@ Global config");
         logger::stdout(format!("Commits analyzed. Bump will be {:?}", bump));
     }
     let new_version = match version_bump(&version, bump) {
-        Some(new_version) => new_version.to_string(),
+        Some(new_version) => new_version,
         None => {
             logger::stdout("No version bump. Nothing to do.");
             process::exit(0);
         }
     };
+    config.new_version = Some(new_version);
+    let new_version = config.new_version.unwrap().to_string();
 
     if is_dry_run {
         logger::stdout(format!("New version would be: {}", new_version));
