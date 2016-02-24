@@ -1,7 +1,10 @@
+use super::Config;
 use std::process::Command;
 
-pub fn update_lockfile(repository_path: &str) -> bool {
-    let manifest_path = format!("{}/Cargo.toml", repository_path);
+pub fn update_lockfile(config: &Config) -> bool {
+    let mut manifest_path = config.repository_path.clone();
+    manifest_path.push("Cargo.toml");
+
     Command::new("cargo")
         .arg("fetch")
         .arg("--manifest-path")
@@ -11,8 +14,10 @@ pub fn update_lockfile(repository_path: &str) -> bool {
         .unwrap_or(false)
 }
 
-pub fn package(repository_path: &str) -> bool {
-    let manifest_path = format!("{}/Cargo.toml", repository_path);
+pub fn package(config: &Config) -> bool {
+    let mut manifest_path = config.repository_path.clone();
+    manifest_path.push("Cargo.toml");
+
     Command::new("cargo")
         .arg("package")
         .arg("--manifest-path")
