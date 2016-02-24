@@ -5,7 +5,7 @@ use git2::{self, Repository, Commit, Signature};
 use commit_analyzer::{self, CommitType};
 use error::Error;
 
-pub fn get_signature(repo: &Repository) -> Result<Signature, Error> {
+pub fn get_signature(repo: &Repository) -> Result<Signature<'static>, Error> {
     let author = {
         let mut author = env::var("GIT_COMMITTER_NAME").map_err(Error::from);
 
@@ -26,7 +26,9 @@ pub fn get_signature(repo: &Repository) -> Result<Signature, Error> {
         try!(email)
     };
 
-    Signature::now(&author, &email).map_err(From::from)
+    Signature::now(&author, &email)
+        .map_err(From::from)
+        .map(|s| s.to_owned())
 }
 
 fn range_to_head(commit: &str) -> String {
