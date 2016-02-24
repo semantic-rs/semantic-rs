@@ -1,3 +1,4 @@
+use super::Config;
 use std::path::Path;
 use semver::Version;
 use std::env;
@@ -72,12 +73,7 @@ fn create_tag(repo: &Repository, signature: &Signature, tag_name: &str, message:
         .map(|_| ())
 }
 
-pub fn latest_tag(path: &str) -> Option<Version> {
-    let repo = match Repository::open(path) {
-        Ok(repo) => repo,
-        Err(_) => return None
-    };
-
+pub fn latest_tag(repo: &Repository) -> Option<Version> {
     let tags = match repo.tag_names(None) {
         Ok(tags) => tags,
         Err(_) => return None
@@ -89,20 +85,18 @@ pub fn latest_tag(path: &str) -> Option<Version> {
         .max()
 }
 
-pub fn version_bump_since_latest(path: &str) -> CommitType {
-    match latest_tag(path) {
+pub fn version_bump_since_latest(config: &Config) -> CommitType {
+    match latest_tag(&config.repository) {
         Some(t) => {
             let tag = format!("v{}", t.to_string());
-            version_bump_since_tag(path, &tag)
+            version_bump_since_tag(&config.repository, &tag)
         },
         None => CommitType::Major
     }
 }
 
-pub fn version_bump_since_tag(path: &str, tag: &str) -> CommitType {
+pub fn version_bump_since_tag(repo: &Repository, tag: &str) -> CommitType {
     let tag = range_to_head(tag);
-
-    let repo = Repository::open(path).expect("Open repository failed");
 
     let mut walker = repo.revwalk().expect("Creating a revwalk failed");
     walker.push_range(&tag).expect("Adding a range failed");

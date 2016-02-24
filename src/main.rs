@@ -49,25 +49,22 @@ struct Args {
     flag_version: bool,
 }
 
-struct Config {
+pub struct Config {
     repository_path: PathBuf,
     repository: Repository,
     write_mode: bool,
-    old_version: Version,
-    new_version: Option<Version>,
+    current_version: Version,
+    new_version: Version,
     signature: Signature<'static>,
 }
 
 impl Config {
-    fn old_version_string(&self) -> String {
-        self.old_version.to_string()
+    fn current_version_string(&self) -> String {
+        self.current_version.to_string()
     }
 
     fn new_version_string(&self) -> String {
-        self.new_version
-            .as_ref()
-            .map(|s| s.to_string())
-            .unwrap_or("".into())
+        self.new_version.to_string()
     }
 }
 
@@ -153,36 +150,36 @@ Global config");
         repository_path: PathBuf::from(repository_path),
         repository: repo,
         write_mode: !is_dry_run,
-        old_version: version.clone(),
-        new_version: None,
+        current_version: version,
+        new_version: Version::parse("0.0.0").unwrap(),
         signature: signature,
     };
 
-    logger::stdout(format!("Current version: {}", config.old_version_string()));
+    logger::stdout(format!("Current version: {}", config.current_version_string()));
 
     logger::stdout("Analyzing commits");
 
-    let bump = git::version_bump_since_latest(repository_path);
+    let bump = git::version_bump_since_latest(&config);
     if is_dry_run {
         logger::stdout(format!("Commits analyzed. Bump would be {:?}", bump));
     }
     else {
         logger::stdout(format!("Commits analyzed. Bump will be {:?}", bump));
     }
-    let new_version = match version_bump(&version, bump) {
+    let new_version = match version_bump(&config.current_version, bump) {
         Some(new_version) => new_version,
         None => {
             logger::stdout("No version bump. Nothing to do.");
             process::exit(0);
         }
     };
-    config.new_version = Some(new_version);
-    let new_version = config.new_version.unwrap().to_string();
+    config.new_version = new_version;
+    let new_version = config.new_version_string();
 
     if is_dry_run {
         logger::stdout(format!("New version would be: {}", new_version));
         logger::stdout("Would write the following Changelog:");
-        let changelog = match changelog::generate(repository_path, &version.to_string(), &new_version) {
+        let changelog = match changelog::generate(&config) {
             Ok(log) => log,
             Err(err) => {
                 logger::stderr(format!("Generating Changelog failed: {:?}", err));
@@ -206,7 +203,7 @@ Global config");
         }
 
         logger::stdout(format!("Writing Changelog"));
-        match changelog::write(repository_path, &version.to_string(), &new_version) {
+        match changelog::write(repository_path, &config.current_version_string(), &new_version) {
             Ok(_)    => { },
             Err(err) => {
                 logger::stderr(format!("Writing Changelog failed: {:?}", err));
@@ -235,7 +232,7 @@ Global config");
         }
 
         logger::stdout("Creating annotated git tag");
-        let tag_message = match changelog::generate(repository_path, &version.to_string(), &new_version) {
+        let tag_message = match changelog::generate(&config) {
             Ok(msg) => msg,
             Err(err) => {
                 logger::stderr(format!("Can't generate changelog: {:?}", err));

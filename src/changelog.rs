@@ -1,3 +1,4 @@
+use super::Config;
 use std::io::BufWriter;
 use clog::Clog;
 use clog::fmt::MarkdownWriter;
@@ -17,12 +18,12 @@ pub fn write(repository_path: &str, old_version: &str, new_version: &str) -> Res
     clog.write_changelog().map_err(|_| "Failed to write Changelog.md".to_owned())
 }
 
-pub fn generate(repository_path: &str, old_version: &str, new_version: &str) -> Result<String, String> {
-    let mut clog = try!(Clog::with_dir(repository_path).map_err(|_| "Clog failed".to_owned()));
+pub fn generate(config: &Config) -> Result<String, String> {
+    let mut clog = try!(Clog::with_dir(&config.repository_path).map_err(|_| "Clog failed".to_owned()));
 
     clog
-        .from(format!("v{}", old_version))
-        .version(format!("v{}", new_version));
+        .from(format!("v{}", config.current_version))
+        .version(format!("v{}", config.new_version));
 
     let mut out_buf = BufWriter::new(Vec::new());
 
