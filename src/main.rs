@@ -241,7 +241,7 @@ Global config");
         };
 
         let tag_name = format!("v{}", new_version);
-        match git::tag(repository_path, &tag_name, &tag_message) {
+        match git::tag(&config, &tag_name, &tag_message) {
             Ok(_) => { },
             Err(err) => {
                 logger::stderr(format!("Failed to create git tag: {:?}", err));

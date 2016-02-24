@@ -128,10 +128,10 @@ pub fn commit_files(config: &Config) -> Result<(), Error> {
     commit(&repo, &signature, &generate_commit_message(&config.new_version_string())).map_err(Error::from)
 }
 
-pub fn tag(repository_path: &str, tag_name: &str, tag_message: &str) -> Result<(), Error> {
-    let repo = try!(Repository::open(repository_path));
-    let signature = try!(get_signature(&repo));
+pub fn tag(config: &Config, tag_name: &str, tag_message: &str) -> Result<(), Error> {
+    let repo = &config.repository;
+    let signature = &config.signature;
 
-    create_tag(&repo, &signature, &tag_name, &tag_message)
+    create_tag(repo, signature, &tag_name, &tag_message)
         .map_err(Error::from)
 }
