@@ -223,7 +223,7 @@ Global config");
             process::exit(1);
         }
 
-        match git::commit_files(repository_path, &new_version) {
+        match git::commit_files(&config) {
             Ok(_)    => { },
             Err(err) => {
                 logger::stderr(format!("Committing files failed: {:?}", err));

@@ -113,8 +113,8 @@ pub fn generate_commit_message(new_version: &str) -> String {
     format!("Bump version to {}", new_version).into()
 }
 
-pub fn commit_files(repository_path: &str, new_version: &str) -> Result<(), Error> {
-    let repo = try!(Repository::open(repository_path));
+pub fn commit_files(config: &Config) -> Result<(), Error> {
+    let repo = &config.repository;
 
     let files = ["Cargo.toml", "Cargo.lock", "Changelog.md"];
     let files = files.iter().filter(|filename| {
@@ -125,7 +125,7 @@ pub fn commit_files(repository_path: &str, new_version: &str) -> Result<(), Erro
     try!(add(&repo, &files[..]));
 
     let signature = try!(get_signature(&repo));
-    commit(&repo, &signature, &generate_commit_message(new_version)).map_err(Error::from)
+    commit(&repo, &signature, &generate_commit_message(&config.new_version_string())).map_err(Error::from)
 }
 
 pub fn tag(repository_path: &str, tag_name: &str, tag_message: &str) -> Result<(), Error> {

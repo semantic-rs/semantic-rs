@@ -2,7 +2,6 @@ use super::Config;
 use std::io::BufWriter;
 use clog::Clog;
 use clog::fmt::MarkdownWriter;
-use std::path::PathBuf;
 
 pub fn write(config: &Config) -> Result<(), String> {
     let mut clog = try!(Clog::with_dir(&config.repository_path).map_err(|_| "Clog failed".to_owned()));
