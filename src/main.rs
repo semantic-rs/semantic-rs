@@ -198,7 +198,7 @@ Global config");
     else {
         logger::stdout(format!("New version: {}", new_version));
 
-        match toml_file::write_new_version(repository_path, &new_version) {
+        match toml_file::write_new_version(&config) {
             Ok(_)    => { },
             Err(err) => {
                 logger::stderr(format!("Writing `Cargo.toml` failed: {:?}", err));

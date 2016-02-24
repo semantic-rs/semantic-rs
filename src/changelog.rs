@@ -5,9 +5,7 @@ use clog::fmt::MarkdownWriter;
 
 pub fn write(config: &Config) -> Result<(), String> {
     let mut clog = try!(Clog::with_dir(&config.repository_path).map_err(|_| "Clog failed".to_owned()));
-
-    let mut clog_file = config.repository_path.clone();
-    clog_file.push("Changelog.md");
+    let clog_file = config.repository_path.join("Changelog.md");
 
     // TODO: Make this configurable? Rely on clog's own configuration?
     clog.changelog(clog_file.to_str().unwrap())
