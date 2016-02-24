@@ -66,6 +66,10 @@ impl Config {
     fn new_version_string(&self) -> String {
         self.new_version.to_string()
     }
+
+    fn manifest_path(&self) -> PathBuf {
+        self.repository_path.join("Cargo.toml")
+    }
 }
 
 fn version_bump(version: &Version, bump: CommitType) -> Option<Version> {
