@@ -178,10 +178,9 @@ Global config");
         }
     };
     config.new_version = new_version;
-    let new_version = config.new_version_string();
 
     if is_dry_run {
-        logger::stdout(format!("New version would be: {}", new_version));
+        logger::stdout(format!("New version would be: {}", config.new_version));
         logger::stdout("Would write the following Changelog:");
         let changelog = match changelog::generate(&config) {
             Ok(log) => log,
@@ -196,7 +195,7 @@ Global config");
         logger::stdout("Would create annotated git tag");
     }
     else {
-        logger::stdout(format!("New version: {}", new_version));
+        logger::stdout(format!("New version: {}", config.new_version));
 
         match toml_file::write_new_version(&config) {
             Ok(_)    => { },
@@ -244,7 +243,7 @@ Global config");
             }
         };
 
-        let tag_name = format!("v{}", new_version);
+        let tag_name = format!("v{}", config.new_version);
         match git::tag(&config, &tag_name, &tag_message) {
             Ok(_) => { },
             Err(err) => {
