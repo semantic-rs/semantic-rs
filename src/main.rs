@@ -203,7 +203,7 @@ Global config");
         }
 
         logger::stdout(format!("Writing Changelog"));
-        match changelog::write(repository_path, &config.current_version_string(), &new_version) {
+        match changelog::write(&config) {
             Ok(_)    => { },
             Err(err) => {
                 logger::stderr(format!("Writing Changelog failed: {:?}", err));

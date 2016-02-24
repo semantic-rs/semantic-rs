@@ -4,16 +4,16 @@ use clog::Clog;
 use clog::fmt::MarkdownWriter;
 use std::path::PathBuf;
 
-pub fn write(repository_path: &str, old_version: &str, new_version: &str) -> Result<(), String> {
-    let mut clog = try!(Clog::with_dir(repository_path).map_err(|_| "Clog failed".to_owned()));
+pub fn write(config: &Config) -> Result<(), String> {
+    let mut clog = try!(Clog::with_dir(&config.repository_path).map_err(|_| "Clog failed".to_owned()));
 
-    let mut clog_file = PathBuf::from(repository_path);
+    let mut clog_file = config.repository_path.clone();
     clog_file.push("Changelog.md");
 
     // TODO: Make this configurable? Rely on clog's own configuration?
     clog.changelog(clog_file.to_str().unwrap())
-        .from(format!("v{}", old_version))
-        .version(format!("v{}", new_version));
+        .from(format!("v{}", config.current_version))
+        .version(format!("v{}", config.new_version));
 
     clog.write_changelog().map_err(|_| "Failed to write Changelog.md".to_owned())
 }
