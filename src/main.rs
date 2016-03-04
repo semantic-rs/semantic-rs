@@ -7,6 +7,7 @@ mod toml_file;
 mod git;
 mod changelog;
 mod commit_analyzer;
+mod cargo;
 mod error;
 
 extern crate rustc_serialize;
@@ -177,10 +178,22 @@ Global config");
             }
         }
 
+        logger::stdout("Updating lockfile");
+        if !cargo::update_lockfile(repository_path) {
+            logger::stderr("`cargo fetch` failed. See above for the cargo error message.");
+            process::exit(1);
+        }
+
+        logger::stdout("Package crate");
+        if !cargo::package(repository_path) {
+            logger::stderr("`cargo package` failed. See above for the cargo error message.");
+            process::exit(1);
+        }
+
         match git::commit_files(repository_path, &new_version) {
             Ok(_)    => { },
             Err(err) => {
-                logger::stderr(format!("Committing `Cargo.toml` and `Changelog.md` failed: {:?}", err));
+                logger::stderr(format!("Committing files failed: {:?}", err));
                 process::exit(1);
             }
         }

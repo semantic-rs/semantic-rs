@@ -46,8 +46,7 @@ setup_dirs() {
   cd initial-release
   setup_dirs
 
-  run semantic-rs -w
-  [ "$status" -eq 0 ]
+  semantic-rs -w
   grep -q 'version = "1.0.0"' Cargo.toml
 }
 
@@ -55,14 +54,11 @@ setup_dirs() {
   cd next-minor
   setup_dirs
 
-  run grep -q 'version = "1.0.0"' Cargo.toml
-  [ "$status" -eq 0 ]
+  grep -q 'version = "1.0.0"' Cargo.toml
 
-  run semantic-rs -w
-  [ "$status" -eq 0 ]
+  semantic-rs -w
 
-  run grep -q 'version = "1.1.0"' Cargo.toml
-  [ "$status" -eq 0 ]
+  grep -q 'version = "1.1.0"' Cargo.toml
 
   run git log --oneline --format=format:%s
   [ "${lines[0]}" = "Bump version to 1.1.0" ]
@@ -72,8 +68,7 @@ setup_dirs() {
   cd no-bump
   setup_dirs
 
-  run grep -q 'version = "1.1.0"' Cargo.toml
-  [ "$status" -eq 0 ]
+  grep -q 'version = "1.1.0"' Cargo.toml
 
   run semantic-rs
   [ "$status" -eq 0 ]
@@ -96,7 +91,8 @@ setup_dirs() {
   run git tag -l
   [ "$output" = "v1.0.0" ]
 
-  run semantic-rs -w
+  semantic-rs -w
+
   run git tag -l
   [ "${lines[0]}" = "v1.0.0" ]
   [ "${lines[1]}" = "v1.1.0" ]
@@ -106,8 +102,7 @@ setup_dirs() {
   cd dry-run
   setup_dirs
 
-  run semantic-rs
-  [ "$status" -eq 0 ]
+  semantic-rs
   grep -q 'version = "0.1.0"' Cargo.toml
 }
 
@@ -115,20 +110,18 @@ setup_dirs() {
   cd write-mode
   setup_dirs
 
-  CI=true run semantic-rs
-  [ "$status" -eq 0 ]
+  CI=true semantic-rs
   grep -q 'version = "1.0.0"' Cargo.toml
 }
 
 @test "Respects Git environment variables" {
   cd env-vars
- setup_dirs
+  setup_dirs
 
   export GIT_COMMITTER_NAME=semantic-rs
   export GIT_COMMITTER_EMAIL=semantic@rs
 
-  run semantic-rs -w
-  [ "$status" -eq 0 ]
+  semantic-rs -w
 
   run git log --oneline --format=format:'%an %ae'
   [ "${lines[0]}" = "semantic-rs semantic@rs" ]
