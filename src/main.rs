@@ -22,7 +22,8 @@ use docopt::Docopt;
 use commit_analyzer::CommitType;
 use std::process;
 use semver::Version;
-use std::env;
+use std::{env,fs};
+use std::path::Path;
 use std::error::Error;
 
 const VERSION: &'static str = env!("CARGO_PKG_VERSION");
@@ -83,7 +84,9 @@ fn main() {
     println!("semantic.rs 🚀");
 
     logger::stdout("Analyzing your repository");
-    let repository_path = &args.flag_path;
+    let path = Path::new(&args.flag_path);
+    let path = fs::canonicalize(path).expect("Path does not exist or a component is not a directory");
+    let repository_path = path.to_str().expect("Path is not valid unicode");
 
     let repo = match git2::Repository::open(repository_path) {
         Ok(repo) => repo,
