@@ -199,5 +199,9 @@ Global config");
         let tag_name = format!("v{}", new_version);
         git::tag(repository_path, &tag_name, &tag_message)
             .unwrap_or_else(|err| print_exit!("Failed to create git tag: {:?}", err));
+
+        logger::stdout("Pushing new commit and tag");
+        git::push(repository_path)
+            .unwrap_or_else(|err| print_exit!("Failed to push git: {:?}", err));
     }
 }

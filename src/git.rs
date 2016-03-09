@@ -1,4 +1,5 @@
 use std::path::Path;
+use std::process::Command;
 use semver::Version;
 use std::env;
 use git2::{self, Repository, Commit, Signature};
@@ -137,5 +138,20 @@ pub fn tag(repository_path: &str, tag_name: &str, tag_message: &str) -> Result<(
     let signature = try!(get_signature(&repo));
 
     create_tag(&repo, &signature, &tag_name, &tag_message)
+        .map_err(Error::from)
+}
+
+pub fn push(repository_path: &str) -> Result<(), Error> {
+    let git_dir = format!("{}/.git", repository_path);
+    let branch = "master"; // TODO: Extract from environment, might be != master
+    Command::new("git")
+        .arg("--git-dir")
+        .arg(git_dir)
+        .arg("push")
+        .arg("--follow-tags")
+        .arg("origin")
+        .arg(branch)
+        .status()
+        .map(|_| ())
         .map_err(Error::from)
 }
