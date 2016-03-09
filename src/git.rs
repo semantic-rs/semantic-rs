@@ -1,8 +1,8 @@
 use std::path::Path;
-use std::process::Command;
 use semver::Version;
 use std::env;
-use git2::{self, Repository, Commit, Signature};
+use git2::{self, Repository, Commit, Signature, PushOptions, RemoteCallbacks, Cred};
+
 use commit_analyzer::{self, CommitType};
 use error::Error;
 
@@ -141,17 +141,33 @@ pub fn tag(repository_path: &str, tag_name: &str, tag_message: &str) -> Result<(
         .map_err(Error::from)
 }
 
-pub fn push(repository_path: &str) -> Result<(), Error> {
-    let git_dir = format!("{}/.git", repository_path);
+pub fn push(repository_path: &str, tag_name: &str) -> Result<(), Error> {
+    let token = try!(env::var("GITHUB_TOKEN"));
+
     let branch = "master"; // TODO: Extract from environment, might be != master
-    Command::new("git")
-        .arg("--git-dir")
-        .arg(git_dir)
-        .arg("push")
-        .arg("--follow-tags")
-        .arg("origin")
-        .arg(branch)
-        .status()
+
+    // We need to push both the branch we just committed as well as the tag we created.
+    let branch_ref = format!("refs/head/{}", branch);
+    let tag_ref    = format!("refs/tags/{}", tag_name);
+    let refs = [&branch_ref[..], &tag_ref[..]];
+
+    // TODO: Get user and repo
+    let user = "";
+    let repo = "";
+    let url = format!("https://github.com/{}/{}.git", user, repo);
+
+    let repo = try!(Repository::open(repository_path));
+    let mut remote = try!(repo.remote_anonymous(&url));
+
+    let mut cbs = RemoteCallbacks::new();
+    cbs.credentials(|_url, _username, _allowed| {
+        Cred::userpass_plaintext(&token, "")
+    });
+    let mut opts = PushOptions::new();
+    opts.remote_callbacks(cbs);
+
+    remote
+        .push(&refs, Some(&mut opts))
         .map(|_| ())
         .map_err(Error::from)
 }

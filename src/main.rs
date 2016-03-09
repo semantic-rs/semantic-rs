@@ -205,7 +205,7 @@ Global config");
             .unwrap_or_else(|err| print_exit!("Failed to create git tag: {:?}", err));
 
         logger::stdout("Pushing new commit and tag");
-        git::push(repository_path)
+        git::push(repository_path, &tag_name)
             .unwrap_or_else(|err| print_exit!("Failed to push git: {:?}", err));
 
         logger::stdout("Creating GitHub release");
