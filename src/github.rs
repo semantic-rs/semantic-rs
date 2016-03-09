@@ -10,8 +10,9 @@ pub fn release(tag_name: &str, tag_message: &str) -> Result<(), Error> {
     let client = Client::new();
     let github = Github::new(USERAGENT, &client, Some(token));
 
-    let user = "badboy";
-    let repo = "test-project";
+    // TODO: Get user and repo
+    let user = "";
+    let repo = "";
     let branch = "master"; // TODO: Extract from environment, might be != master
 
     let opts = ReleaseOptions::builder(tag_name)
