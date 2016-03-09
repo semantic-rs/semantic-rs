@@ -9,6 +9,7 @@ mod changelog;
 mod commit_analyzer;
 mod cargo;
 mod error;
+mod github;
 
 extern crate rustc_serialize;
 extern crate toml;
@@ -17,6 +18,8 @@ extern crate semver;
 extern crate docopt;
 extern crate git2;
 extern crate clog;
+extern crate hyper;
+extern crate hubcaps;
 
 use docopt::Docopt;
 use commit_analyzer::CommitType;
@@ -27,6 +30,7 @@ use std::path::Path;
 use std::error::Error;
 
 const VERSION: &'static str = env!("CARGO_PKG_VERSION");
+const USERAGENT: &'static str = concat!("semantic-rs/", env!("CARGO_PKG_VERSION"));
 const USAGE: &'static str = "
 semantic.rs 🚀
 
@@ -203,5 +207,9 @@ Global config");
         logger::stdout("Pushing new commit and tag");
         git::push(repository_path)
             .unwrap_or_else(|err| print_exit!("Failed to push git: {:?}", err));
+
+        logger::stdout("Creating GitHub release");
+        github::release(&tag_name, &tag_message)
+            .unwrap_or_else(|err| print_exit!("Failed to create GitHub release: {:?}", err));
     }
 }
