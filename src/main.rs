@@ -20,6 +20,7 @@ extern crate git2;
 extern crate clog;
 extern crate hyper;
 extern crate hubcaps;
+extern crate url;
 
 use docopt::Docopt;
 use commit_analyzer::CommitType;
@@ -28,6 +29,7 @@ use semver::Version;
 use std::{env,fs};
 use std::path::Path;
 use std::error::Error;
+use url::Url;
 
 const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 const USERAGENT: &'static str = concat!("semantic-rs/", env!("CARGO_PKG_VERSION"));
@@ -77,6 +79,29 @@ fn version_bump(version: &Version, bump: CommitType) -> Option<Version> {
 
 fn ci_env_set() -> bool {
     env::var("CI").is_ok()
+}
+
+fn user_repo_from_url(url: Url) -> Result<(String, String), String> {
+    let path = match url.path() {
+        Some(path) => path,
+        None => return Err("URL should contain user and repository".into()),
+    };
+
+    let user = path[0].clone();
+    let repo = match path[1].rfind(".git") {
+        None => path[1].clone(),
+        Some(suffix_pos) => {
+            let valid_pos = path[1].len() - 4;
+            if valid_pos == suffix_pos {
+                let path = &path[1][0..suffix_pos];
+                path.into()
+            } else {
+                return Err(".git suffix not at the end of URL".into())
+            }
+        }
+    };
+
+    Ok((user, repo))
 }
 
 fn main() {
@@ -131,6 +156,26 @@ If none is set the normal git config is tried in the following order:
 Local repository config
 User config
 Global config");
+            process::exit(1);
+        }
+    };
+
+    let remote_url = match repo.find_remote("origin") {
+        Err(e) => {
+            logger::stderr(format!("Could not determine the origin remote url: {:?}", e));
+            process::exit(1);
+        },
+        Ok(remote) => {
+            let url = remote.url().expect("Remote URL is not valid UTF-8");
+            Url::parse(&url).expect("Remote URL can't be parsed")
+        }
+    };
+
+    // TODO: Save those and re-use them later
+    let (_user, _repo) = match user_repo_from_url(remote_url) {
+        Ok(user_repo) => user_repo,
+        Err(e) => {
+            logger::stderr(format!("Could not extract user and repository name from URL: {:?}", e));
             process::exit(1);
         }
     };
