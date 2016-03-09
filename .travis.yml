@@ -29,7 +29,6 @@ script:
   - |
       travis-cargo build &&
       travis-cargo test &&
-      pushd tests/integration && bats integration.bats && popd &&
       travis-cargo --only stable doc
 after_success:
   - travis-cargo coveralls --no-sudo
