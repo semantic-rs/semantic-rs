@@ -47,7 +47,7 @@ macro_rules! print_exit {
         process::exit(1);
     }};
     ($fmt:expr, $($arg:tt)*) => {{
-        logger::stderr(format!($fmt, $($args)*));
+        logger::stderr(format!($fmt, $($arg)*));
         process::exit(1);
     }};
 }
@@ -131,13 +131,8 @@ Global config");
         }
     };
 
-    let version = match toml_file::read_from_file(repository_path) {
-        Ok(toml) => toml,
-        Err(e) => {
-            logger::stderr(format!("Reading `Cargo.toml` failed: {:?}", e));
-            process::exit(1);
-        }
-    };
+    let version = toml_file::read_from_file(repository_path)
+        .unwrap_or_else(|err| print_exit!("Reading `Cargo.toml` failed: {:?}", err));
 
     let version = Version::parse(&version).expect("Not a valid version");
     logger::stdout(format!("Current version: {}", version.to_string()));
@@ -177,59 +172,32 @@ Global config");
     else {
         logger::stdout(format!("New version: {}", new_version));
 
-        match toml_file::write_new_version(repository_path, &new_version) {
-            Ok(_)    => { },
-            Err(err) => {
-                logger::stderr(format!("Writing `Cargo.toml` failed: {:?}", err));
-                process::exit(1);
-            }
-        }
+        toml_file::write_new_version(repository_path, &new_version)
+            .unwrap_or_else(|err| print_exit!("Writing `Cargo.toml` failed: {:?}", err));
 
         logger::stdout(format!("Writing Changelog"));
-        match changelog::write(repository_path, &version.to_string(), &new_version) {
-            Ok(_)    => { },
-            Err(err) => {
-                logger::stderr(format!("Writing Changelog failed: {:?}", err));
-                process::exit(1);
-            }
-        }
+        changelog::write(repository_path, &version.to_string(), &new_version)
+            .unwrap_or_else(|err| print_exit!("Writing Changelog failed: {:?}", err));
 
         logger::stdout("Updating lockfile");
         if !cargo::update_lockfile(repository_path) {
-            logger::stderr("`cargo fetch` failed. See above for the cargo error message.");
-            process::exit(1);
+            print_exit!("`cargo fetch` failed. See above for the cargo error message.");
         }
 
         logger::stdout("Package crate");
         if !cargo::package(repository_path) {
-            logger::stderr("`cargo package` failed. See above for the cargo error message.");
-            process::exit(1);
+            print_exit!("`cargo package` failed. See above for the cargo error message.");
         }
 
-        match git::commit_files(repository_path, &new_version) {
-            Ok(_)    => { },
-            Err(err) => {
-                logger::stderr(format!("Committing files failed: {:?}", err));
-                process::exit(1);
-            }
-        }
+        git::commit_files(repository_path, &new_version)
+            .unwrap_or_else(|err| print_exit!("Committing files failed: {:?}", err));
 
         logger::stdout("Creating annotated git tag");
-        let tag_message = match changelog::generate(repository_path, &version.to_string(), &new_version) {
-            Ok(msg) => msg,
-            Err(err) => {
-                logger::stderr(format!("Can't generate changelog: {:?}", err));
-                process::exit(1);
-            }
-        };
+        let tag_message = changelog::generate(repository_path, &version.to_string(), &new_version)
+            .unwrap_or_else(|err| print_exit!("Can't generate changelog: {:?}", err));
 
         let tag_name = format!("v{}", new_version);
-        match git::tag(repository_path, &tag_name, &tag_message) {
-            Ok(_) => { },
-            Err(err) => {
-                logger::stderr(format!("Failed to create git tag: {:?}", err));
-                process::exit(1);
-            }
-        }
+        git::tag(repository_path, &tag_name, &tag_message)
+            .unwrap_or_else(|err| print_exit!("Failed to create git tag: {:?}", err));
     }
 }
