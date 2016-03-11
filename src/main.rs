@@ -41,6 +41,17 @@ Options:
   -w, --write            Run with writing the changes afterwards.
 ";
 
+macro_rules! print_exit {
+    ($fmt:expr) => {{
+        logger::stderr(format!($fmt));
+        process::exit(1);
+    }};
+    ($fmt:expr, $($arg:tt)*) => {{
+        logger::stderr(format!($fmt, $($args)*));
+        process::exit(1);
+    }};
+}
+
 #[derive(Debug, RustcDecodable)]
 struct Args {
     flag_path: String,
@@ -85,8 +96,10 @@ fn main() {
 
     logger::stdout("Analyzing your repository");
     let path = Path::new(&args.flag_path);
-    let path = fs::canonicalize(path).expect("Path does not exist or a component is not a directory");
-    let repository_path = path.to_str().expect("Path is not valid unicode");
+    let path = fs::canonicalize(path)
+        .unwrap_or_else(|_| print_exit!("Path does not exist or a component is not a directory"));
+    let repository_path = path.to_str()
+        .unwrap_or_else(|| print_exit!("Path is not valid unicode"));
 
     let repo = match git2::Repository::open(repository_path) {
         Ok(repo) => repo,
