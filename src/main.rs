@@ -161,10 +161,7 @@ Global config");
     };
 
     let remote_url = match repo.find_remote("origin") {
-        Err(e) => {
-            logger::stderr(format!("Could not determine the origin remote url: {:?}", e));
-            process::exit(1);
-        },
+        Err(e) => print_exit!("Could not determine the origin remote url: {:?}", e),
         Ok(remote) => {
             let url = remote.url().expect("Remote URL is not valid UTF-8");
             Url::parse(&url).expect("Remote URL can't be parsed")
@@ -172,13 +169,8 @@ Global config");
     };
 
     // TODO: Save those and re-use them later
-    let (_user, _repo) = match user_repo_from_url(remote_url) {
-        Ok(user_repo) => user_repo,
-        Err(e) => {
-            logger::stderr(format!("Could not extract user and repository name from URL: {:?}", e));
-            process::exit(1);
-        }
-    };
+    let (_user, _repo) = user_repo_from_url(remote_url)
+        .unwrap_or_else(|e| print_exit!("Could not extract user and repository name from URL: {:?}", e));
 
     let version = toml_file::read_from_file(repository_path)
         .unwrap_or_else(|err| print_exit!("Reading `Cargo.toml` failed: {:?}", err));
