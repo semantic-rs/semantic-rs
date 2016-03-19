@@ -32,6 +32,7 @@ use std::{env,fs};
 use std::path::Path;
 use std::error::Error;
 use url::Url;
+use std::io::{self, Read};
 
 const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 const USERAGENT: &'static str = concat!("semantic-rs/", env!("CARGO_PKG_VERSION"));
@@ -243,18 +244,32 @@ Global config");
 
     if is_dry_run {
         logger::stdout(format!("New version would be: {}", new_version));
-        logger::stdout("Would write the following Changelog:");
-        let changelog = match changelog::generate(repository_path, &version.to_string(), &new_version) {
-            Ok(log) => log,
+
+        let has_commits = match changelog::has_commits(repository_path, &version.to_string(), &new_version) {
+            Ok(commits) => commits,
             Err(err) => {
-                logger::stderr(format!("Generating Changelog failed: {:?}", err));
+                logger::stderr(format!("Getting commits for Changelog failed: {:?}", err));
                 process::exit(1);
             }
         };
-        logger::stdout("====================================");
-        logger::stdout(changelog);
-        logger::stdout("====================================");
-        logger::stdout("Would create annotated git tag");
+
+        if has_commits {
+            logger::stdout("Would write the following Changelog:");
+            let changelog = match changelog::generate(repository_path, &version.to_string(), &new_version) {
+                Ok(log) => log,
+                Err(err) => {
+                    logger::stderr(format!("Generating Changelog failed: {:?}", err));
+                    process::exit(1);
+                }
+            };
+            logger::stdout("====================================");
+            logger::stdout(changelog);
+            logger::stdout("====================================");
+            logger::stdout("Would create annotated git tag");
+        } else {
+            logger::stdout("No commits found to generate a Changelog");
+        }
+
     }
     else {
         logger::stdout(format!("New version: {}", new_version));

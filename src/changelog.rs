@@ -2,6 +2,9 @@ use std::io::BufWriter;
 use clog::Clog;
 use clog::fmt::MarkdownWriter;
 use std::path::PathBuf;
+use std::io::prelude::*;
+use std::fs::{File,OpenOptions};
+use std::io::Error;
 
 pub fn write(repository_path: &str, old_version: &str, new_version: &str) -> Result<(), String> {
     let mut clog = try!(Clog::with_dir(repository_path).map_err(|_| "Clog failed".to_owned()));
@@ -15,6 +18,30 @@ pub fn write(repository_path: &str, old_version: &str, new_version: &str) -> Res
         .version(format!("v{}", new_version));
 
     clog.write_changelog().map_err(|_| "Failed to write Changelog.md".to_owned())
+}
+
+pub fn write_custom(repository_path: &str, new_version: &str, changelog_text: &str) -> Result<(), Error> {
+    let mut changelog_path = PathBuf::from(repository_path);
+    changelog_path.push("Changelog.md");
+    let mut file = match OpenOptions::new().write(true).open(changelog_path) {
+        Ok(mut f) => f,
+        Err(err) => return Err(err)
+    };
+    try!(file.write(format!("## {}", new_version).as_bytes()));
+    match file.write(changelog_text.as_bytes()) {
+        Ok(_) => Ok(()),
+        Err(err) => Err(err)
+    }
+}
+
+pub fn has_commits(repository_path: &str, old_version: &str, new_version: &str) -> Result<bool, String> {
+    let mut clog = try!(Clog::with_dir(repository_path).map_err(|_| "Clog failed".to_owned()));
+
+    let commits = clog.from(format!("v{}", old_version))
+        .version(format!("v{}", new_version))
+        .get_commits();
+
+    Ok(commits.len() > 0)
 }
 
 pub fn generate(repository_path: &str, old_version: &str, new_version: &str) -> Result<String, String> {
