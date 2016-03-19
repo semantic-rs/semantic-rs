@@ -3,7 +3,7 @@ use clog::Clog;
 use clog::fmt::MarkdownWriter;
 use std::path::PathBuf;
 use std::io::prelude::*;
-use std::fs::{File,OpenOptions};
+use std::fs::OpenOptions;
 use std::io::Error;
 
 pub fn write(repository_path: &str, old_version: &str, new_version: &str) -> Result<(), String> {
