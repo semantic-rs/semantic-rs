@@ -27,8 +27,8 @@ pub fn write_custom(repository_path: &str, new_version: &str, changelog_text: &s
         Ok(f) => f,
         Err(err) => return Err(err)
     };
-    try!(file.write(format!("## {}", new_version).as_bytes()));
-    match file.write(changelog_text.as_bytes()) {
+    try!(file.write(format!("## v{}\n", new_version).as_bytes()));
+    match file.write(format!("{}\n", changelog_text).as_bytes()) {
         Ok(_) => Ok(()),
         Err(err) => Err(err)
     }

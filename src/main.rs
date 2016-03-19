@@ -278,8 +278,24 @@ Global config");
             .unwrap_or_else(|err| print_exit!("Writing `Cargo.toml` failed: {:?}", err));
 
         logger::stdout(format!("Writing Changelog"));
-        changelog::write(repository_path, &version.to_string(), &new_version)
-            .unwrap_or_else(|err| print_exit!("Writing Changelog failed: {:?}", err));
+
+        let has_commits = match changelog::has_commits(repository_path, &version.to_string(), &new_version) {
+            Ok(commits) => commits,
+            Err(err) => {
+                logger::stderr(format!("Getting commits for Changelog failed: {:?}", err));
+                process::exit(1);
+            }
+        };
+
+        if has_commits {
+            changelog::write(repository_path, &version.to_string(), &new_version)
+                .unwrap_or_else(|err| print_exit!("Writing Changelog failed: {:?}", err));
+        } else {
+            logger::stdout("Could not generate a Changelog based on project's commits");
+            logger::stdout("Generating Changelog with default text");
+            changelog::write_custom(repository_path, &new_version, "Stable version".into())
+                .unwrap_or_else(|err| print_exit!("Writing Changelog failed: {:?}", err));
+        }
 
         if config.release_mode {
             logger::stdout("Updating lockfile");
