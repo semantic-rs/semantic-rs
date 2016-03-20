@@ -23,10 +23,7 @@ pub fn write(repository_path: &str, old_version: &str, new_version: &str) -> Res
 pub fn write_custom(repository_path: &str, new_version: &str, changelog_text: &str) -> Result<(), Error> {
     let mut changelog_path = PathBuf::from(repository_path);
     changelog_path.push("Changelog.md");
-    let mut file = match OpenOptions::new().create(true).write(true).open(changelog_path) {
-        Ok(f) => f,
-        Err(err) => return Err(err)
-    };
+    let mut file = try!(OpenOptions::new().create(true).write(true).open(changelog_path));
     try!(file.write(format!("## v{}\n", new_version).as_bytes()));
     match file.write(format!("{}\n", changelog_text).as_bytes()) {
         Ok(_) => Ok(()),
