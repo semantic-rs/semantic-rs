@@ -47,6 +47,8 @@ Options:
   --version              Show version.
   -p PATH, --path=PATH   Specifies the repository path. [default: .]
   -w, --write            Run with writing the changes afterwards.
+  -r <r>, --release=<r>  Create release on GitHub and publish on crates.io (only in write mode) [default: yes]
+  -b <b>, --branch=<b>   The branch on which releases should happen. [default: master]
 ";
 
 macro_rules! print_exit {
@@ -65,6 +67,16 @@ struct Args {
     flag_path: String,
     flag_write: bool,
     flag_version: bool,
+    flag_release: String,
+    flag_branch: String,
+}
+
+fn string_to_bool(answer: &str) -> bool {
+    match &answer.to_lowercase()[..] {
+        "yes" | "true" | "1" => true,
+        "no" | "false" | "0" => false,
+        _ => false
+    }
 }
 
 fn version_bump(version: &Version, bump: CommitType) -> Option<Version> {
@@ -125,7 +137,11 @@ fn main() {
         !args.flag_write
     };
 
+    let release_mode = string_to_bool(&args.flag_release);
+
     cb.write(args.flag_write);
+    cb.release(release_mode);
+    cb.branch(args.flag_branch);
 
     println!("semantic.rs 🚀");
 
@@ -173,27 +189,31 @@ Global config");
         cb.signature(signature.to_owned());
     }
 
-    let remote_url = match repo.find_remote("origin") {
-        Err(e) => print_exit!("Could not determine the origin remote url: {:?}", e),
-        Ok(remote) => {
-            let url = remote.url().expect("Remote URL is not valid UTF-8");
-            Url::parse(&url).expect("Remote URL can't be parsed")
-        }
-    };
+    // In case we are in write-mode AND release mode,
+    // we will make sure we got all configuration settings
+    if !is_dry_run && release_mode {
+        let remote_url = match repo.find_remote("origin") {
+            Err(e) => print_exit!("Could not determine the origin remote url: {:?}", e),
+            Ok(remote) => {
+                let url = remote.url().expect("Remote URL is not valid UTF-8");
+                Url::parse(&url).expect("Remote URL can't be parsed")
+            }
+        };
 
-    let (user, repo_name) = user_repo_from_url(remote_url)
-        .unwrap_or_else(|e| print_exit!("Could not extract user and repository name from URL: {:?}", e));
-    cb.user(user);
-    cb.repository_name(repo_name);
+        let (user, repo_name) = user_repo_from_url(remote_url)
+            .unwrap_or_else(|e| print_exit!("Could not extract user and repository name from URL: {:?}", e));
+        cb.user(user);
+        cb.repository_name(repo_name);
 
-    let gh_token = env::var("GH_TOKEN")
-        .unwrap_or_else(|err| print_exit!("GH_TOKEN not set: {:?}", err));
+        let gh_token = env::var("GH_TOKEN")
+            .unwrap_or_else(|err| print_exit!("GH_TOKEN not set: {:?}", err));
 
-    let travis_token = env::var("TRAVIS_TOKEN")
-        .unwrap_or_else(|err| print_exit!("TRAVIS_TOKEN not set: {:?}", err));
+        let travis_token = env::var("TRAVIS_TOKEN")
+            .unwrap_or_else(|err| print_exit!("TRAVIS_TOKEN not set: {:?}", err));
 
-    cb.gh_token(gh_token);
-    cb.travis_token(travis_token);
+        cb.gh_token(gh_token);
+        cb.travis_token(travis_token);
+    }
 
     cb.repository(repo);
     cb.branch("master".into());
@@ -247,9 +267,11 @@ Global config");
         changelog::write(repository_path, &version.to_string(), &new_version)
             .unwrap_or_else(|err| print_exit!("Writing Changelog failed: {:?}", err));
 
-        logger::stdout("Updating lockfile");
-        if !cargo::update_lockfile(repository_path) {
-            print_exit!("`cargo fetch` failed. See above for the cargo error message.");
+        if config.release_mode {
+            logger::stdout("Updating lockfile");
+            if !cargo::update_lockfile(repository_path) {
+                print_exit!("`cargo fetch` failed. See above for the cargo error message.");
+            }
         }
 
         logger::stdout("Package crate");
@@ -268,17 +290,19 @@ Global config");
         git::tag(&config.repository, &tag_name, &tag_message)
             .unwrap_or_else(|err| print_exit!("Failed to create git tag: {:?}", err));
 
-        logger::stdout("Pushing new commit and tag");
-        git::push(&config, &tag_name)
-            .unwrap_or_else(|err| print_exit!("Failed to push git: {:?}", err));
+        if config.release_mode {
+            logger::stdout("Pushing new commit and tag");
+            git::push(&config, &tag_name)
+                .unwrap_or_else(|err| print_exit!("Failed to push git: {:?}", err));
 
-        logger::stdout("Creating GitHub release");
-        github::release(&config, &tag_name, &tag_message)
-            .unwrap_or_else(|err| print_exit!("Failed to create GitHub release: {:?}", err));
+            logger::stdout("Creating GitHub release");
+            github::release(&config, &tag_name, &tag_message)
+                .unwrap_or_else(|err| print_exit!("Failed to create GitHub release: {:?}", err));
 
-        logger::stdout("Publishing crate on crates.io");
-        if !cargo::publish(&config.repository_path, &config.travis_token.as_ref().unwrap()) {
-            print_exit!("Failed to publish on crates.io");
+            logger::stdout("Publishing crate on crates.io");
+            if !cargo::publish(&config.repository_path, &config.travis_token.as_ref().unwrap()) {
+                print_exit!("Failed to publish on crates.io");
+            }
         }
     }
 }
