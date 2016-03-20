@@ -10,6 +10,7 @@ mod commit_analyzer;
 mod cargo;
 mod error;
 mod github;
+mod config;
 
 extern crate rustc_serialize;
 extern crate toml;
@@ -24,6 +25,7 @@ extern crate url;
 
 use docopt::Docopt;
 use commit_analyzer::CommitType;
+use config::ConfigBuilder;
 use std::process;
 use semver::Version;
 use std::{env,fs};
@@ -109,6 +111,8 @@ fn main() {
         .and_then(|d| d.decode())
         .unwrap_or_else(|e| e.exit());
 
+    let mut cb = ConfigBuilder::new();
+
     if args.flag_version {
         println!("semantic.rs 🚀 -- v{}", VERSION);
         process::exit(0);
@@ -120,6 +124,8 @@ fn main() {
     else {
         !args.flag_write
     };
+
+    cb.write(args.flag_write);
 
     println!("semantic.rs 🚀");
 
@@ -138,11 +144,15 @@ fn main() {
         }
     };
 
-    let _signature = match git::get_signature(&repo) {
-        Ok(sig) => sig,
-        Err(e) => {
-            logger::stderr(format!("Failed to get the committer's name and email address: {}", e.description()));
-            logger::stderr(r"
+    cb.repository_path(repository_path.to_owned());
+
+    // extra scope scope to make sure borrow of `repo` is dropped
+    {
+        let signature = match git::get_signature(&repo) {
+            Ok(sig) => sig,
+            Err(e) => {
+                logger::stderr(format!("Failed to get the committer's name and email address: {}", e.description()));
+                logger::stderr(r"
 A release commit needs a committer name and email address.
 We tried fetching it from different locations, but couldn't find one.
 
@@ -156,9 +166,12 @@ If none is set the normal git config is tried in the following order:
 Local repository config
 User config
 Global config");
-            process::exit(1);
-        }
-    };
+                process::exit(1);
+            }
+        };
+
+        cb.signature(signature.to_owned());
+    }
 
     let remote_url = match repo.find_remote("origin") {
         Err(e) => print_exit!("Could not determine the origin remote url: {:?}", e),
@@ -168,9 +181,10 @@ Global config");
         }
     };
 
-    // TODO: Save those and re-use them later
-    let (_user, _repo) = user_repo_from_url(remote_url)
+    let (user, repo_name) = user_repo_from_url(remote_url)
         .unwrap_or_else(|e| print_exit!("Could not extract user and repository name from URL: {:?}", e));
+    cb.user(user);
+    cb.repository_name(repo_name);
 
     let gh_token = env::var("GH_TOKEN")
         .unwrap_or_else(|err| print_exit!("GH_TOKEN not set: {:?}", err));
@@ -178,7 +192,14 @@ Global config");
     let travis_token = env::var("TRAVIS_TOKEN")
         .unwrap_or_else(|err| print_exit!("TRAVIS_TOKEN not set: {:?}", err));
 
-    let version = toml_file::read_from_file(repository_path)
+    cb.gh_token(gh_token);
+    cb.travis_token(travis_token);
+
+    cb.repository(repo);
+    cb.branch("master".into());
+    let config = cb.build();
+
+    let version = toml_file::read_from_file(&config.repository_path)
         .unwrap_or_else(|err| print_exit!("Reading `Cargo.toml` failed: {:?}", err));
 
     let version = Version::parse(&version).expect("Not a valid version");
@@ -186,7 +207,7 @@ Global config");
 
     logger::stdout("Analyzing commits");
 
-    let bump = git::version_bump_since_latest(repository_path);
+    let bump = git::version_bump_since_latest(&config.repository);
     if is_dry_run {
         logger::stdout(format!("Commits analyzed. Bump would be {:?}", bump));
     }
@@ -236,7 +257,7 @@ Global config");
             print_exit!("`cargo package` failed. See above for the cargo error message.");
         }
 
-        git::commit_files(repository_path, &new_version)
+        git::commit_files(&config.repository, &new_version)
             .unwrap_or_else(|err| print_exit!("Committing files failed: {:?}", err));
 
         logger::stdout("Creating annotated git tag");
@@ -244,15 +265,20 @@ Global config");
             .unwrap_or_else(|err| print_exit!("Can't generate changelog: {:?}", err));
 
         let tag_name = format!("v{}", new_version);
-        git::tag(repository_path, &tag_name, &tag_message)
+        git::tag(&config.repository, &tag_name, &tag_message)
             .unwrap_or_else(|err| print_exit!("Failed to create git tag: {:?}", err));
 
         logger::stdout("Pushing new commit and tag");
-        git::push(repository_path, &tag_name)
+        git::push(&config, &tag_name)
             .unwrap_or_else(|err| print_exit!("Failed to push git: {:?}", err));
 
         logger::stdout("Creating GitHub release");
-        github::release(&tag_name, &tag_message)
+        github::release(&config, &tag_name, &tag_message)
             .unwrap_or_else(|err| print_exit!("Failed to create GitHub release: {:?}", err));
+
+        logger::stdout("Publishing crate on crates.io");
+        if !cargo::publish(&config.repository_path, &config.travis_token.as_ref().unwrap()) {
+            print_exit!("Failed to publish on crates.io");
+        }
     }
 }

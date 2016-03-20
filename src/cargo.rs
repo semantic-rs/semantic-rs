@@ -22,9 +22,8 @@ pub fn package(repository_path: &str) -> bool {
         .unwrap_or(false)
 }
 
-pub fn publish(repository_path: &str) -> bool {
+pub fn publish(repository_path: &str, token: &str) -> bool {
     let manifest_path = format!("{}/Cargo.toml", repository_path);
-    let token = "TO BE DETERMINED";
     Command::new("cargo")
         .arg("publish")
         .arg("--manifest-path")

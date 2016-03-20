@@ -5,6 +5,7 @@ use git2::{self, Repository, Commit, Signature, PushOptions, RemoteCallbacks, Cr
 
 use commit_analyzer::{self, CommitType};
 use error::Error;
+use config::Config;
 
 pub fn get_signature(repo: &Repository) -> Result<Signature, Error> {
     let author = {
@@ -71,12 +72,7 @@ fn create_tag(repo: &Repository, signature: &Signature, tag_name: &str, message:
         .map(|_| ())
 }
 
-pub fn latest_tag(path: &str) -> Option<Version> {
-    let repo = match Repository::open(path) {
-        Ok(repo) => repo,
-        Err(_) => return None
-    };
-
+pub fn latest_tag(repo: &Repository) -> Option<Version> {
     let tags = match repo.tag_names(None) {
         Ok(tags) => tags,
         Err(_) => return None
@@ -88,20 +84,18 @@ pub fn latest_tag(path: &str) -> Option<Version> {
         .max()
 }
 
-pub fn version_bump_since_latest(path: &str) -> CommitType {
-    match latest_tag(path) {
+pub fn version_bump_since_latest(repo: &Repository) -> CommitType {
+    match latest_tag(repo) {
         Some(t) => {
             let tag = format!("v{}", t.to_string());
-            version_bump_since_tag(path, &tag)
+            version_bump_since_tag(repo, &tag)
         },
         None => CommitType::Major
     }
 }
 
-pub fn version_bump_since_tag(path: &str, tag: &str) -> CommitType {
+pub fn version_bump_since_tag(repo: &Repository, tag: &str) -> CommitType {
     let tag = range_to_head(tag);
-
-    let repo = Repository::open(path).expect("Open repository failed");
 
     let mut walker = repo.revwalk().expect("Creating a revwalk failed");
     walker.push_range(&tag).expect("Adding a range failed");
@@ -118,9 +112,7 @@ pub fn generate_commit_message(new_version: &str) -> String {
     format!("Bump version to {}", new_version).into()
 }
 
-pub fn commit_files(repository_path: &str, new_version: &str) -> Result<(), Error> {
-    let repo = try!(Repository::open(repository_path));
-
+pub fn commit_files(repo: &Repository, new_version: &str) -> Result<(), Error> {
     let files = ["Cargo.toml", "Cargo.lock", "Changelog.md"];
     let files = files.iter().filter(|filename| {
         let path = Path::new(filename);
@@ -133,18 +125,20 @@ pub fn commit_files(repository_path: &str, new_version: &str) -> Result<(), Erro
     commit(&repo, &signature, &generate_commit_message(new_version)).map_err(Error::from)
 }
 
-pub fn tag(repository_path: &str, tag_name: &str, tag_message: &str) -> Result<(), Error> {
-    let repo = try!(Repository::open(repository_path));
+pub fn tag(repo: &Repository, tag_name: &str, tag_message: &str) -> Result<(), Error> {
     let signature = try!(get_signature(&repo));
 
     create_tag(&repo, &signature, &tag_name, &tag_message)
         .map_err(Error::from)
 }
 
-pub fn push(repository_path: &str, tag_name: &str) -> Result<(), Error> {
-    let token = try!(env::var("GITHUB_TOKEN"));
+pub fn push(config: &Config, tag_name: &str) -> Result<(), Error> {
+    let repo      = &config.repository;
+    let token     = config.gh_token.as_ref().unwrap();
 
-    let branch = "master"; // TODO: Extract from environment, might be != master
+    let user      = &config.user;
+    let repo_name = &config.repository_name;
+    let branch    = &config.branch;
 
     // We need to push both the branch we just committed as well as the tag we created.
     let branch_ref = format!("refs/head/{}", branch);
@@ -152,11 +146,8 @@ pub fn push(repository_path: &str, tag_name: &str) -> Result<(), Error> {
     let refs = [&branch_ref[..], &tag_ref[..]];
 
     // TODO: Get user and repo
-    let user = "";
-    let repo = "";
-    let url = format!("https://github.com/{}/{}.git", user, repo);
+    let url = format!("https://github.com/{}/{}.git", user, repo_name);
 
-    let repo = try!(Repository::open(repository_path));
     let mut remote = try!(repo.remote_anonymous(&url));
 
     let mut cbs = RemoteCallbacks::new();
