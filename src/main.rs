@@ -172,6 +172,12 @@ Global config");
     let (_user, _repo) = user_repo_from_url(remote_url)
         .unwrap_or_else(|e| print_exit!("Could not extract user and repository name from URL: {:?}", e));
 
+    let gh_token = env::var("GH_TOKEN")
+        .unwrap_or_else(|err| print_exit!("GH_TOKEN not set: {:?}", err));
+
+    let travis_token = env::var("TRAVIS_TOKEN")
+        .unwrap_or_else(|err| print_exit!("TRAVIS_TOKEN not set: {:?}", err));
+
     let version = toml_file::read_from_file(repository_path)
         .unwrap_or_else(|err| print_exit!("Reading `Cargo.toml` failed: {:?}", err));
 
