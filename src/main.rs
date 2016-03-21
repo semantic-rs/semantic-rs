@@ -303,6 +303,8 @@ Global config");
             if !cargo::publish(&config.repository_path, &config.cargo_token.as_ref().unwrap()) {
                 print_exit!("Failed to publish on crates.io");
             }
+
+            println!("{} v{} is released. 🚀🚀🚀", config.repository_name, new_version);
         }
     }
 }
