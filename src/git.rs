@@ -49,8 +49,9 @@ fn add<P: AsRef<Path>>(repo: &Repository, files: &[P]) -> Result<(), git2::Error
     index.write()
 }
 
-fn commit(repo: &Repository, signature: &Signature, message: &str) -> Result<(), git2::Error> {
-    let update_ref = Some("HEAD");
+fn commit(config: &Config, message: &str) -> Result<(), git2::Error> {
+    let update_ref = format!("refs/heads/{}", config.branch);
+    let repo = &config.repository;
 
     let oid = try!(repo.refname_to_id("HEAD"));
     let parent_commit = try!(repo.find_commit(oid));
@@ -61,14 +62,17 @@ fn commit(repo: &Repository, signature: &Signature, message: &str) -> Result<(),
     let tree = try!(repo.find_tree(tree_oid));
 
     repo
-        .commit(update_ref, signature, signature, message, &tree, &parents)
+        .commit(Some(&update_ref), &config.signature, &config.signature, message, &tree, &parents)
         .map(|_| ())
 }
 
-fn create_tag(repo: &Repository, signature: &Signature, tag_name: &str, message: &str) -> Result<(), git2::Error> {
-    let obj = try!(repo.revparse_single("HEAD"));
+fn create_tag(config: &Config, tag_name: &str, message: &str) -> Result<(), git2::Error> {
+    let repo = &config.repository;
 
-    repo.tag(tag_name, &obj, &signature, message, false)
+    let rev = format!("refs/heads/{}", config.branch);
+    let obj = try!(repo.revparse_single(&rev));
+
+    repo.tag(tag_name, &obj, &config.signature, message, false)
         .map(|_| ())
 }
 
@@ -112,23 +116,21 @@ pub fn generate_commit_message(new_version: &str) -> String {
     format!("Bump version to {}", new_version).into()
 }
 
-pub fn commit_files(repo: &Repository, new_version: &str) -> Result<(), Error> {
+pub fn commit_files(config: &Config, new_version: &str) -> Result<(), Error> {
+    let repo = &config.repository;
     let files = ["Cargo.toml", "Cargo.lock", "Changelog.md"];
     let files = files.iter().filter(|filename| {
         let path = Path::new(filename);
         !repo.status_should_ignore(path).expect("Determining ignore status of file failed")
     }).collect::<Vec<_>>();
 
-    try!(add(&repo, &files[..]));
+    try!(add(&config.repository, &files[..]));
 
-    let signature = try!(get_signature(&repo));
-    commit(&repo, &signature, &generate_commit_message(new_version)).map_err(Error::from)
+    commit(config, &generate_commit_message(new_version)).map_err(Error::from)
 }
 
-pub fn tag(repo: &Repository, tag_name: &str, tag_message: &str) -> Result<(), Error> {
-    let signature = try!(get_signature(&repo));
-
-    create_tag(&repo, &signature, &tag_name, &tag_message)
+pub fn tag(config: &Config, tag_name: &str, tag_message: &str) -> Result<(), Error> {
+    create_tag(config, &tag_name, &tag_message)
         .map_err(Error::from)
 }
 

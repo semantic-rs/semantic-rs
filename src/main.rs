@@ -279,7 +279,7 @@ Global config");
             print_exit!("`cargo package` failed. See above for the cargo error message.");
         }
 
-        git::commit_files(&config.repository, &new_version)
+        git::commit_files(&config, &new_version)
             .unwrap_or_else(|err| print_exit!("Committing files failed: {:?}", err));
 
         logger::stdout("Creating annotated git tag");
@@ -287,7 +287,7 @@ Global config");
             .unwrap_or_else(|err| print_exit!("Can't generate changelog: {:?}", err));
 
         let tag_name = format!("v{}", new_version);
-        git::tag(&config.repository, &tag_name, &tag_message)
+        git::tag(&config, &tag_name, &tag_message)
             .unwrap_or_else(|err| print_exit!("Failed to create git tag: {:?}", err));
 
         if config.release_mode {
