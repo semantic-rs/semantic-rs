@@ -147,7 +147,6 @@ pub fn push(config: &Config, tag_name: &str) -> Result<(), Error> {
     let tag_ref    = format!("refs/tags/{}", tag_name);
     let refs = [&branch_ref[..], &tag_ref[..]];
 
-    // TODO: Get user and repo
     let url = format!("https://github.com/{}/{}.git", user, repo_name);
 
     let mut remote = try!(repo.remote_anonymous(&url));
