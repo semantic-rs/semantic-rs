@@ -46,7 +46,7 @@ setup_dirs() {
   cd initial-release
   setup_dirs
 
-  semantic-rs -w
+  semantic-rs -w --release=no
   grep -q 'version = "1.0.0"' Cargo.toml
 }
 
@@ -56,7 +56,7 @@ setup_dirs() {
 
   grep -q 'version = "1.0.0"' Cargo.toml
 
-  semantic-rs -w
+  semantic-rs -w --release=no
 
   grep -q 'version = "1.1.0"' Cargo.toml
 
@@ -70,7 +70,7 @@ setup_dirs() {
 
   grep -q 'version = "1.1.0"' Cargo.toml
 
-  run semantic-rs
+  run semantic-rs -w --release=no
   [ "$status" -eq 0 ]
   [[ "$output" =~ "No version bump. Nothing to do" ]]
 
@@ -91,7 +91,7 @@ setup_dirs() {
   run git tag -l
   [ "$output" = "v1.0.0" ]
 
-  semantic-rs -w
+  semantic-rs -w --release=no
 
   run git tag -l
   [ "${lines[0]}" = "v1.0.0" ]
@@ -110,7 +110,7 @@ setup_dirs() {
   cd write-mode
   setup_dirs
 
-  CI=true semantic-rs
+  CI=true semantic-rs --release=no
   grep -q 'version = "1.0.0"' Cargo.toml
 }
 
@@ -121,7 +121,7 @@ setup_dirs() {
   export GIT_COMMITTER_NAME=semantic-rs
   export GIT_COMMITTER_EMAIL=semantic@rs
 
-  semantic-rs -w
+  semantic-rs -w --release=no
 
   run git log --oneline --format=format:'%an %ae'
   [ "${lines[0]}" = "semantic-rs semantic@rs" ]

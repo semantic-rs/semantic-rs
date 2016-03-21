@@ -9,6 +9,8 @@ mod changelog;
 mod commit_analyzer;
 mod cargo;
 mod error;
+mod github;
+mod config;
 
 extern crate rustc_serialize;
 extern crate toml;
@@ -17,16 +19,22 @@ extern crate semver;
 extern crate docopt;
 extern crate git2;
 extern crate clog;
+extern crate hyper;
+extern crate hubcaps;
+extern crate url;
 
 use docopt::Docopt;
 use commit_analyzer::CommitType;
+use config::ConfigBuilder;
 use std::process;
 use semver::Version;
 use std::{env,fs};
 use std::path::Path;
 use std::error::Error;
+use url::Url;
 
 const VERSION: &'static str = env!("CARGO_PKG_VERSION");
+const USERAGENT: &'static str = concat!("semantic-rs/", env!("CARGO_PKG_VERSION"));
 const USAGE: &'static str = "
 semantic.rs 🚀
 
@@ -39,6 +47,8 @@ Options:
   --version              Show version.
   -p PATH, --path=PATH   Specifies the repository path. [default: .]
   -w, --write            Run with writing the changes afterwards.
+  -r <r>, --release=<r>  Create release on GitHub and publish on crates.io (only in write mode) [default: yes]
+  -b <b>, --branch=<b>   The branch on which releases should happen. [default: master]
 ";
 
 macro_rules! print_exit {
@@ -57,6 +67,16 @@ struct Args {
     flag_path: String,
     flag_write: bool,
     flag_version: bool,
+    flag_release: String,
+    flag_branch: String,
+}
+
+fn string_to_bool(answer: &str) -> bool {
+    match &answer.to_lowercase()[..] {
+        "yes" | "true" | "1" => true,
+        "no" | "false" | "0" => false,
+        _ => false
+    }
 }
 
 fn version_bump(version: &Version, bump: CommitType) -> Option<Version> {
@@ -75,10 +95,35 @@ fn ci_env_set() -> bool {
     env::var("CI").is_ok()
 }
 
+fn user_repo_from_url(url: Url) -> Result<(String, String), String> {
+    let path = match url.path() {
+        Some(path) => path,
+        None => return Err("URL should contain user and repository".into()),
+    };
+
+    let user = path[0].clone();
+    let repo = match path[1].rfind(".git") {
+        None => path[1].clone(),
+        Some(suffix_pos) => {
+            let valid_pos = path[1].len() - 4;
+            if valid_pos == suffix_pos {
+                let path = &path[1][0..suffix_pos];
+                path.into()
+            } else {
+                return Err("URL does not point to a git repository".into())
+            }
+        }
+    };
+
+    Ok((user, repo))
+}
+
 fn main() {
     let args: Args = Docopt::new(USAGE)
         .and_then(|d| d.decode())
         .unwrap_or_else(|e| e.exit());
+
+    let mut cb = ConfigBuilder::new();
 
     if args.flag_version {
         println!("semantic.rs 🚀 -- v{}", VERSION);
@@ -91,6 +136,12 @@ fn main() {
     else {
         !args.flag_write
     };
+
+    let release_mode = string_to_bool(&args.flag_release);
+
+    cb.write(args.flag_write);
+    cb.release(release_mode);
+    cb.branch(args.flag_branch);
 
     println!("semantic.rs 🚀");
 
@@ -109,11 +160,15 @@ fn main() {
         }
     };
 
-    let _signature = match git::get_signature(&repo) {
-        Ok(sig) => sig,
-        Err(e) => {
-            logger::stderr(format!("Failed to get the committer's name and email address: {}", e.description()));
-            logger::stderr(r"
+    cb.repository_path(repository_path.to_owned());
+
+    // extra scope scope to make sure borrow of `repo` is dropped
+    {
+        let signature = match git::get_signature(&repo) {
+            Ok(sig) => sig,
+            Err(e) => {
+                logger::stderr(format!("Failed to get the committer's name and email address: {}", e.description()));
+                logger::stderr(r"
 A release commit needs a committer name and email address.
 We tried fetching it from different locations, but couldn't find one.
 
@@ -127,11 +182,43 @@ If none is set the normal git config is tried in the following order:
 Local repository config
 User config
 Global config");
-            process::exit(1);
-        }
-    };
+                process::exit(1);
+            }
+        };
 
-    let version = toml_file::read_from_file(repository_path)
+        cb.signature(signature.to_owned());
+    }
+
+    // In case we are in write-mode AND release mode,
+    // we will make sure we got all configuration settings
+    if !is_dry_run && release_mode {
+        let remote_url = match repo.find_remote("origin") {
+            Err(e) => print_exit!("Could not determine the origin remote url: {:?}", e),
+            Ok(remote) => {
+                let url = remote.url().expect("Remote URL is not valid UTF-8");
+                Url::parse(&url).expect("Remote URL can't be parsed")
+            }
+        };
+
+        let (user, repo_name) = user_repo_from_url(remote_url)
+            .unwrap_or_else(|e| print_exit!("Could not extract user and repository name from URL: {:?}", e));
+        cb.user(user);
+        cb.repository_name(repo_name);
+
+        let gh_token = env::var("GH_TOKEN")
+            .unwrap_or_else(|err| print_exit!("GH_TOKEN not set: {:?}", err));
+
+        let cargo_token = env::var("CARGO_TOKEN")
+            .unwrap_or_else(|err| print_exit!("CARGO_TOKEN not set: {:?}", err));
+
+        cb.gh_token(gh_token);
+        cb.cargo_token(cargo_token);
+    }
+
+    cb.repository(repo);
+    let config = cb.build();
+
+    let version = toml_file::read_from_file(&config.repository_path)
         .unwrap_or_else(|err| print_exit!("Reading `Cargo.toml` failed: {:?}", err));
 
     let version = Version::parse(&version).expect("Not a valid version");
@@ -139,7 +226,7 @@ Global config");
 
     logger::stdout("Analyzing commits");
 
-    let bump = git::version_bump_since_latest(repository_path);
+    let bump = git::version_bump_since_latest(&config.repository);
     if is_dry_run {
         logger::stdout(format!("Commits analyzed. Bump would be {:?}", bump));
     }
@@ -179,9 +266,11 @@ Global config");
         changelog::write(repository_path, &version.to_string(), &new_version)
             .unwrap_or_else(|err| print_exit!("Writing Changelog failed: {:?}", err));
 
-        logger::stdout("Updating lockfile");
-        if !cargo::update_lockfile(repository_path) {
-            print_exit!("`cargo fetch` failed. See above for the cargo error message.");
+        if config.release_mode {
+            logger::stdout("Updating lockfile");
+            if !cargo::update_lockfile(repository_path) {
+                print_exit!("`cargo fetch` failed. See above for the cargo error message.");
+            }
         }
 
         logger::stdout("Package crate");
@@ -189,7 +278,7 @@ Global config");
             print_exit!("`cargo package` failed. See above for the cargo error message.");
         }
 
-        git::commit_files(repository_path, &new_version)
+        git::commit_files(&config, &new_version)
             .unwrap_or_else(|err| print_exit!("Committing files failed: {:?}", err));
 
         logger::stdout("Creating annotated git tag");
@@ -197,7 +286,24 @@ Global config");
             .unwrap_or_else(|err| print_exit!("Can't generate changelog: {:?}", err));
 
         let tag_name = format!("v{}", new_version);
-        git::tag(repository_path, &tag_name, &tag_message)
+        git::tag(&config, &tag_name, &tag_message)
             .unwrap_or_else(|err| print_exit!("Failed to create git tag: {:?}", err));
+
+        if config.release_mode {
+            logger::stdout("Pushing new commit and tag");
+            git::push(&config, &tag_name)
+                .unwrap_or_else(|err| print_exit!("Failed to push git: {:?}", err));
+
+            logger::stdout("Creating GitHub release");
+            github::release(&config, &tag_name, &tag_message)
+                .unwrap_or_else(|err| print_exit!("Failed to create GitHub release: {:?}", err));
+
+            logger::stdout("Publishing crate on crates.io");
+            if !cargo::publish(&config.repository_path, &config.cargo_token.as_ref().unwrap()) {
+                print_exit!("Failed to publish on crates.io");
+            }
+
+            println!("{} v{} is released. 🚀🚀🚀", config.repository_name, new_version);
+        }
     }
 }
