@@ -141,7 +141,7 @@ pub fn push(config: &Config, tag_name: &str) -> Result<(), Error> {
     let branch    = &config.branch;
 
     // We need to push both the branch we just committed as well as the tag we created.
-    let branch_ref = format!("refs/head/{}", branch);
+    let branch_ref = format!("refs/heads/{}", branch);
     let tag_ref    = format!("refs/tags/{}", tag_name);
     let refs = [&branch_ref[..], &tag_ref[..]];
 
