@@ -110,7 +110,7 @@ fn user_repo_from_url(url: Url) -> Result<(String, String), String> {
                 let path = &path[1][0..suffix_pos];
                 path.into()
             } else {
-                return Err(".git suffix not at the end of URL".into())
+                return Err("URL does not point to a git repository".into())
             }
         }
     };
