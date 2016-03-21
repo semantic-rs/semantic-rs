@@ -15,7 +15,7 @@ pub struct Config {
     pub signature: Signature<'static>,
 
     pub gh_token: Option<String>,
-    pub travis_token: Option<String>,
+    pub cargo_token: Option<String>,
 }
 
 pub struct ConfigBuilder {
@@ -33,7 +33,7 @@ pub struct ConfigBuilder {
     signature: Option<Signature<'static>>,
 
     gh_token: Option<String>,
-    travis_token: Option<String>,
+    cargo_token: Option<String>,
 }
 
 impl ConfigBuilder {
@@ -48,7 +48,7 @@ impl ConfigBuilder {
             repository: None,
             signature: None,
             gh_token: None,
-            travis_token: None,
+            cargo_token: None,
         }
     }
 
@@ -97,8 +97,8 @@ impl ConfigBuilder {
         self
     }
 
-    pub fn travis_token(&mut self, token: String) -> &mut Self {
-        self.travis_token = Some(token);
+    pub fn cargo_token(&mut self, token: String) -> &mut Self {
+        self.cargo_token = Some(token);
         self
     }
 
@@ -113,7 +113,7 @@ impl ConfigBuilder {
             repository: self.repository.unwrap(),
             signature: self.signature.unwrap(),
             gh_token: self.gh_token,
-            travis_token: self.travis_token,
+            cargo_token: self.cargo_token,
         }
     }
 }

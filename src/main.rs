@@ -208,11 +208,11 @@ Global config");
         let gh_token = env::var("GH_TOKEN")
             .unwrap_or_else(|err| print_exit!("GH_TOKEN not set: {:?}", err));
 
-        let travis_token = env::var("TRAVIS_TOKEN")
-            .unwrap_or_else(|err| print_exit!("TRAVIS_TOKEN not set: {:?}", err));
+        let cargo_token = env::var("cargo_token")
+            .unwrap_or_else(|err| print_exit!("cargo_token not set: {:?}", err));
 
         cb.gh_token(gh_token);
-        cb.travis_token(travis_token);
+        cb.cargo_token(cargo_token);
     }
 
     cb.repository(repo);
@@ -300,7 +300,7 @@ Global config");
                 .unwrap_or_else(|err| print_exit!("Failed to create GitHub release: {:?}", err));
 
             logger::stdout("Publishing crate on crates.io");
-            if !cargo::publish(&config.repository_path, &config.travis_token.as_ref().unwrap()) {
+            if !cargo::publish(&config.repository_path, &config.cargo_token.as_ref().unwrap()) {
                 print_exit!("Failed to publish on crates.io");
             }
         }
