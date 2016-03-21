@@ -216,7 +216,6 @@ Global config");
     }
 
     cb.repository(repo);
-    cb.branch("master".into());
     let config = cb.build();
 
     let version = toml_file::read_from_file(&config.repository_path)
