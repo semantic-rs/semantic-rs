@@ -47,7 +47,7 @@ impl fmt::Display for Error {
             Git(ref e) => e.fmt(f),
             Var(ref e) => e.fmt(f),
             Io(ref e) => e.fmt(f),
-            GitHub(_) => write!(f, "Hubcaps failed"),
+            GitHub(ref e) => e.fmt(f),
         }
 
     }
@@ -59,7 +59,7 @@ impl StdError for Error {
             Git(ref e) => e.description(),
             Var(ref e) => e.description(),
             Io(ref e) => e.description(),
-            GitHub(_) => "hubcap error",
+            GitHub(ref e) => e.description(),
         }
     }
 }
