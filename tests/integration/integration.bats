@@ -109,6 +109,7 @@ setup_dirs() {
 }
 
 @test "Runs in write-mode with CI=true" {
+  skip
   cd write-mode
   setup_dirs
 
