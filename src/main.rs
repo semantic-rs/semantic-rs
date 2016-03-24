@@ -23,6 +23,7 @@ extern crate hyper;
 extern crate hubcaps;
 extern crate url;
 extern crate travis_after_all;
+extern crate env_logger;
 
 use docopt::Docopt;
 use commit_analyzer::CommitType;
@@ -146,6 +147,8 @@ fn user_repo_from_url(url: Url) -> Result<(String, String), String> {
 }
 
 fn main() {
+    env_logger::init().expect("Can't instantiate env logger");
+
     let args: Args = Docopt::new(USAGE)
         .and_then(|d| d.decode())
         .unwrap_or_else(|e| e.exit());
