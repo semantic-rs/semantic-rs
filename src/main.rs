@@ -22,6 +22,7 @@ extern crate clog;
 extern crate hyper;
 extern crate hubcaps;
 extern crate url;
+extern crate travis_after_all;
 
 use docopt::Docopt;
 use commit_analyzer::CommitType;
@@ -32,6 +33,7 @@ use std::{env,fs};
 use std::path::Path;
 use std::error::Error;
 use url::Url;
+use travis_after_all::Build;
 
 const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 const USERAGENT: &'static str = concat!("semantic-rs/", env!("CARGO_PKG_VERSION"));
@@ -250,6 +252,25 @@ Global config");
         println!("Current branch is '{}', releases are only done from branch '{}'", branch, config.branch);
         println!("No release done from a pull request either.");
         process::exit(0);
+    }
+
+    if ci_env_set() {
+        let build_run = Build::from_env()
+            .unwrap_or_else(|e| print_exit!("CI mode, but can't check other builds. Error: {:?}", e));
+
+        if !build_run.is_leader() {
+            println!("Not the build leader. Nothing to do. Bye.");
+            process::exit(0);
+        }
+
+        println!("I am the build leader. Waiting for other jobs to finish.");
+        match build_run.wait_for_others() {
+            Ok(()) => println!("Other jobs finished and succeeded. Doing my work now."),
+            Err(travis_after_all::Error::FailedBuilds) => {
+                print_exit!("Some builds failed. Stopping here.");
+            },
+            Err(e) => print_exit!("Waiting for other builds failed Reason: {:?}", e),
+        }
     }
 
     let version = toml_file::read_from_file(&config.repository_path)
