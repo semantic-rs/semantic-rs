@@ -95,6 +95,31 @@ fn ci_env_set() -> bool {
     env::var("CI").is_ok()
 }
 
+fn current_branch(repo: &git2::Repository) -> Option<String> {
+    if let Ok(branch) = env::var("TRAVIS_BRANCH") {
+        return Some(branch)
+    }
+
+    let head = repo.head().expect("No HEAD found for repository");
+
+    if head.is_branch() {
+        let short = head.shorthand().expect("No branch name found");
+        return Some(short.into());
+    }
+
+    None
+}
+
+fn is_release_branch(current: &str, release: &str) -> bool {
+    if let Ok(pr) = env::var("TRAVIS_PULL_REQUEST") {
+        if pr != "false" {
+            return false;
+        }
+    }
+
+    current == release
+}
+
 fn user_repo_from_url(url: Url) -> Result<(String, String), String> {
     let path = match url.path() {
         Some(path) => path,
@@ -217,6 +242,15 @@ Global config");
 
     cb.repository(repo);
     let config = cb.build();
+
+    let branch = current_branch(&config.repository)
+        .unwrap_or_else(|| print_exit!("Could not determine current branch."));
+
+    if !is_release_branch(&branch, &config.branch) {
+        println!("Current branch is '{}', releases are only done from branch '{}'", branch, config.branch);
+        println!("No release done from a pull request either.");
+        process::exit(0);
+    }
 
     let version = toml_file::read_from_file(&config.repository_path)
         .unwrap_or_else(|err| print_exit!("Reading `Cargo.toml` failed: {:?}", err));
