@@ -33,6 +33,8 @@ use semver::Version;
 use std::{env,fs};
 use std::path::Path;
 use std::error::Error;
+use std::thread;
+use std::time::Duration;
 use url::Url;
 use travis_after_all::Build;
 
@@ -351,6 +353,9 @@ Global config");
             logger::stdout("Pushing new commit and tag");
             git::push(&config, &tag_name)
                 .unwrap_or_else(|err| print_exit!("Failed to push git: {:?}", err));
+
+            logger::stdout("Waiting a tiny bit, so GitHub can store the git tag");
+            thread::sleep(Duration::from_secs(1));
 
             logger::stdout("Creating GitHub release");
             github::release(&config, &tag_name, &tag_message)
