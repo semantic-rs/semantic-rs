@@ -4,6 +4,7 @@ use clog::fmt::MarkdownWriter;
 use std::path::PathBuf;
 use std::io::prelude::*;
 use std::fs::{self, File, OpenOptions};
+use error::Error;
 
 fn changelog_exists(path: &PathBuf) -> bool {
     match fs::metadata(path) {
@@ -12,19 +13,22 @@ fn changelog_exists(path: &PathBuf) -> bool {
     }
 }
 
-fn prepend_to_file(filename: PathBuf, new_changelog: &str) -> Result<(), String> {
+fn prepend_to_file(filename: PathBuf, new_changelog: &str) -> Result<(), Error> {
     let mut existing_file_content = String::new();
-    let mut f = File::open(&filename).expect("Failed to open Changelog for reading");
-    f.read_to_string(&mut existing_file_content).expect("Failed to read Changelog");
+    let mut f = try!(File::open(&filename));
+    try!(f.read_to_string(&mut existing_file_content));
 
-    let mut file = OpenOptions::new().create(true).write(true).open(filename).expect("Failed to open Changelog for prepending new items");
+    let mut file = match OpenOptions::new().create(true).write(true).open(filename) {
+        Ok(handle) => handle,
+        Err(err) => return Err(Error::from(err))
+    };
     match file.write(format!("{}\n", new_changelog).as_bytes()) {
         Ok(_) => {},
-        Err(err) => return Err(format!("Could not prepend text to changelog file: {:?}", err))
+        Err(err) => return Err(Error::from(err))
     }
     match file.write(format!("{}\n", existing_file_content).as_bytes()) {
         Ok(_) => Ok(()),
-        Err(err) => Err(format!("Could not prepend text to changelog file: {:?}", err))
+        Err(err) => return Err(Error::from(err))
     }
 }
 
@@ -42,7 +46,7 @@ pub fn write(repository_path: &str, old_version: &str, new_version: &str) -> Res
     clog.write_changelog().map_err(|_| "Failed to write Changelog.md".to_owned())
 }
 
-pub fn write_custom(repository_path: &str, new_version: &str, changelog_text: &str) -> Result<(), String> {
+pub fn write_custom(repository_path: &str, new_version: &str, changelog_text: &str) -> Result<(), Error> {
     let mut changelog_path = PathBuf::from(repository_path);
     changelog_path.push("Changelog.md");
     let changelog_text = format!("## v{}\n{}\n", new_version, changelog_text);
@@ -50,11 +54,13 @@ pub fn write_custom(repository_path: &str, new_version: &str, changelog_text: &s
         prepend_to_file(changelog_path, &changelog_text)
     }
     else {
-        let mut file = OpenOptions::new().create(true).write(true).open(changelog_path)
-            .expect("Failed to create new Changelog");
+        let mut file = match OpenOptions::new().create(true).write(true).open(changelog_path) {
+            Ok(handle) => handle,
+            Err(err) => return Err(Error::from(err))
+        };
         match file.write(changelog_text.as_bytes()) {
             Ok(_) => Ok(()),
-            Err(err) => Err(format!("Could not prepend text to changelog file: {:?}", err))
+            Err(err) => return Err(Error::from(err))
         }
     }
 }
