@@ -18,14 +18,8 @@ fn prepend_to_file(filename: PathBuf, new_changelog: &str) -> Result<(), Error> 
     let mut f = try!(File::open(&filename));
     try!(f.read_to_string(&mut existing_file_content));
 
-    let mut file = match OpenOptions::new().create(true).write(true).open(filename) {
-        Ok(handle) => handle,
-        Err(err) => return Err(Error::from(err))
-    };
-    match file.write(format!("{}\n", new_changelog).as_bytes()) {
-        Ok(_) => {},
-        Err(err) => return Err(Error::from(err))
-    }
+    let mut file = try!(OpenOptions::new().create(true).write(true).open(filename));
+    try!(file.write(format!("{}\n", new_changelog).as_bytes()));
     match file.write(format!("{}\n", existing_file_content).as_bytes()) {
         Ok(_) => Ok(()),
         Err(err) => return Err(Error::from(err))
@@ -54,10 +48,7 @@ pub fn write_custom(repository_path: &str, new_version: &str, changelog_text: &s
         prepend_to_file(changelog_path, &changelog_text)
     }
     else {
-        let mut file = match OpenOptions::new().create(true).write(true).open(changelog_path) {
-            Ok(handle) => handle,
-            Err(err) => return Err(Error::from(err))
-        };
+        let mut file = try!(OpenOptions::new().create(true).write(true).open(changelog_path));
         match file.write(changelog_text.as_bytes()) {
             Ok(_) => Ok(()),
             Err(err) => return Err(Error::from(err))
