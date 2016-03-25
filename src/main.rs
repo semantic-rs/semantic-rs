@@ -32,7 +32,6 @@ use std::{env,fs};
 use std::path::Path;
 use std::error::Error;
 use url::Url;
-use std::io::{self, Read};
 
 const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 const USERAGENT: &'static str = concat!("semantic-rs/", env!("CARGO_PKG_VERSION"));
