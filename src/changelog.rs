@@ -43,7 +43,7 @@ pub fn write(repository_path: &str, old_version: &str, new_version: &str) -> Res
 pub fn write_custom(repository_path: &str, new_version: &str, changelog_text: &str) -> Result<(), String> {
     let mut changelog_path = PathBuf::from(repository_path);
     changelog_path.push("Changelog.md");
-    let changelog_text = format!("## v{}\n{}", new_version, changelog_text);
+    let changelog_text = format!("## v{}\n{}\n", new_version, changelog_text);
     if changelog_exists(&changelog_path) {
         prepend_to_file(changelog_path, &changelog_text)
     }
