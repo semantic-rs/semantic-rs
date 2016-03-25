@@ -3,6 +3,8 @@
 setup() {
   cd $WORKSPACE
   unset CI
+  unset TRAVIS_PULL_REQUEST
+  unset TRAVIS_BRANCH
 }
 
 setup_dirs() {
@@ -128,4 +130,12 @@ setup_dirs() {
 
   unset GIT_AUTHOR_NAME
   unset GIT_COMMITTER_EMAIL
+}
+
+@test "Does not run when on wrong branch" {
+  cd wrong-branch
+  setup_dirs
+
+  run semantic-rs --branch=hamster
+  [ "${lines[2]}" = "Current branch is 'master', releases are only done from branch 'hamster'" ]
 }
