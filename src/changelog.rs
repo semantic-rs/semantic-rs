@@ -4,7 +4,6 @@ use clog::fmt::MarkdownWriter;
 use std::path::PathBuf;
 use std::io::prelude::*;
 use std::fs::{self, File, OpenOptions};
-use std::io::Error;
 
 fn changelog_exists(path: &PathBuf) -> bool {
     match fs::metadata(path) {
