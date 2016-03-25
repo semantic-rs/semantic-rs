@@ -18,7 +18,10 @@ fn prepend_to_file(filename: PathBuf, new_changelog: &str) -> Result<(), String>
     f.read_to_string(&mut existing_file_content).expect("Failed to read Changelog");
 
     let mut file = OpenOptions::new().create(true).write(true).open(filename).expect("Failed to open Changelog for prepending new items");
-    file.write(format!("{}\n", new_changelog).as_bytes());
+    match file.write(format!("{}\n", new_changelog).as_bytes()) {
+        Ok(_) => {},
+        Err(err) => return Err(format!("Could not prepend text to changelog file: {:?}", err))
+    }
     match file.write(format!("{}\n", existing_file_content).as_bytes()) {
         Ok(_) => Ok(()),
         Err(err) => Err(format!("Could not prepend text to changelog file: {:?}", err))
