@@ -2,6 +2,29 @@ use std::io::BufWriter;
 use clog::Clog;
 use clog::fmt::MarkdownWriter;
 use std::path::PathBuf;
+use std::io::prelude::*;
+use std::fs::{self, File, OpenOptions};
+use error::Error;
+
+fn changelog_exists(path: &PathBuf) -> bool {
+    match fs::metadata(path) {
+        Ok(md) => md.is_file(),
+        Err(_) => return false
+    }
+}
+
+fn prepend_to_file(filename: PathBuf, new_changelog: &str) -> Result<(), Error> {
+    let mut existing_file_content = String::new();
+    let mut f = try!(File::open(&filename));
+    try!(f.read_to_string(&mut existing_file_content));
+
+    let mut file = try!(OpenOptions::new().create(true).write(true).open(filename));
+    try!(file.write(format!("{}\n", new_changelog).as_bytes()));
+    match file.write(format!("{}\n", existing_file_content).as_bytes()) {
+        Ok(_) => Ok(()),
+        Err(err) => return Err(Error::from(err))
+    }
+}
 
 pub fn write(repository_path: &str, old_version: &str, new_version: &str) -> Result<(), String> {
     let mut clog = try!(Clog::with_dir(repository_path).map_err(|_| "Clog failed".to_owned()));
@@ -15,6 +38,32 @@ pub fn write(repository_path: &str, old_version: &str, new_version: &str) -> Res
         .version(format!("v{}", new_version));
 
     clog.write_changelog().map_err(|_| "Failed to write Changelog.md".to_owned())
+}
+
+pub fn write_custom(repository_path: &str, new_version: &str, changelog_text: &str) -> Result<(), Error> {
+    let mut changelog_path = PathBuf::from(repository_path);
+    changelog_path.push("Changelog.md");
+    let changelog_text = format!("## v{}\n{}\n", new_version, changelog_text);
+    if changelog_exists(&changelog_path) {
+        prepend_to_file(changelog_path, &changelog_text)
+    }
+    else {
+        let mut file = try!(OpenOptions::new().create(true).write(true).open(changelog_path));
+        match file.write(changelog_text.as_bytes()) {
+            Ok(_) => Ok(()),
+            Err(err) => return Err(Error::from(err))
+        }
+    }
+}
+
+pub fn has_commits(repository_path: &str, old_version: &str, new_version: &str) -> Result<bool, String> {
+    let mut clog = try!(Clog::with_dir(repository_path).map_err(|_| "Clog failed".to_owned()));
+
+    let commits = clog.from(format!("v{}", old_version))
+        .version(format!("v{}", new_version))
+        .get_commits();
+
+    Ok(commits.len() > 0)
 }
 
 pub fn generate(repository_path: &str, old_version: &str, new_version: &str) -> Result<String, String> {

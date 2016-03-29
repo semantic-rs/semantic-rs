@@ -303,18 +303,32 @@ Global config");
 
     if is_dry_run {
         logger::stdout(format!("New version would be: {}", new_version));
-        logger::stdout("Would write the following Changelog:");
-        let changelog = match changelog::generate(repository_path, &version.to_string(), &new_version) {
-            Ok(log) => log,
+
+        let has_commits = match changelog::has_commits(repository_path, &version.to_string(), &new_version) {
+            Ok(commits) => commits,
             Err(err) => {
-                logger::stderr(format!("Generating Changelog failed: {:?}", err));
+                logger::stderr(format!("Getting commits for Changelog failed: {:?}", err));
                 process::exit(1);
             }
         };
-        logger::stdout("====================================");
-        logger::stdout(changelog);
-        logger::stdout("====================================");
-        logger::stdout("Would create annotated git tag");
+
+        if has_commits {
+            logger::stdout("Would write the following Changelog:");
+            let changelog = match changelog::generate(repository_path, &version.to_string(), &new_version) {
+                Ok(log) => log,
+                Err(err) => {
+                    logger::stderr(format!("Generating Changelog failed: {:?}", err));
+                    process::exit(1);
+                }
+            };
+            logger::stdout("====================================");
+            logger::stdout(changelog);
+            logger::stdout("====================================");
+            logger::stdout("Would create annotated git tag");
+        } else {
+            logger::stdout("No commits found to generate a Changelog");
+        }
+
     }
     else {
         logger::stdout(format!("New version: {}", new_version));
@@ -323,8 +337,24 @@ Global config");
             .unwrap_or_else(|err| print_exit!("Writing `Cargo.toml` failed: {:?}", err));
 
         logger::stdout(format!("Writing Changelog"));
-        changelog::write(repository_path, &version.to_string(), &new_version)
-            .unwrap_or_else(|err| print_exit!("Writing Changelog failed: {:?}", err));
+
+        let has_commits = match changelog::has_commits(repository_path, &version.to_string(), &new_version) {
+            Ok(commits) => commits,
+            Err(err) => {
+                logger::stderr(format!("Getting commits for Changelog failed: {:?}", err));
+                process::exit(1);
+            }
+        };
+
+        if has_commits {
+            changelog::write(repository_path, &version.to_string(), &new_version)
+                .unwrap_or_else(|err| print_exit!("Writing Changelog failed: {:?}", err));
+        } else {
+            logger::stdout("Could not generate a Changelog based on project's commits");
+            logger::stdout("Generating Changelog with default text");
+            changelog::write_custom(repository_path, &new_version, "Stable version".into())
+                .unwrap_or_else(|err| print_exit!("Writing Changelog failed: {:?}", err));
+        }
 
         if config.release_mode {
             logger::stdout("Updating lockfile");
