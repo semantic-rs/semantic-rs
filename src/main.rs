@@ -22,6 +22,8 @@ extern crate clog;
 extern crate hyper;
 extern crate hubcaps;
 extern crate url;
+extern crate travis_after_all;
+extern crate env_logger;
 
 use docopt::Docopt;
 use commit_analyzer::CommitType;
@@ -31,7 +33,10 @@ use semver::Version;
 use std::{env,fs};
 use std::path::Path;
 use std::error::Error;
+use std::thread;
+use std::time::Duration;
 use url::Url;
+use travis_after_all::Build;
 
 const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 const USERAGENT: &'static str = concat!("semantic-rs/", env!("CARGO_PKG_VERSION"));
@@ -144,6 +149,8 @@ fn user_repo_from_url(url: Url) -> Result<(String, String), String> {
 }
 
 fn main() {
+    env_logger::init().expect("Can't instantiate env logger");
+
     let args: Args = Docopt::new(USAGE)
         .and_then(|d| d.decode())
         .unwrap_or_else(|e| e.exit());
@@ -252,6 +259,25 @@ Global config");
         process::exit(0);
     }
 
+    if ci_env_set() {
+        let build_run = Build::from_env()
+            .unwrap_or_else(|e| print_exit!("CI mode, but can't check other builds. Error: {:?}", e));
+
+        if !build_run.is_leader() {
+            println!("Not the build leader. Nothing to do. Bye.");
+            process::exit(0);
+        }
+
+        println!("I am the build leader. Waiting for other jobs to finish.");
+        match build_run.wait_for_others() {
+            Ok(()) => println!("Other jobs finished and succeeded. Doing my work now."),
+            Err(travis_after_all::Error::FailedBuilds) => {
+                print_exit!("Some builds failed. Stopping here.");
+            },
+            Err(e) => print_exit!("Waiting for other builds failed Reason: {:?}", e),
+        }
+    }
+
     let version = toml_file::read_from_file(&config.repository_path)
         .unwrap_or_else(|err| print_exit!("Reading `Cargo.toml` failed: {:?}", err));
 
@@ -327,6 +353,9 @@ Global config");
             logger::stdout("Pushing new commit and tag");
             git::push(&config, &tag_name)
                 .unwrap_or_else(|err| print_exit!("Failed to push git: {:?}", err));
+
+            logger::stdout("Waiting a tiny bit, so GitHub can store the git tag");
+            thread::sleep(Duration::from_secs(1));
 
             logger::stdout("Creating GitHub release");
             github::release(&config, &tag_name, &tag_message)
