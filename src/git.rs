@@ -104,12 +104,10 @@ pub fn version_bump_since_tag(repo: &Repository, tag: &str) -> CommitType {
     let mut walker = repo.revwalk().expect("Creating a revwalk failed");
     walker.push_range(&tag).expect("Adding a range failed");
 
-    let tag = walker.map(|c| repo.find_commit(c.expect("Not a valid commit")).expect("No commit found"))
+    walker.map(|c| repo.find_commit(c.expect("Not a valid commit")).expect("No commit found"))
         .map(format_commit)
         .map(|c| commit_analyzer::analyze_single(&c).expect("Analyzing commit failed"))
-        .max().unwrap_or(CommitType::Unknown);
-
-    tag
+        .max().unwrap_or(CommitType::Unknown)
 }
 
 pub fn generate_commit_message(new_version: &str) -> String {

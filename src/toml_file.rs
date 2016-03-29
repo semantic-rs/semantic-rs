@@ -8,8 +8,8 @@ use std::path::Path;
 
 #[derive(Debug)]
 pub enum TomlError {
-    ParseError(&'static str),
-    IoError(Error)
+    Parse(&'static str),
+    Io(Error)
 }
 
 pub fn read_version(file: String) -> Option<String> {
@@ -37,12 +37,12 @@ pub fn read_from_file(repository_path: &str) -> Result<String, TomlError> {
     let file_path = Path::new(&repository_path).join("Cargo.toml");
     let cargo_file = match read_cargo_toml(&file_path) {
         Ok(buffer) => buffer,
-        Err(err) => return Err(TomlError::IoError(err))
+        Err(err) => return Err(TomlError::Io(err))
     };
 
     match read_version(cargo_file) {
         Some(version) => Ok(version),
-        None => Err(TomlError::ParseError("No version field found"))
+        None => Err(TomlError::Parse("No version field found"))
     }
 }
 
