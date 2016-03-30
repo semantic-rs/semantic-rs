@@ -117,3 +117,9 @@ impl ConfigBuilder {
         }
     }
 }
+
+impl Default for ConfigBuilder {
+    fn default() -> ConfigBuilder {
+        ConfigBuilder::new()
+    }
+}

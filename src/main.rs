@@ -58,7 +58,7 @@ Options:
 
 macro_rules! print_exit {
     ($fmt:expr) => {{
-        logger::stderr(format!($fmt));
+        logger::stderr($fmt);
         process::exit(1);
     }};
     ($fmt:expr, $($arg:tt)*) => {{
@@ -79,7 +79,6 @@ struct Args {
 fn string_to_bool(answer: &str) -> bool {
     match &answer.to_lowercase()[..] {
         "yes" | "true" | "1" => true,
-        "no" | "false" | "0" => false,
         _ => false
     }
 }
@@ -322,7 +321,7 @@ Global config");
         toml_file::write_new_version(repository_path, &new_version)
             .unwrap_or_else(|err| print_exit!("Writing `Cargo.toml` failed: {:?}", err));
 
-        logger::stdout(format!("Writing Changelog"));
+        logger::stdout("Writing Changelog");
         changelog::write(repository_path, &version.to_string(), &new_version)
             .unwrap_or_else(|err| print_exit!("Writing Changelog failed: {:?}", err));
 
