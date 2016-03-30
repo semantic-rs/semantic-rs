@@ -14,31 +14,36 @@ semantic-rs automates all these steps for you so you can focus more on developin
 - Follow the [Angular.js commit message conventions](https://docs.google.com/document/d/1QrDFcIiPjSLDn3EL15IJygNPiHORgU1_OOAqWjiDU5Y/edit?pref=2&pli=1) when you commit changes to your repository
 - When you're done with development, run semantic-rs
 - Based on your changes it determines the next version number, generates a changelog, commits it and creates a new tag
-- Done.
+- It also increases the version number in `Cargo.toml` (also committed)
+- Runs `cargo package` for you
+- Creates a release on GitHub
+- Publishes the new version to [crates.io](crates.io)
+- Done 🚀
 
 ## Usage
+
+### Prerequisites
+
+You need the following data beforehand:
+
+- A GitHub application token [Get it here](https://github.com/settings/tokens/new)
+- Your crates.io API key [Get it here](https://crates.io/me)
+
+### Run it
+
+semantic-rs depends on some data being passed in via environment variables. In our examples we specify those variables explicitly but if you run semantic-rs frequently you may want to configure those in your shell's configuration file.
+
+Setting `GIT_COMITTER_NAME` and `GIT_COMMITTER_EMAIL` is optional. If you omit those, we default to the settings from your (global) git configuration. 
 
 If you run semantic-rs without any arguments, it operates on your current working directory:
 
 ```bash
+$ export GH_TOKEN=<GHTOKEN>
+$ export CARGO_TOKEN=<CARGOTOKEN> 
+$ export GIT_COMMITTER_NAME=<Your name>
+$ export GIT_COMMITTER_EMAIL=<Your email>
 $ semantic-rs
-semantic.rs 🚀
-Analyzing your repository
-Current version: 0.5.0
-Analyzing commits
-Commits analyzed. Bump would be Minor
-New version would be: 0.6.0
-Would write the following Changelog:
-====================================
-## v0.6.0 (2016-01-30)
-
-
-#### Features
-
-*   Improve user interface ([497485a0](497485a0))
-
-====================================
-Would create annotated git tag
+#...
 ```
 
 By default it runs in dry-run mode. This means it doens't perform changes automatically. You see which changes would be performed and also the resulting changelog.
@@ -47,14 +52,6 @@ To perform the changes, pass `-w` as an argument:
 
 ```bash
 $ semantic-rs -w
-semantic.rs 🚀
-Analyzing your repository
-Current version: 0.5.0
-Analyzing commits
-Commits analyzed. Bump will be Minor
-New version: 0.6.0
-Writing Changelog
-Creating annotated git tag
 ```
 This performs the following operations:
 - Create or update `Changelog.md` containing everything that changed
@@ -62,8 +59,9 @@ This performs the following operations:
   - `Changelog.md`
   - An updated `Cargo.toml` with the new version number
 - Create a new annotated git tag pointing to the last commit created recently and including the Changelog for the new version
-
-Note that commits and tags are created with your configured git user and email.
+- A new version published to [crates.io](crates.io)
+- A new release on GitHub
+- Push the new commit and tag to GitHub
 
 ## Development
 
@@ -87,6 +85,12 @@ $ cargo run
 ```
 
 This analyzes the current git repository and updates the project's `Cargo.toml`.
+
+To pass in arguments you need to separate them with `--`:
+
+```bash
+cargo run -- -p ~/home/my-project -w
+```
 
 ## Run semantic-rs in CI environment
 
