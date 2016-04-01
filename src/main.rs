@@ -226,7 +226,7 @@ Global config");
         let remote_or_none = repo.find_remote("origin");
         if remote_or_none.is_err() {
             let err = remote_or_none.err().unwrap();
-            logger::stderr(format!("Could not determine the origin remote url: {:?}", err));
+            logger::warn(format!("Could not determine the origin remote url: {:?}", err));
         }
         else  {
             let remote = remote_or_none.ok().unwrap();
