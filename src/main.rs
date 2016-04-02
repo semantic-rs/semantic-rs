@@ -350,7 +350,7 @@ Global config");
         git::tag(&config, &tag_name, &tag_message)
             .unwrap_or_else(|err| print_exit!("Failed to create git tag: {:?}", err));
 
-        if config.release_mode {
+        if config.release_mode && config.can_push() {
             logger::stdout("Pushing new commit and tag");
             git::push(&config, &tag_name)
                 .unwrap_or_else(|err| print_exit!("Failed to push git: {:?}", err));
@@ -367,7 +367,7 @@ Global config");
                 print_exit!("Failed to publish on crates.io");
             }
 
-            println!("{} v{} is released. 🚀🚀🚀", config.repository_name, new_version);
+            println!("{} v{} is released. 🚀🚀🚀", config.repository_name.unwrap(), new_version);
         }
     }
 }

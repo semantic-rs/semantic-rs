@@ -5,8 +5,8 @@ use super::USERAGENT;
 use config::Config;
 
 pub fn release(config: &Config, tag_name: &str, tag_message: &str) -> Result<(), Error> {
-    let user      = &config.user[..];
-    let repo_name = &config.repository_name[..];
+    let user      = &config.user.as_ref().unwrap()[..];
+    let repo_name = &config.repository_name.as_ref().unwrap()[..];
     let branch    = &config.branch[..];
     let token     = config.gh_token.as_ref().unwrap();
 

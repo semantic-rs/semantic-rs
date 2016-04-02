@@ -134,10 +134,10 @@ pub fn tag(config: &Config, tag_name: &str, tag_message: &str) -> Result<(), Err
 
 pub fn push(config: &Config, tag_name: &str) -> Result<(), Error> {
     let repo      = &config.repository;
-    let token     = config.gh_token.as_ref().unwrap();
+    let token     = &config.gh_token.as_ref().unwrap();
 
-    let user      = &config.user;
-    let repo_name = &config.repository_name;
+    let user      = &config.user.as_ref().unwrap();
+    let repo_name = &config.repository_name.as_ref().unwrap();
     let branch    = &config.branch;
 
     // We need to push both the branch we just committed as well as the tag we created.
