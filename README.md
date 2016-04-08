@@ -100,7 +100,7 @@ Make sure to set the `CI=true` environment variable to disable dry-run mode.
 
 Bug reports and pull requests are welcome on [GitHub](https://github.com/semantic-rs/semantic-rs).
 You can find more information about contributing in the [CONTRIBUTING.md](https://github.com/semantic-rs/semantic-rs/blob/master/CONTRIBUTING.md).
-This project is intended to be a safe, welcoming space for collaboration and discussion, and contributors are expected to adhere to the [Contributor Covenant](http://contributor-covenant.org/) code of conduct.
+This project is intended to be a safe, welcoming space for collaboration and discussion, and contributors are expected to adhere to the [Contributor Covenant](http://contributor-covenant.org/version/1/3/0/) code of conduct.
 
 ## License
 
