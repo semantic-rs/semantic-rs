@@ -7,7 +7,7 @@ dependencies = [
  "docopt 0.6.78 (registry+https://github.com/rust-lang/crates.io-index)",
  "env_logger 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "git2 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "hubcaps 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "hubcaps 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "hyper 0.7.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "regex 0.1.58 (registry+https://github.com/rust-lang/crates.io-index)",
  "rustc-serialize 0.3.18 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -171,7 +171,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "hubcaps"
-version = "0.2.0"
+version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "hyper 0.7.2 (registry+https://github.com/rust-lang/crates.io-index)",
