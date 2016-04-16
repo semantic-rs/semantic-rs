@@ -40,8 +40,3 @@ env:
 
 notifications:
   email: false
-  webhooks: http://homu.hellorust.com/travis
-
-branches:
-  only:
-    - auto
