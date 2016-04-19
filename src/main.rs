@@ -224,28 +224,28 @@ Global config");
     // we will make sure we got all configuration settings
     if !is_dry_run && release_mode {
         let remote_or_none = repo.find_remote("origin");
-        if remote_or_none.is_err() {
-            let err = remote_or_none.err().unwrap();
-            logger::warn(format!("Could not determine the origin remote url: {:?}", err));
-            logger::warn("semantic-rs can't push changes or create a release on GitHub");
-        }
-        else  {
-            let remote = remote_or_none.ok().unwrap();
-            let url = remote.url().expect("Remote URL is not valid UTF-8");
-            let remote_url = Url::parse(&url).expect("Remote URL can't be parsed");
-            let (user, repo_name) = user_repo_from_url(remote_url)
-                .unwrap_or_else(|e| print_exit!("Could not extract user and repository name from URL: {:?}", e));
-            config_builder.user(user);
-            config_builder.repository_name(repo_name);
+        match remote_or_none {
+            Ok(remote) => {
+                let url = remote.url().expect("Remote URL is not valid UTF-8");
+                let remote_url = Url::parse(&url).expect("Remote URL can't be parsed");
+                let (user, repo_name) = user_repo_from_url(remote_url)
+                    .unwrap_or_else(|e| print_exit!("Could not extract user and repository name from URL: {:?}", e));
+                config_builder.user(user);
+                config_builder.repository_name(repo_name);
 
-            let gh_token = env::var("GH_TOKEN")
-                .unwrap_or_else(|err| print_exit!("GH_TOKEN not set: {:?}", err));
+                let gh_token = env::var("GH_TOKEN")
+                    .unwrap_or_else(|err| print_exit!("GH_TOKEN not set: {:?}", err));
 
-            let cargo_token = env::var("CARGO_TOKEN")
-                .unwrap_or_else(|err| print_exit!("CARGO_TOKEN not set: {:?}", err));
+                let cargo_token = env::var("CARGO_TOKEN")
+                    .unwrap_or_else(|err| print_exit!("CARGO_TOKEN not set: {:?}", err));
 
-            config_builder.gh_token(gh_token);
-            config_builder.cargo_token(cargo_token);
+                config_builder.gh_token(gh_token);
+                config_builder.cargo_token(cargo_token);
+            },
+            Err(err) => {
+                logger::warn(format!("Could not determine the origin remote url: {:?}", err));
+                logger::warn("semantic-rs can't push changes or create a release on GitHub");
+            }
         }
     }
 
