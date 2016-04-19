@@ -227,7 +227,7 @@ Global config");
         if remote_or_none.is_err() {
             let err = remote_or_none.err().unwrap();
             logger::warn(format!("Could not determine the origin remote url: {:?}", err));
-            logger::warn("semantic-rs therefor does not push anything to a remote repository does not create a release on GitHub");
+            logger::warn("semantic-rs can't push changes or create a release on GitHub");
         }
         else  {
             let remote = remote_or_none.ok().unwrap();
