@@ -150,7 +150,6 @@ fn main() {
         _ => ci_env_set(),
     };
 
-    let is_dry_run = !write_mode;
     // We can only release, if we are allowed to write
     let release_mode = write_mode && string_to_bool(&args.flag_release);
 
@@ -206,7 +205,7 @@ Global config");
 
     // In case we are in write-mode AND release mode,
     // we will make sure we got all configuration settings
-    if !is_dry_run && release_mode {
+    if write_mode && release_mode {
         let remote_or_none = repo.find_remote("origin");
         match remote_or_none {
             Ok(remote) => {
@@ -272,11 +271,10 @@ Global config");
     logger::stdout("Analyzing commits");
 
     let bump = git::version_bump_since_latest(&config.repository);
-    if is_dry_run {
-        logger::stdout(format!("Commits analyzed. Bump would be {:?}", bump));
-    }
-    else {
+    if write_mode {
         logger::stdout(format!("Commits analyzed. Bump will be {:?}", bump));
+    } else {
+        logger::stdout(format!("Commits analyzed. Bump would be {:?}", bump));
     }
     let new_version = match version_bump(&version, bump) {
         Some(new_version) => new_version.to_string(),
@@ -286,7 +284,7 @@ Global config");
         }
     };
 
-    if is_dry_run {
+    if !config.write_mode {
         logger::stdout(format!("New version would be: {}", new_version));
         logger::stdout("Would write the following Changelog:");
         let changelog = match changelog::generate(repository_path, &version.to_string(), &new_version) {
@@ -300,8 +298,7 @@ Global config");
         logger::stdout(changelog);
         logger::stdout("====================================");
         logger::stdout("Would create annotated git tag");
-    }
-    else {
+    } else {
         logger::stdout(format!("New version: {}", new_version));
 
         toml_file::write_new_version(repository_path, &new_version)
