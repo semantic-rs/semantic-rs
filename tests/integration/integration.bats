@@ -5,6 +5,8 @@ setup() {
   unset CI
   unset TRAVIS_PULL_REQUEST
   unset TRAVIS_BRANCH
+  unset TRAVIS_BUILD_ID
+  unset TRAVIS_JOB_NUMBER
 }
 
 setup_dirs() {
@@ -109,7 +111,6 @@ setup_dirs() {
 }
 
 @test "Runs in write-mode with CI=true" {
-  skip
   cd write-mode
   setup_dirs
 
@@ -118,7 +119,6 @@ setup_dirs() {
 }
 
 @test "Runs in dry-run-mode with CI=true but dry-run forced" {
-  skip
   cd write-mode-disabled
   setup_dirs
 
@@ -146,7 +146,7 @@ setup_dirs() {
   cd wrong-branch
   setup_dirs
 
-  run semantic-rs --branch=hamster
+  run semantic-rs --branch=hamster --release=no
   [ "${lines[2]}" = "Current branch is 'master', releases are only done from branch 'hamster'" ]
 }
 
