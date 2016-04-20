@@ -117,6 +117,15 @@ setup_dirs() {
   grep -q 'version = "1.0.0"' Cargo.toml
 }
 
+@test "Runs in dry-run-mode with CI=true but dry-run forced" {
+  skip
+  cd write-mode-disabled
+  setup_dirs
+
+  CI=true semantic-rs --no-write
+  grep -q 'version = "0.1.0"' Cargo.toml
+}
+
 @test "Respects Git environment variables" {
   cd env-vars
   setup_dirs

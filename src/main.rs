@@ -45,7 +45,7 @@ const USAGE: &'static str = "
 semantic.rs 🚀
 
 Usage:
-  semantic-rs [options]
+  semantic-rs [(--write | --no-write)] [options]
   semantic-rs --version
 
 Options:
@@ -53,6 +53,7 @@ Options:
   --version              Show version.
   -p PATH, --path=PATH   Specifies the repository path. [default: .]
   -w, --write            Run with writing the changes afterwards.
+      --no-write         Disable write mode.
   -r <r>, --release=<r>  Create release on GitHub and publish on crates.io (only in write mode) [default: yes]
   -b <b>, --branch=<b>   The branch on which releases should happen. [default: master]
 ";
@@ -72,6 +73,7 @@ macro_rules! print_exit {
 struct Args {
     flag_path: String,
     flag_write: bool,
+    flag_no_write: bool,
     flag_version: bool,
     flag_release: String,
     flag_branch: String,
@@ -139,16 +141,19 @@ fn main() {
         process::exit(0);
     }
 
-    let is_dry_run = if ci_env_set() {
-        false
-    }
-    else {
-        !args.flag_write
+    // If write mode is requested OR denied,
+    // adhere to the user's wish,
+    // otherwise we decide based on whether we are running in CI.
+    let write_mode = match (args.flag_write, args.flag_no_write) {
+        (true, false) => true,
+        (false, true) => false,
+        _ => ci_env_set(),
     };
 
+    let is_dry_run = !write_mode;
     let release_mode = string_to_bool(&args.flag_release);
 
-    config_builder.write(args.flag_write);
+    config_builder.write(write_mode);
     config_builder.release(release_mode);
     config_builder.branch(args.flag_branch);
 
