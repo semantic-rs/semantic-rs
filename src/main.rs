@@ -151,7 +151,8 @@ fn main() {
     };
 
     let is_dry_run = !write_mode;
-    let release_mode = string_to_bool(&args.flag_release);
+    // We can only release, if we are allowed to write
+    let release_mode = write_mode && string_to_bool(&args.flag_release);
 
     config_builder.write(write_mode);
     config_builder.release(release_mode);
