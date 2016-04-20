@@ -243,7 +243,7 @@ Global config");
         process::exit(0);
     }
 
-    if ci_env_set() {
+    if config.release_mode && ci_env_set() {
         let build_run = Build::from_env()
             .unwrap_or_else(|e| print_exit!("CI mode, but can't check other builds. Error: {:?}", e));
 
