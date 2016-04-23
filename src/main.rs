@@ -11,6 +11,7 @@ mod cargo;
 mod error;
 mod github;
 mod config;
+mod utils;
 
 extern crate rustc_serialize;
 extern crate toml;
@@ -35,8 +36,8 @@ use std::path::Path;
 use std::error::Error;
 use std::thread;
 use std::time::Duration;
-use url::Url;
 use travis_after_all::Build;
+use utils::user_repo_from_url;
 
 const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 const USERAGENT: &'static str = concat!("semantic-rs/", env!("CARGO_PKG_VERSION"));
@@ -124,29 +125,6 @@ fn is_release_branch(current: &str, release: &str) -> bool {
     current == release
 }
 
-fn user_repo_from_url(url: Url) -> Result<(String, String), String> {
-    let path = match url.path() {
-        Some(path) => path,
-        None => return Err("URL should contain user and repository".into()),
-    };
-
-    let user = path[0].clone();
-    let repo = match path[1].rfind(".git") {
-        None => path[1].clone(),
-        Some(suffix_pos) => {
-            let valid_pos = path[1].len() - 4;
-            if valid_pos == suffix_pos {
-                let path = &path[1][0..suffix_pos];
-                path.into()
-            } else {
-                return Err("URL does not point to a git repository".into())
-            }
-        }
-    };
-
-    Ok((user, repo))
-}
-
 fn main() {
     env_logger::init().expect("Can't instantiate env logger");
 
@@ -226,9 +204,8 @@ Global config");
         let remote_or_none = repo.find_remote("origin");
         match remote_or_none {
             Ok(remote) => {
-                let url = remote.url().expect("Remote URL is not valid UTF-8");
-                let remote_url = Url::parse(&url).expect("Remote URL can't be parsed");
-                let (user, repo_name) = user_repo_from_url(remote_url)
+                let url = remote.url().expect("Remote URL is not valid UTF-8").to_owned();
+                let (user, repo_name) = user_repo_from_url(&url)
                     .unwrap_or_else(|e| print_exit!("Could not extract user and repository name from URL: {:?}", e));
                 config_builder.user(user);
                 config_builder.repository_name(repo_name);
