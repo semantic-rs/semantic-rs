@@ -132,7 +132,7 @@ fn main() {
         .and_then(|d| d.decode())
         .unwrap_or_else(|e| e.exit());
 
-    let mut cb = ConfigBuilder::new();
+    let mut config_builder = ConfigBuilder::new();
 
     if args.flag_version {
         println!("semantic.rs 🚀 -- v{}", VERSION);
@@ -148,9 +148,9 @@ fn main() {
 
     let release_mode = string_to_bool(&args.flag_release);
 
-    cb.write(args.flag_write);
-    cb.release(release_mode);
-    cb.branch(args.flag_branch);
+    config_builder.write(args.flag_write);
+    config_builder.release(release_mode);
+    config_builder.branch(args.flag_branch);
 
     println!("semantic.rs 🚀");
 
@@ -169,7 +169,7 @@ fn main() {
         }
     };
 
-    cb.repository_path(repository_path.to_owned());
+    config_builder.repository_path(repository_path.to_owned());
 
     // extra scope scope to make sure borrow of `repo` is dropped
     {
@@ -195,34 +195,39 @@ Global config");
             }
         };
 
-        cb.signature(signature.to_owned());
+        config_builder.signature(signature.to_owned());
     }
 
     // In case we are in write-mode AND release mode,
     // we will make sure we got all configuration settings
     if !is_dry_run && release_mode {
-        let remote_url = match repo.find_remote("origin") {
-            Err(e) => print_exit!("Could not determine the origin remote url: {:?}", e),
-            Ok(remote) => remote.url().expect("Remote URL is not valid UTF-8").to_owned(),
-        };
+        let remote_or_none = repo.find_remote("origin");
+        match remote_or_none {
+            Ok(remote) => {
+                let url = remote.url().expect("Remote URL is not valid UTF-8").to_owned();
+                let (user, repo_name) = user_repo_from_url(&url)
+                    .unwrap_or_else(|e| print_exit!("Could not extract user and repository name from URL: {:?}", e));
+                config_builder.user(user);
+                config_builder.repository_name(repo_name);
 
-        let (user, repo_name) = user_repo_from_url(&remote_url)
-            .unwrap_or_else(|e| print_exit!("Could not extract user and repository name from URL: {:?}", e));
-        cb.user(user);
-        cb.repository_name(repo_name);
+                let gh_token = env::var("GH_TOKEN")
+                    .unwrap_or_else(|err| print_exit!("GH_TOKEN not set: {:?}", err));
 
-        let gh_token = env::var("GH_TOKEN")
-            .unwrap_or_else(|err| print_exit!("GH_TOKEN not set: {:?}", err));
+                let cargo_token = env::var("CARGO_TOKEN")
+                    .unwrap_or_else(|err| print_exit!("CARGO_TOKEN not set: {:?}", err));
 
-        let cargo_token = env::var("CARGO_TOKEN")
-            .unwrap_or_else(|err| print_exit!("CARGO_TOKEN not set: {:?}", err));
-
-        cb.gh_token(gh_token);
-        cb.cargo_token(cargo_token);
+                config_builder.gh_token(gh_token);
+                config_builder.cargo_token(cargo_token);
+            },
+            Err(err) => {
+                logger::warn(format!("Could not determine the origin remote url: {:?}", err));
+                logger::warn("semantic-rs can't push changes or create a release on GitHub");
+            }
+        }
     }
 
-    cb.repository(repo);
-    let config = cb.build();
+    config_builder.repository(repo);
+    let config = config_builder.build();
 
     let branch = current_branch(&config.repository)
         .unwrap_or_else(|| print_exit!("Could not determine current branch."));
@@ -323,7 +328,7 @@ Global config");
         git::tag(&config, &tag_name, &tag_message)
             .unwrap_or_else(|err| print_exit!("Failed to create git tag: {:?}", err));
 
-        if config.release_mode {
+        if config.release_mode && config.can_push() {
             logger::stdout("Pushing new commit and tag");
             git::push(&config, &tag_name)
                 .unwrap_or_else(|err| print_exit!("Failed to push git: {:?}", err));
@@ -340,7 +345,7 @@ Global config");
                 print_exit!("Failed to publish on crates.io");
             }
 
-            println!("{} v{} is released. 🚀🚀🚀", config.repository_name, new_version);
+            println!("{} v{} is released. 🚀🚀🚀", config.repository_name.unwrap(), new_version);
         }
     }
 }

@@ -1,8 +1,8 @@
 use git2::{Repository, Signature};
 
 pub struct Config {
-    pub user: String,
-    pub repository_name: String,
+    pub user: Option<String>,
+    pub repository_name: Option<String>,
 
     pub branch: String,
 
@@ -16,6 +16,12 @@ pub struct Config {
 
     pub gh_token: Option<String>,
     pub cargo_token: Option<String>,
+}
+
+impl Config {
+    pub fn can_push(&self) -> bool {
+        self.user.is_some() && self.repository_name.is_some()
+    }
 }
 
 pub struct ConfigBuilder {
@@ -104,8 +110,8 @@ impl ConfigBuilder {
 
     pub fn build(self) -> Config {
         Config {
-            user: self.user.unwrap_or("".into()),
-            repository_name: self.repository_name.unwrap_or("".into()),
+            user: self.user,
+            repository_name: self.repository_name,
             branch: self.branch.unwrap_or("master".into()),
             repository_path: self.repository_path.unwrap(),
             write_mode: self.write_mode,

@@ -140,3 +140,13 @@ setup_dirs() {
   run semantic-rs --branch=hamster
   [ "${lines[2]}" = "Current branch is 'master', releases are only done from branch 'hamster'" ]
 }
+
+@test "Does not fail when project has no remote" {
+  cd has-no-remote
+  setup_dirs
+
+  CARGO_TOKEN=1234 run semantic-rs -w
+
+  [ "$status" -eq 0 ]
+  [[ "$output" =~ "semantic-rs can't push changes or create a release on GitHub" ]]
+}
