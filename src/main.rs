@@ -210,13 +210,15 @@ Global config");
                 config_builder.user(user);
                 config_builder.repository_name(repo_name);
 
-                let gh_token = env::var("GH_TOKEN")
-                    .unwrap_or_else(|err| print_exit!("GH_TOKEN not set: {:?}", err));
+                if github::is_github_url(&url) {
+                    let gh_token = env::var("GH_TOKEN")
+                        .unwrap_or_else(|err| print_exit!("GH_TOKEN not set: {:?}", err));
+                    config_builder.gh_token(gh_token);
+                }
 
                 let cargo_token = env::var("CARGO_TOKEN")
                     .unwrap_or_else(|err| print_exit!("CARGO_TOKEN not set: {:?}", err));
 
-                config_builder.gh_token(gh_token);
                 config_builder.cargo_token(cargo_token);
             },
             Err(err) => {
@@ -336,9 +338,13 @@ Global config");
             logger::stdout("Waiting a tiny bit, so GitHub can store the git tag");
             thread::sleep(Duration::from_secs(1));
 
-            logger::stdout("Creating GitHub release");
-            github::release(&config, &tag_name, &tag_message)
-                .unwrap_or_else(|err| print_exit!("Failed to create GitHub release: {:?}", err));
+            if github::can_release(&config) {
+                logger::stdout("Creating GitHub release");
+                github::release(&config, &tag_name, &tag_message)
+                    .unwrap_or_else(|err| print_exit!("Failed to create GitHub release: {:?}", err));
+            } else {
+                logger::stdout("Project not hosted on GitHub. Skipping release step");
+            }
 
             logger::stdout("Publishing crate on crates.io");
             if !cargo::publish(&config.repository_path, &config.cargo_token.as_ref().unwrap()) {
