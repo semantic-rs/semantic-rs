@@ -137,7 +137,6 @@ pub fn push(config: &Config, tag_name: &str) -> Result<(), Error> {
 
     let branch    = &config.branch;
     let token     = config.gh_token.as_ref();
-    let email     = config.signature.email().unwrap();
 
     // We need to push both the branch we just committed as well as the tag we created.
     let branch_ref = format!("refs/heads/{}", branch);
@@ -154,8 +153,8 @@ pub fn push(config: &Config, tag_name: &str) -> Result<(), Error> {
         });
         opts.remote_callbacks(cbs);
     } else {
-        cbs.credentials(|_url, _username, _allowed| {
-            Cred::ssh_key_from_agent(&email)
+        cbs.credentials(|_url, username, _allowed| {
+            Cred::ssh_key_from_agent(&username.unwrap())
         });
         opts.remote_callbacks(cbs);
     }
