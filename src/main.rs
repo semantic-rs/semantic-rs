@@ -335,7 +335,7 @@ Global config");
             git::push(&config, &tag_name)
                 .unwrap_or_else(|err| print_exit!("Failed to push git: {:?}", err));
 
-            logger::stdout("Waiting a tiny bit, so GitHub can store the git tag");
+            logger::stdout("Waiting a tiny bit, so remote source control can store the git tag");
             thread::sleep(Duration::from_secs(1));
 
             if github::can_release(&config) {
