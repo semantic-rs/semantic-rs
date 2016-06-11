@@ -45,17 +45,16 @@ const USAGE: &'static str = "
 semantic.rs 🚀
 
 Usage:
-  semantic-rs [(--write | --no-write)] [options]
+  semantic-rs [options]
   semantic-rs --version
 
 Options:
   -h --help              Show this screen.
   --version              Show version.
   -p PATH, --path=PATH   Specifies the repository path. [default: .]
-  -w, --write            Run with writing the changes afterwards.
-      --no-write         Disable write mode.
-  -r <r>, --release=<r>  Create release on GitHub and publish on crates.io (only in write mode) [default: yes]
-  -b <b>, --branch=<b>   The branch on which releases should happen. [default: master]
+  -w <w>, --write=<w>    Write changes to files (default: yes if CI is set, otherwise no).
+  -r <r>, --release=<r>  Create release on GitHub and publish on crates.io (only in write mode) [default: yes].
+  -b <b>, --branch=<b>   The branch on which releases should happen. [default: master].
 ";
 
 macro_rules! print_exit {
@@ -72,8 +71,7 @@ macro_rules! print_exit {
 #[derive(Debug, RustcDecodable)]
 struct Args {
     flag_path: String,
-    flag_write: bool,
-    flag_no_write: bool,
+    flag_write: Option<String>,
     flag_version: bool,
     flag_release: String,
     flag_branch: String,
@@ -144,10 +142,9 @@ fn main() {
     // If write mode is requested OR denied,
     // adhere to the user's wish,
     // otherwise we decide based on whether we are running in CI.
-    let write_mode = match (args.flag_write, args.flag_no_write) {
-        (true, false) => true,
-        (false, true) => false,
-        _ => ci_env_set(),
+    let write_mode = match args.flag_write {
+        None => ci_env_set(),
+        Some(ref flag) => string_to_bool(flag)
     };
 
     // We can only release, if we are allowed to write

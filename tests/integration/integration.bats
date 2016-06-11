@@ -50,7 +50,7 @@ setup_dirs() {
   cd initial-release
   setup_dirs
 
-  semantic-rs -w --release=no
+  semantic-rs --write=yes --release=no
   grep -q 'version = "1.0.0"' Cargo.toml
 }
 
@@ -60,7 +60,7 @@ setup_dirs() {
 
   grep -q 'version = "1.0.0"' Cargo.toml
 
-  semantic-rs -w --release=no
+  semantic-rs --write=yes --release=no
 
   grep -q 'version = "1.1.0"' Cargo.toml
 
@@ -74,7 +74,7 @@ setup_dirs() {
 
   grep -q 'version = "1.1.0"' Cargo.toml
 
-  run semantic-rs -w --release=no
+  run semantic-rs --write=yes --release=no
   [ "$status" -eq 0 ]
   [[ "$output" =~ "No version bump. Nothing to do" ]]
 
@@ -95,7 +95,7 @@ setup_dirs() {
   run git tag -l
   [ "$output" = "v1.0.0" ]
 
-  semantic-rs -w --release=no
+  semantic-rs --write=yes --release=no
 
   run git tag -l
   [ "${lines[0]}" = "v1.0.0" ]
@@ -122,7 +122,7 @@ setup_dirs() {
   cd write-mode-disabled
   setup_dirs
 
-  CI=true semantic-rs --no-write
+  CI=true semantic-rs --write=no
   grep -q 'version = "0.1.0"' Cargo.toml
 }
 
@@ -133,7 +133,7 @@ setup_dirs() {
   export GIT_COMMITTER_NAME=semantic-rs
   export GIT_COMMITTER_EMAIL=semantic@rs
 
-  semantic-rs -w --release=no
+  semantic-rs --write=yes --release=no
 
   run git log --oneline --format=format:'%an %ae'
   [ "${lines[0]}" = "semantic-rs semantic@rs" ]
@@ -154,7 +154,7 @@ setup_dirs() {
   cd has-no-remote
   setup_dirs
 
-  CARGO_TOKEN=1234 run semantic-rs -w
+  CARGO_TOKEN=1234 run semantic-rs --write=yes
 
   [ "$status" -eq 0 ]
   [[ "$output" =~ "semantic-rs can't push changes or create a release on GitHub" ]]
