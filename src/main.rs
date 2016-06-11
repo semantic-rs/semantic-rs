@@ -52,9 +52,9 @@ Options:
   -h --help              Show this screen.
   --version              Show version.
   -p PATH, --path=PATH   Specifies the repository path. [default: .]
-  -w, --write            Run with writing the changes afterwards.
-  -r <r>, --release=<r>  Create release on GitHub and publish on crates.io (only in write mode) [default: yes]
-  -b <b>, --branch=<b>   The branch on which releases should happen. [default: master]
+  -w W, --write=W        Write changes to files (default: yes if CI is set, otherwise no).
+  -r R, --release=R      Create release on GitHub and publish on crates.io (only in write mode) [default: yes].
+  -b B, --branch=B       The branch on which releases should happen. [default: master].
 ";
 
 macro_rules! print_exit {
@@ -71,7 +71,7 @@ macro_rules! print_exit {
 #[derive(Debug, RustcDecodable)]
 struct Args {
     flag_path: String,
-    flag_write: bool,
+    flag_write: Option<String>,
     flag_version: bool,
     flag_release: String,
     flag_branch: String,
@@ -139,16 +139,18 @@ fn main() {
         process::exit(0);
     }
 
-    let is_dry_run = if ci_env_set() {
-        false
-    }
-    else {
-        !args.flag_write
+    // If write mode is requested OR denied,
+    // adhere to the user's wish,
+    // otherwise we decide based on whether we are running in CI.
+    let write_mode = match args.flag_write {
+        None => ci_env_set(),
+        Some(ref flag) => string_to_bool(flag)
     };
 
-    let release_mode = string_to_bool(&args.flag_release);
+    // We can only release, if we are allowed to write
+    let release_mode = write_mode && string_to_bool(&args.flag_release);
 
-    config_builder.write(args.flag_write);
+    config_builder.write(write_mode);
     config_builder.release(release_mode);
     config_builder.branch(args.flag_branch);
 
@@ -200,7 +202,7 @@ Global config");
 
     // In case we are in write-mode AND release mode,
     // we will make sure we got all configuration settings
-    if !is_dry_run && release_mode {
+    if write_mode && release_mode {
         let remote_or_none = repo.find_remote("origin");
         match remote_or_none {
             Ok(remote) => {
@@ -238,7 +240,7 @@ Global config");
         process::exit(0);
     }
 
-    if ci_env_set() {
+    if config.release_mode && ci_env_set() {
         let build_run = Build::from_env()
             .unwrap_or_else(|e| print_exit!("CI mode, but can't check other builds. Error: {:?}", e));
 
@@ -266,11 +268,10 @@ Global config");
     logger::stdout("Analyzing commits");
 
     let bump = git::version_bump_since_latest(&config.repository);
-    if is_dry_run {
-        logger::stdout(format!("Commits analyzed. Bump would be {:?}", bump));
-    }
-    else {
+    if write_mode {
         logger::stdout(format!("Commits analyzed. Bump will be {:?}", bump));
+    } else {
+        logger::stdout(format!("Commits analyzed. Bump would be {:?}", bump));
     }
     let new_version = match version_bump(&version, bump) {
         Some(new_version) => new_version.to_string(),
@@ -280,7 +281,7 @@ Global config");
         }
     };
 
-    if is_dry_run {
+    if !config.write_mode {
         logger::stdout(format!("New version would be: {}", new_version));
         logger::stdout("Would write the following Changelog:");
         let changelog = match changelog::generate(repository_path, &version.to_string(), &new_version) {
@@ -294,8 +295,7 @@ Global config");
         logger::stdout(changelog);
         logger::stdout("====================================");
         logger::stdout("Would create annotated git tag");
-    }
-    else {
+    } else {
         logger::stdout(format!("New version: {}", new_version));
 
         toml_file::write_new_version(repository_path, &new_version)

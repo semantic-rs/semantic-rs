@@ -5,6 +5,8 @@ setup() {
   unset CI
   unset TRAVIS_PULL_REQUEST
   unset TRAVIS_BRANCH
+  unset TRAVIS_BUILD_ID
+  unset TRAVIS_JOB_NUMBER
 }
 
 setup_dirs() {
@@ -48,7 +50,7 @@ setup_dirs() {
   cd initial-release
   setup_dirs
 
-  semantic-rs -w --release=no
+  semantic-rs --write=yes --release=no
   grep -q 'version = "1.0.0"' Cargo.toml
 }
 
@@ -58,7 +60,7 @@ setup_dirs() {
 
   grep -q 'version = "1.0.0"' Cargo.toml
 
-  semantic-rs -w --release=no
+  semantic-rs --write=yes --release=no
 
   grep -q 'version = "1.1.0"' Cargo.toml
 
@@ -72,7 +74,7 @@ setup_dirs() {
 
   grep -q 'version = "1.1.0"' Cargo.toml
 
-  run semantic-rs -w --release=no
+  run semantic-rs --write=yes --release=no
   [ "$status" -eq 0 ]
   [[ "$output" =~ "No version bump. Nothing to do" ]]
 
@@ -93,7 +95,7 @@ setup_dirs() {
   run git tag -l
   [ "$output" = "v1.0.0" ]
 
-  semantic-rs -w --release=no
+  semantic-rs --write=yes --release=no
 
   run git tag -l
   [ "${lines[0]}" = "v1.0.0" ]
@@ -109,12 +111,19 @@ setup_dirs() {
 }
 
 @test "Runs in write-mode with CI=true" {
-  skip
   cd write-mode
   setup_dirs
 
   CI=true semantic-rs --release=no
   grep -q 'version = "1.0.0"' Cargo.toml
+}
+
+@test "Runs in dry-run-mode with CI=true but dry-run forced" {
+  cd write-mode-disabled
+  setup_dirs
+
+  CI=true semantic-rs --write=no
+  grep -q 'version = "0.1.0"' Cargo.toml
 }
 
 @test "Respects Git environment variables" {
@@ -124,7 +133,7 @@ setup_dirs() {
   export GIT_COMMITTER_NAME=semantic-rs
   export GIT_COMMITTER_EMAIL=semantic@rs
 
-  semantic-rs -w --release=no
+  semantic-rs --write=yes --release=no
 
   run git log --oneline --format=format:'%an %ae'
   [ "${lines[0]}" = "semantic-rs semantic@rs" ]
@@ -137,7 +146,7 @@ setup_dirs() {
   cd wrong-branch
   setup_dirs
 
-  run semantic-rs --branch=hamster
+  run semantic-rs --branch=hamster --release=no
   [ "${lines[2]}" = "Current branch is 'master', releases are only done from branch 'hamster'" ]
 }
 
@@ -145,7 +154,7 @@ setup_dirs() {
   cd has-no-remote
   setup_dirs
 
-  CARGO_TOKEN=1234 run semantic-rs -w
+  CARGO_TOKEN=1234 run semantic-rs --write=yes
 
   [ "$status" -eq 0 ]
   [[ "$output" =~ "semantic-rs can't push changes or create a release on GitHub" ]]
