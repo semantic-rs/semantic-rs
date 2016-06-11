@@ -52,9 +52,9 @@ Options:
   -h --help              Show this screen.
   --version              Show version.
   -p PATH, --path=PATH   Specifies the repository path. [default: .]
-  -w <w>, --write=<w>    Write changes to files (default: yes if CI is set, otherwise no).
-  -r <r>, --release=<r>  Create release on GitHub and publish on crates.io (only in write mode) [default: yes].
-  -b <b>, --branch=<b>   The branch on which releases should happen. [default: master].
+  -w W, --write=W        Write changes to files (default: yes if CI is set, otherwise no).
+  -r R, --release=R      Create release on GitHub and publish on crates.io (only in write mode) [default: yes].
+  -b B, --branch=B       The branch on which releases should happen. [default: master].
 ";
 
 macro_rules! print_exit {
