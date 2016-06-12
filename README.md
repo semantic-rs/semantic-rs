@@ -70,13 +70,15 @@ Requirements:
 - OpenSSL development package
   - Ubuntu: `libssl-dev`
   - Mac Homebrew: `openssl`
-- Rust 1.5
+- Rust 1.5 or later
 
 Clone this project:
 
 ```bash
 $ git clone git@github.com:semantic-rs/semantic-rs.git
 ```
+
+As a test project you can use this one: https://github.com/badboy/test-project.
 
 You can run semantic-rs by calling:
 
