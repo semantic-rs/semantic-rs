@@ -46,7 +46,7 @@ $ semantic-rs
 #...
 ```
 
-By default it runs in dry-run mode. This means it doens't perform changes automatically. You see which changes would be performed and also the resulting changelog.
+By default it runs in dry-run mode. This means it doesn't perform changes automatically. You see which steps would be performed and also the resulting changelog.
 
 To perform the changes, pass `-w` as an argument:
 
@@ -78,7 +78,7 @@ Clone this project:
 $ git clone git@github.com:semantic-rs/semantic-rs.git
 ```
 
-As a test project you can use this one: https://github.com/badboy/test-project.
+As a test project you can use this one: [https://github.com/badboy/test-project](https://github.com/badboy/test-project).
 
 You can run semantic-rs by calling:
 
