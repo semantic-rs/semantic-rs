@@ -4,6 +4,24 @@ use error::Error;
 use super::USERAGENT;
 use config::Config;
 
+pub fn can_release(config: &Config) -> bool {
+    let repo = &config.repository;
+    match repo.find_remote("origin") {
+        Ok(remote) => {
+            let url = match remote.url() {
+                Some(u) => u,
+                None => return false
+            };
+            is_github_url(url)
+        },
+        Err(_) => false
+    }
+}
+
+pub fn is_github_url(url: &str) -> bool {
+    url.contains("github.com")
+}
+
 pub fn release(config: &Config, tag_name: &str, tag_message: &str) -> Result<(), Error> {
     let user      = &config.user.as_ref().unwrap()[..];
     let repo_name = &config.repository_name.as_ref().unwrap()[..];

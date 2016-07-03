@@ -134,27 +134,30 @@ pub fn tag(config: &Config, tag_name: &str, tag_message: &str) -> Result<(), Err
 
 pub fn push(config: &Config, tag_name: &str) -> Result<(), Error> {
     let repo      = &config.repository;
-    let token     = config.gh_token.as_ref().unwrap();
 
-    let user      = config.user.as_ref().unwrap();
-    let repo_name = config.repository_name.as_ref().unwrap();
     let branch    = &config.branch;
+    let token     = config.gh_token.as_ref();
 
     // We need to push both the branch we just committed as well as the tag we created.
     let branch_ref = format!("refs/heads/{}", branch);
     let tag_ref    = format!("refs/tags/{}", tag_name);
     let refs = [&branch_ref[..], &tag_ref[..]];
 
-    let url = format!("https://github.com/{}/{}.git", user, repo_name);
-
-    let mut remote = try!(repo.remote_anonymous(&url));
-
+    let mut remote = try!(repo.find_remote("origin"));
     let mut cbs = RemoteCallbacks::new();
-    cbs.credentials(|_url, _username, _allowed| {
-        Cred::userpass_plaintext(&token, "")
-    });
     let mut opts = PushOptions::new();
-    opts.remote_callbacks(cbs);
+
+    if config.gh_token.as_ref().is_some() {
+        cbs.credentials(|_url, _username, _allowed| {
+            Cred::userpass_plaintext(&token.unwrap(), "")
+        });
+        opts.remote_callbacks(cbs);
+    } else {
+        cbs.credentials(|_url, username, _allowed| {
+            Cred::ssh_key_from_agent(&username.unwrap())
+        });
+        opts.remote_callbacks(cbs);
+    }
 
     remote
         .push(&refs, Some(&mut opts))
