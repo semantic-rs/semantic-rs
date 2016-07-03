@@ -159,11 +159,34 @@ fn generate_changelog(repository_path: &str, version: &Version, new_version: &St
     }
 }
 
+fn write_changelog(repository_path: &str, version: &Version, new_version: &str) {
+    logger::stdout("Writing Changelog");
+    changelog::write(repository_path, &version.to_string(), &new_version)
+        .unwrap_or_else(|err| print_exit!("Writing Changelog failed: {:?}", err));
+}
+
 fn print_changelog(changelog: &str) {
     logger::stdout("====================================");
     logger::stdout(changelog);
     logger::stdout("====================================");
     logger::stdout("Would create annotated git tag");
+}
+
+fn package_crate(config: &config::Config, repository_path: &str, new_version: &str) {
+    if config.release_mode {
+        logger::stdout("Updating lockfile");
+        if !cargo::update_lockfile(repository_path) {
+            print_exit!("`cargo fetch` failed. See above for the cargo error message.");
+        }
+    }
+
+    logger::stdout("Package crate");
+    if !cargo::package(repository_path) {
+        print_exit!("`cargo package` failed. See above for the cargo error message.");
+    }
+
+    git::commit_files(&config, &new_version)
+        .unwrap_or_else(|err| print_exit!("Committing files failed: {:?}", err));
 }
 
 fn main() {
@@ -331,24 +354,8 @@ Global config");
         toml_file::write_new_version(repository_path, &new_version)
             .unwrap_or_else(|err| print_exit!("Writing `Cargo.toml` failed: {:?}", err));
 
-        logger::stdout("Writing Changelog");
-        changelog::write(repository_path, &version.to_string(), &new_version)
-            .unwrap_or_else(|err| print_exit!("Writing Changelog failed: {:?}", err));
-
-        if config.release_mode {
-            logger::stdout("Updating lockfile");
-            if !cargo::update_lockfile(repository_path) {
-                print_exit!("`cargo fetch` failed. See above for the cargo error message.");
-            }
-        }
-
-        logger::stdout("Package crate");
-        if !cargo::package(repository_path) {
-            print_exit!("`cargo package` failed. See above for the cargo error message.");
-        }
-
-        git::commit_files(&config, &new_version)
-            .unwrap_or_else(|err| print_exit!("Committing files failed: {:?}", err));
+        write_changelog(&repository_path, &version, &new_version);
+        package_crate(&config, &repository_path, &new_version);
 
         logger::stdout("Creating annotated git tag");
         let tag_message = changelog::generate(repository_path, &version.to_string(), &new_version)
