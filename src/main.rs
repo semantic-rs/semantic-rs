@@ -125,6 +125,28 @@ fn is_release_branch(current: &str, release: &str) -> bool {
     current == release
 }
 
+fn push_to_github(config: &config::Config, tag_name: &str) {
+    logger::stdout("Pushing new commit and tag");
+    git::push(&config, &tag_name)
+        .unwrap_or_else(|err| print_exit!("Failed to push git: {:?}", err));
+
+    logger::stdout("Waiting a tiny bit, so GitHub can store the git tag");
+    thread::sleep(Duration::from_secs(1));
+}
+
+fn release_on_github(config: &config::Config, tag_message: &str, tag_name: &str) {
+    logger::stdout("Creating GitHub release");
+    github::release(&config, &tag_name, &tag_message)
+        .unwrap_or_else(|err| print_exit!("Failed to create GitHub release: {:?}", err));
+}
+
+fn release_on_cratesio(config: &config::Config) {
+    logger::stdout("Publishing crate on crates.io");
+    if !cargo::publish(&config.repository_path, &config.cargo_token.as_ref().unwrap()) {
+        print_exit!("Failed to publish on crates.io");
+    }
+}
+
 fn main() {
     env_logger::init().expect("Can't instantiate env logger");
 
@@ -329,22 +351,9 @@ Global config");
             .unwrap_or_else(|err| print_exit!("Failed to create git tag: {:?}", err));
 
         if config.release_mode && config.can_push() {
-            logger::stdout("Pushing new commit and tag");
-            git::push(&config, &tag_name)
-                .unwrap_or_else(|err| print_exit!("Failed to push git: {:?}", err));
-
-            logger::stdout("Waiting a tiny bit, so GitHub can store the git tag");
-            thread::sleep(Duration::from_secs(1));
-
-            logger::stdout("Creating GitHub release");
-            github::release(&config, &tag_name, &tag_message)
-                .unwrap_or_else(|err| print_exit!("Failed to create GitHub release: {:?}", err));
-
-            logger::stdout("Publishing crate on crates.io");
-            if !cargo::publish(&config.repository_path, &config.cargo_token.as_ref().unwrap()) {
-                print_exit!("Failed to publish on crates.io");
-            }
-
+            push_to_github(&config, &tag_name);
+            release_on_github(&config, &tag_message, &tag_name);
+            release_on_cratesio(&config);
             println!("{} v{} is released. 🚀🚀🚀", config.repository_name.unwrap(), new_version);
         }
     }
