@@ -33,13 +33,13 @@ You need the following data beforehand:
 
 semantic-rs depends on some data being passed in via environment variables. In our examples we specify those variables explicitly but if you run semantic-rs frequently you may want to configure those in your shell's configuration file.
 
-Setting `GIT_COMITTER_NAME` and `GIT_COMMITTER_EMAIL` is optional. If you omit those, we default to the settings from your (global) git configuration. 
+Setting `GIT_COMITTER_NAME` and `GIT_COMMITTER_EMAIL` is optional. If you omit those, we default to the settings from your (global) git configuration.
 
 If you run semantic-rs without any arguments, it operates on your current working directory:
 
 ```bash
 $ export GH_TOKEN=<GHTOKEN>
-$ export CARGO_TOKEN=<CARGOTOKEN> 
+$ export CARGO_TOKEN=<CARGOTOKEN>
 $ export GIT_COMMITTER_NAME=<Your name>
 $ export GIT_COMMITTER_EMAIL=<Your email>
 $ semantic-rs
@@ -80,19 +80,51 @@ $ git clone git@github.com:semantic-rs/semantic-rs.git
 
 As a test project you can use this one: [https://github.com/badboy/test-project](https://github.com/badboy/test-project).
 
-You can run semantic-rs by calling:
+Clone it as well:
 
 ```bash
-$ cargo run
+$ git clone https://github.com/badboy/test-project.git
 ```
 
-This analyzes the current git repository and updates the project's `Cargo.toml`.
-
-To pass in arguments you need to separate them with `--`:
+In your top level directory there should be now the following two folders:
 
 ```bash
-cargo run -- -p ~/home/my-project -w
+$ ls -l
+semantic-rs
+test-project
 ```
+
+Change into the semantic-rs folder and run `cargo build`.
+Then you can run semantic-rs against the test project:
+
+```bash
+$ cargo run -- -p ../test-project
+   Compiling semantic-rs v0.1.0 (file:///Users/janschulte/projects/semantic-rs/semantic-rs)
+     Running `target/debug/semantic-rs -p ../test-project`
+semantic.rs 🚀
+Analyzing your repository
+Current version: 2.0.3
+Analyzing commits
+Commits analyzed. Bump would be Minor
+New version would be: 2.1.0
+Would write the following Changelog:
+====================================
+## v2.1.0 (2016-07-03)
+
+
+#### Features
+
+*   Math mode ([24afa46f](24afa46f))
+
+#### Bug Fixes
+
+*   Into the void ([9e54f4bf](9e54f4bf))
+
+====================================
+Would create annotated git tag
+```
+
+Since `-w` was not passed, it only prints out what it would do. Note that if you run it on your local machine the output may differ.
 
 ## Run semantic-rs in CI environment
 
