@@ -147,6 +147,25 @@ fn release_on_cratesio(config: &config::Config) {
     }
 }
 
+fn generate_changelog(repository_path: &str, version: &Version, new_version: &String) -> String {
+    logger::stdout(format!("New version would be: {}", new_version));
+    logger::stdout("Would write the following Changelog:");
+    match changelog::generate(repository_path, &version.to_string(), new_version) {
+        Ok(log) => log,
+        Err(err) => {
+            logger::stderr(format!("Generating Changelog failed: {:?}", err));
+            process::exit(1)
+        }
+    }
+}
+
+fn print_changelog(changelog: &str) {
+    logger::stdout("====================================");
+    logger::stdout(changelog);
+    logger::stdout("====================================");
+    logger::stdout("Would create annotated git tag");
+}
+
 fn main() {
     env_logger::init().expect("Can't instantiate env logger");
 
@@ -304,19 +323,8 @@ Global config");
     };
 
     if !config.write_mode {
-        logger::stdout(format!("New version would be: {}", new_version));
-        logger::stdout("Would write the following Changelog:");
-        let changelog = match changelog::generate(repository_path, &version.to_string(), &new_version) {
-            Ok(log) => log,
-            Err(err) => {
-                logger::stderr(format!("Generating Changelog failed: {:?}", err));
-                process::exit(1);
-            }
-        };
-        logger::stdout("====================================");
-        logger::stdout(changelog);
-        logger::stdout("====================================");
-        logger::stdout("Would create annotated git tag");
+        let changelog = generate_changelog(repository_path, &version, &new_version);
+        print_changelog(&changelog);
     } else {
         logger::stdout(format!("New version: {}", new_version));
 
