@@ -57,6 +57,21 @@ Options:
   -b B, --branch=B       The branch on which releases should happen. [default: master].
 ";
 
+const COMMITTER_MESSAGE: &'static str = r"
+A release commit needs a committer name and email address.
+We tried fetching it from different locations, but couldn't find one.
+
+Committer information is taken from the following environment variables, if set:
+
+GIT_COMMITTER_NAME
+GIT_COMMITTER_EMAIL
+
+If none is set the normal git config is tried in the following order:
+
+Local repository config
+User config
+Global config";
+
 macro_rules! print_exit {
     ($fmt:expr) => {{
         logger::stderr($fmt);
@@ -243,20 +258,7 @@ fn main() {
             Ok(sig) => sig,
             Err(e) => {
                 logger::stderr(format!("Failed to get the committer's name and email address: {}", e.description()));
-                logger::stderr(r"
-A release commit needs a committer name and email address.
-We tried fetching it from different locations, but couldn't find one.
-
-Committer information is taken from the following environment variables, if set:
-
-GIT_COMMITTER_NAME
-GIT_COMMITTER_EMAIL
-
-If none is set the normal git config is tried in the following order:
-
-Local repository config
-User config
-Global config");
+                logger::stderr(COMMITTER_MESSAGE);
                 process::exit(1);
             }
         };
