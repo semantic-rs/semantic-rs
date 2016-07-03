@@ -57,7 +57,7 @@ Options:
   -b B, --branch=B       The branch on which releases should happen. [default: master].
 ";
 
-const COMMITTER_MESSAGE: &'static str = r"
+const COMMITTER_ERROR_MESSAGE: &'static str = r"
 A release commit needs a committer name and email address.
 We tried fetching it from different locations, but couldn't find one.
 
@@ -258,7 +258,7 @@ fn main() {
             Ok(sig) => sig,
             Err(e) => {
                 logger::stderr(format!("Failed to get the committer's name and email address: {}", e.description()));
-                logger::stderr(COMMITTER_MESSAGE);
+                logger::stderr(COMMITTER_ERROR_MESSAGE);
                 process::exit(1);
             }
         };
