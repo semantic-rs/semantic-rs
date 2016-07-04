@@ -2,12 +2,6 @@ language: rust
 cache: cargo
 sudo: required
 dist: trusty
-addons:
-  apt:
-    packages:
-      - libcurl4-openssl-dev
-      - libelf-dev
-      - libdw-dev
 
 # run builds for both all the trains
 rust:
@@ -32,8 +26,6 @@ script:
       travis-cargo test &&
       pushd tests/integration && bats integration.bats && popd &&
       travis-cargo --only stable doc
-after_success:
-  - travis-cargo coveralls --no-sudo
 
 env:
   global:
