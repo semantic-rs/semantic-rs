@@ -57,6 +57,21 @@ Options:
   -b B, --branch=B       The branch on which releases should happen. [default: master].
 ";
 
+const COMMITTER_ERROR_MESSAGE: &'static str = r"
+A release commit needs a committer name and email address.
+We tried fetching it from different locations, but couldn't find one.
+
+Committer information is taken from the following environment variables, if set:
+
+GIT_COMMITTER_NAME
+GIT_COMMITTER_EMAIL
+
+If none is set the normal git config is tried in the following order:
+
+Local repository config
+User config
+Global config";
+
 macro_rules! print_exit {
     ($fmt:expr) => {{
         logger::stderr($fmt);
@@ -125,6 +140,74 @@ fn is_release_branch(current: &str, release: &str) -> bool {
     current == release
 }
 
+fn push_to_github(config: &config::Config, tag_name: &str) {
+    logger::stdout("Pushing new commit and tag");
+    git::push(&config, &tag_name)
+        .unwrap_or_else(|err| print_exit!("Failed to push git: {:?}", err));
+
+    logger::stdout("Waiting a tiny bit, so GitHub can store the git tag");
+    thread::sleep(Duration::from_secs(1));
+}
+
+fn release_on_github(config: &config::Config, tag_message: &str, tag_name: &str) {
+    if github::can_release(&config) {
+        logger::stdout("Creating GitHub release");
+        github::release(&config, &tag_name, &tag_message)
+            .unwrap_or_else(|err| print_exit!("Failed to create GitHub release: {:?}", err));
+    } else {
+        logger::stdout("Project not hosted on GitHub. Skipping release step");
+    }
+}
+
+fn release_on_cratesio(config: &config::Config) {
+    logger::stdout("Publishing crate on crates.io");
+    if !cargo::publish(&config.repository_path, &config.cargo_token.as_ref().unwrap()) {
+        print_exit!("Failed to publish on crates.io");
+    }
+}
+
+fn generate_changelog(repository_path: &str, version: &Version, new_version: &String) -> String {
+    logger::stdout(format!("New version would be: {}", new_version));
+    logger::stdout("Would write the following Changelog:");
+    match changelog::generate(repository_path, &version.to_string(), new_version) {
+        Ok(log) => log,
+        Err(err) => {
+            logger::stderr(format!("Generating Changelog failed: {:?}", err));
+            process::exit(1)
+        }
+    }
+}
+
+fn write_changelog(repository_path: &str, version: &Version, new_version: &str) {
+    logger::stdout("Writing Changelog");
+    changelog::write(repository_path, &version.to_string(), &new_version)
+        .unwrap_or_else(|err| print_exit!("Writing Changelog failed: {:?}", err));
+}
+
+fn print_changelog(changelog: &str) {
+    logger::stdout("====================================");
+    logger::stdout(changelog);
+    logger::stdout("====================================");
+    logger::stdout("Would create annotated git tag");
+}
+
+fn package_crate(config: &config::Config, repository_path: &str, new_version: &str) {
+    if config.release_mode {
+        logger::stdout("Updating lockfile");
+        if !cargo::update_lockfile(repository_path) {
+            print_exit!("`cargo fetch` failed. See above for the cargo error message.");
+        }
+    }
+
+    logger::stdout("Package crate");
+    if !cargo::package(repository_path) {
+        print_exit!("`cargo package` failed. See above for the cargo error message.");
+    }
+
+    git::commit_files(&config, &new_version)
+        .unwrap_or_else(|err| print_exit!("Committing files failed: {:?}", err));
+}
+
 fn main() {
     env_logger::init().expect("Can't instantiate env logger");
 
@@ -179,20 +262,7 @@ fn main() {
             Ok(sig) => sig,
             Err(e) => {
                 logger::stderr(format!("Failed to get the committer's name and email address: {}", e.description()));
-                logger::stderr(r"
-A release commit needs a committer name and email address.
-We tried fetching it from different locations, but couldn't find one.
-
-Committer information is taken from the following environment variables, if set:
-
-GIT_COMMITTER_NAME
-GIT_COMMITTER_EMAIL
-
-If none is set the normal git config is tried in the following order:
-
-Local repository config
-User config
-Global config");
+                logger::stderr(COMMITTER_ERROR_MESSAGE);
                 process::exit(1);
             }
         };
@@ -284,43 +354,16 @@ Global config");
     };
 
     if !config.write_mode {
-        logger::stdout(format!("New version would be: {}", new_version));
-        logger::stdout("Would write the following Changelog:");
-        let changelog = match changelog::generate(repository_path, &version.to_string(), &new_version) {
-            Ok(log) => log,
-            Err(err) => {
-                logger::stderr(format!("Generating Changelog failed: {:?}", err));
-                process::exit(1);
-            }
-        };
-        logger::stdout("====================================");
-        logger::stdout(changelog);
-        logger::stdout("====================================");
-        logger::stdout("Would create annotated git tag");
+        let changelog = generate_changelog(repository_path, &version, &new_version);
+        print_changelog(&changelog);
     } else {
         logger::stdout(format!("New version: {}", new_version));
 
         toml_file::write_new_version(repository_path, &new_version)
             .unwrap_or_else(|err| print_exit!("Writing `Cargo.toml` failed: {:?}", err));
 
-        logger::stdout("Writing Changelog");
-        changelog::write(repository_path, &version.to_string(), &new_version)
-            .unwrap_or_else(|err| print_exit!("Writing Changelog failed: {:?}", err));
-
-        if config.release_mode {
-            logger::stdout("Updating lockfile");
-            if !cargo::update_lockfile(repository_path) {
-                print_exit!("`cargo fetch` failed. See above for the cargo error message.");
-            }
-        }
-
-        logger::stdout("Package crate");
-        if !cargo::package(repository_path) {
-            print_exit!("`cargo package` failed. See above for the cargo error message.");
-        }
-
-        git::commit_files(&config, &new_version)
-            .unwrap_or_else(|err| print_exit!("Committing files failed: {:?}", err));
+        write_changelog(&repository_path, &version, &new_version);
+        package_crate(&config, &repository_path, &new_version);
 
         logger::stdout("Creating annotated git tag");
         let tag_message = changelog::generate(repository_path, &version.to_string(), &new_version)
@@ -331,26 +374,9 @@ Global config");
             .unwrap_or_else(|err| print_exit!("Failed to create git tag: {:?}", err));
 
         if config.release_mode && config.can_push() {
-            logger::stdout("Pushing new commit and tag");
-            git::push(&config, &tag_name)
-                .unwrap_or_else(|err| print_exit!("Failed to push git: {:?}", err));
-
-            logger::stdout("Waiting a tiny bit, so remote source control can store the git tag");
-            thread::sleep(Duration::from_secs(1));
-
-            if github::can_release(&config) {
-                logger::stdout("Creating GitHub release");
-                github::release(&config, &tag_name, &tag_message)
-                    .unwrap_or_else(|err| print_exit!("Failed to create GitHub release: {:?}", err));
-            } else {
-                logger::stdout("Project not hosted on GitHub. Skipping release step");
-            }
-
-            logger::stdout("Publishing crate on crates.io");
-            if !cargo::publish(&config.repository_path, &config.cargo_token.as_ref().unwrap()) {
-                print_exit!("Failed to publish on crates.io");
-            }
-
+            push_to_github(&config, &tag_name);
+            release_on_github(&config, &tag_message, &tag_name);
+            release_on_cratesio(&config);
             println!("{} v{} is released. 🚀🚀🚀", config.repository_name.unwrap(), new_version);
         }
     }
