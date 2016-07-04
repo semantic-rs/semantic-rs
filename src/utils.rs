@@ -1,36 +1,25 @@
-use url::{UrlParser, ParseError, SchemeType};
-
-fn scheme_mapper(scheme: &str) -> SchemeType {
-    match scheme {
-        "file" => SchemeType::FileLike,
-        "ftp" => SchemeType::Relative(21),
-        "gopher" => SchemeType::Relative(70),
-        "http" => SchemeType::Relative(80),
-        "https" => SchemeType::Relative(443),
-        "ws" => SchemeType::Relative(80),
-        "wss" => SchemeType::Relative(443),
-        "ssh" => SchemeType::Relative(22),
-        _ => SchemeType::NonRelative,
-    }
-}
+use url::{Url, ParseError};
 
 pub fn user_repo_from_url(url: &str) -> Result<(String, String), String> {
-    let mut parser = UrlParser::new();
-    parser.scheme_type_mapper(scheme_mapper);
-
-    let path = match parser.parse(url) {
+    let path = match Url::parse(url) {
         Err(ParseError::RelativeUrlWithoutBase) => {
             match url.rfind(":") {
                 None => return Err("Can't parse path from remote URL".into()),
                 Some(colon_pos) => {
-                    Some(url[colon_pos+1..].split("/")
+                    Some(url[colon_pos+1..].split('/')
                                            .map(|s| s.to_owned())
                                            .collect::<Vec<_>>())
                 }
             }
         }
         Err(_) => return Err("Can't parse remote URL".into()),
-        Ok(url) => url.path().map(|s| s.to_vec())
+        Ok(url) => {
+            url.path_segments()
+                .map(|path| {
+                    path.map(|seg| seg.to_owned())
+                        .collect::<Vec<_>>()
+                })
+        }
     };
 
     let path = match path {
