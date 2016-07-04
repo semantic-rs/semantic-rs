@@ -199,13 +199,13 @@ fn package_crate(config: &config::Config, repository_path: &str, new_version: &s
         }
     }
 
+    git::commit_files(&config, &new_version)
+        .unwrap_or_else(|err| print_exit!("Committing files failed: {:?}", err));
+
     logger::stdout("Package crate");
     if !cargo::package(repository_path) {
         print_exit!("`cargo package` failed. See above for the cargo error message.");
     }
-
-    git::commit_files(&config, &new_version)
-        .unwrap_or_else(|err| print_exit!("Committing files failed: {:?}", err));
 }
 
 fn main() {
