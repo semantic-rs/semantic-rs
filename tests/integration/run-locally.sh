@@ -2,6 +2,20 @@
 
 set -e
 
+if [[ `uname` == 'Darwin' ]]; then
+  hash greadlink 2>/dev/null || \
+  hash gcp 2>/dev/null || \
+  { echo >&2 "you're running OS X:
+  to make this script compatible coreutils  is required;
+  install with 'brew install coreutils'; Aborting."; exit 1; }
+  readlink() {
+    $(which greadlink) "$@"
+  }
+  cp() {
+    $(which gcp) "$@"
+  }
+fi
+
 cd $(dirname $(readlink -f $0))
 
 export WORKSPACE=$(readlink -f ../../..)/workspace

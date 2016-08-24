@@ -71,6 +71,7 @@ Requirements:
   - Ubuntu: `libssl-dev`
   - Mac Homebrew: `openssl`
 - Rust 1.5 or later
+- OS X: coreutils:`brew install coreutils`
 
 Clone this project:
 
