@@ -3,19 +3,22 @@
 set -e
 
 expandpath() {
-  CDPATH= cd -- "$1" && pwd -P
+  CDPATH=$(cd -- "$1" && pwd -P)
+  echo "$CDPATH"
 }
 
-SCRIPTPATH=$(expandpath "$(dirname -- $0)")
+SCRIPTPATH=$(expandpath "$(dirname -- "$0")")
 cd "$SCRIPTPATH"
 
-export WORKSPACE="$(expandpath ../../..)/workspace"
+export WORKSPACE
+WORKSPACE="$(expandpath ../../..)/workspace"
 
 git clone https://github.com/sstephenson/bats/ || true
-export PATH=$(pwd)/bats/bin:$(expandpath ../../target/debug):$PATH
+export PATH
+PATH=$(pwd)/bats/bin:$(expandpath ../../target/debug):$PATH
 
-rm -rf $WORKSPACE
-mkdir $WORKSPACE
-cp -ar fixtures/* $WORKSPACE
+rm -rf "$WORKSPACE"
+mkdir "$WORKSPACE"
+cp -aR fixtures/* "$WORKSPACE"
 
 bats integration.bats
