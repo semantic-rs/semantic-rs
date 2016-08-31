@@ -18,6 +18,6 @@ PATH=$(pwd)/bats/bin:$(expandpath ../../target/debug):$PATH
 
 rm -rf "$WORKSPACE"
 mkdir "$WORKSPACE"
-cp -aR fixtures/* "$WORKSPACE"
+cp -a fixtures/* "$WORKSPACE"
 
 bats integration.bats
