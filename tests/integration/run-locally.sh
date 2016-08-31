@@ -3,7 +3,7 @@
 set -e
 
 expandpath() {
-  CDPATH=cd -- "$1" && pwd -P
+  CDPATH="" cd -- "$1" && pwd -P
 }
 
 SCRIPTPATH=$(expandpath "$(dirname -- "$0")")
