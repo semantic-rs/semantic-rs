@@ -51,7 +51,7 @@ By default it runs in dry-run mode. This means it doesn't perform changes automa
 To perform the changes, pass `-w` as an argument:
 
 ```bash
-$ semantic-rs -w
+$ semantic-rs -w yes
 ```
 This performs the following operations:
 - Create or update `Changelog.md` containing everything that changed
@@ -124,7 +124,7 @@ Would write the following Changelog:
 Would create annotated git tag
 ```
 
-Since `-w` was not passed, it only prints out what it would do. Note that if you run it on your local machine the output may differ.
+Since `-w yes` was not passed, it only prints out what it would do. Note that if you run it on your local machine the output may differ.
 
 ## Run semantic-rs in CI environment
 
