@@ -63,6 +63,14 @@ This performs the following operations:
 - A new release on GitHub
 - Push the new commit and tag to GitHub
 
+
+## Running the tests
+
+To run semantic-rs's tests:
+
+- unit tests: `cargo test`.
+- integration tests: `./tests/integration/run-locally.sh`.
+
 ## Development
 
 Requirements:
