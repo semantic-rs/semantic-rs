@@ -72,6 +72,14 @@ Requirements:
   - Mac Homebrew: `openssl`
 - Rust 1.5 or later
 
+### For OS X > 10.10
+
+Note that since OS X 10.11 Apple doesn't ship development headers for OpenSSL anymore. In order to get it working, you need to export the following two variables in order to get the build working:
+
+```bash
+export DEP_OPENSSL_INCLUDE=$(brew --prefix openssl)/include
+```
+
 Clone this project:
 
 ```bash
