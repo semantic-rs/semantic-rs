@@ -17,7 +17,7 @@ semantic-rs automates all these steps for you so you can focus more on developin
 - It also increases the version number in `Cargo.toml` (also committed)
 - Runs `cargo package` for you
 - Creates a release on GitHub
-- Publishes the new version to [crates.io](crates.io)
+- Publishes the new version to [crates.io](https://crates.io)
 - Done 🚀
 
 ## Usage
