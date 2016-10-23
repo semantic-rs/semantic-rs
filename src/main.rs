@@ -251,13 +251,6 @@ fn get_user_and_repo(repository_path: &str) -> (Option<String>, Option<String>) 
                 .unwrap_or_else(|e| print_exit!("Could not extract user and repository name from URL: {:?}", e));
 
             (Some(user), Some(repo_name))
-
-
-            //We'll do that separately
-            // let cargo_token = env::var("CARGO_TOKEN")
-            //     .unwrap_or_else(|err| print_exit!("CARGO_TOKEN not set: {:?}", err));
-
-            // config_builder.cargo_token(cargo_token);
         },
         Err(err) => {
             logger::warn(format!("Could not determine the origin remote url: {:?}", err));
@@ -287,6 +280,12 @@ fn get_github_token(repository_path: &str) -> Option<String> {
         },
         Err(_) => None
     }
+}
+
+fn get_cargo_token() -> String {
+    let cargo_token = env::var("CARGO_TOKEN")
+        .unwrap_or_else(|err| print_exit!("CARGO_TOKEN not set: {:?}", err));
+    cargo_token
 }
 
 fn main() {
@@ -332,4 +331,6 @@ fn main() {
     if gh_token.is_some() {
         config_builder.gh_token(gh_token.unwrap());
     }
+
+    config_builder.cargo_token(get_cargo_token());
 }
