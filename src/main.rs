@@ -334,4 +334,5 @@ fn main() {
 
     config_builder.cargo_token(get_cargo_token());
     config_builder.repository(get_repo(&repository_path));
+    let config = config_builder.build();
 }
