@@ -208,6 +208,15 @@ fn package_crate(config: &config::Config, repository_path: &str, new_version: &s
     }
 }
 
+fn get_repository_path(args: &Args) -> String {
+    let path = Path::new(&args.flag_path);
+    let path = fs::canonicalize(path)
+        .unwrap_or_else(|_| print_exit!("Path does not exist or a component is
+                                                            not a directory"));
+    let repo_path = path.to_str().unwrap_or_else(|| print_exit!("Path is not valid unicode"));
+    repo_path.to_string()
+}
+
 fn main() {
     env_logger::init().expect("Can't instantiate env logger");
     println!("semantic.rs 🚀");
@@ -236,6 +245,6 @@ fn main() {
 
     config_builder.write(write_mode);
     config_builder.release(release_mode);
-    config_builder.branch(args.flag_branch);
-
+    config_builder.branch(args.flag_branch.clone());
+    config_builder.repository_path(get_repository_path(&args));
 }
