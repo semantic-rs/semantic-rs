@@ -217,6 +217,26 @@ fn get_repository_path(args: &Args) -> String {
     repo_path.to_string()
 }
 
+fn get_signature<'a>(repository_path: String) -> git2::Signature<'a> {
+    let repo = match git2::Repository::open(repository_path) {
+        Ok(repo) => repo,
+        Err(e) => {
+            logger::stderr(format!("Could not open the git repository: {:?}", e));
+            process::exit(1);
+        }
+    };
+    let signature = match git::get_signature(&repo) {
+        Ok(sig) => sig,
+            Err(e) => {
+                logger::stderr(format!("Failed to get the committer's name and email address: {}", e.description()));
+                logger::stderr(COMMITTER_ERROR_MESSAGE);
+                process::exit(1);
+            }
+    };
+
+    signature.to_owned()
+}
+
 fn main() {
     env_logger::init().expect("Can't instantiate env logger");
     println!("semantic.rs 🚀");
@@ -247,4 +267,5 @@ fn main() {
     config_builder.release(release_mode);
     config_builder.branch(args.flag_branch.clone());
     config_builder.repository_path(get_repository_path(&args));
+    config_builder.signature(get_signature(get_repository_path(&args)));
 }
