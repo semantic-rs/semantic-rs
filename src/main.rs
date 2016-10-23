@@ -362,4 +362,82 @@ fn main() {
 
     let config = assemble_configuration(args);
     validate_config(&config);
+
+    let branch = current_branch(&config.repository)
+        .unwrap_or_else(|| print_exit!("Could not determine current branch."));
+
+    if !is_release_branch(&branch, &config.branch) {
+        println!("Current branch is '{}', releases are only done from branch '{}'", branch, config.branch);
+        println!("No release done from a pull request either.");
+        process::exit(0);
+    }
+
+    if config.release_mode && ci_env_set() {
+        let build_run = Build::from_env()
+            .unwrap_or_else(|e| print_exit!("CI mode, but can't check other builds. Error: {:?}", e));
+
+        if !build_run.is_leader() {
+            println!("Not the build leader. Nothing to do. Bye.");
+            process::exit(0);
+        }
+
+        println!("I am the build leader. Waiting for other jobs to finish.");
+        match build_run.wait_for_others() {
+            Ok(()) => println!("Other jobs finished and succeeded. Doing my work now."),
+                Err(travis_after_all::Error::FailedBuilds) => {
+                    print_exit!("Some builds failed. Stopping here.");
+                },
+                Err(e) => print_exit!("Waiting for other builds failed Reason: {:?}", e),
+        }
+    }
+
+    let version = toml_file::read_from_file(&config.repository_path)
+        .unwrap_or_else(|err| print_exit!("Reading `Cargo.toml` failed: {:?}", err));
+
+    let version = Version::parse(&version).expect("Not a valid version");
+    logger::stdout(format!("Current version: {}", version.to_string()));
+
+    logger::stdout("Analyzing commits");
+
+    let bump = git::version_bump_since_latest(&config.repository);
+    if config.write_mode {
+        logger::stdout(format!("Commits analyzed. Bump will be {:?}", bump));
+    } else {
+        logger::stdout(format!("Commits analyzed. Bump would be {:?}", bump));
+    }
+    let new_version = match version_bump(&version, bump) {
+        Some(new_version) => new_version.to_string(),
+            None => {
+                logger::stdout("No version bump. Nothing to do.");
+                process::exit(0);
+            }
+    };
+
+    if !config.write_mode {
+        let changelog = generate_changelog(&config.repository_path, &version, &new_version);
+        print_changelog(&changelog);
+    } else {
+        logger::stdout(format!("New version: {}", new_version));
+
+        toml_file::write_new_version(&config.repository_path, &new_version)
+            .unwrap_or_else(|err| print_exit!("Writing `Cargo.toml` failed: {:?}", err));
+
+        write_changelog(&config.repository_path, &version, &new_version);
+        package_crate(&config, &config.repository_path, &new_version);
+
+        logger::stdout("Creating annotated git tag");
+        let tag_message = changelog::generate(&config.repository_path, &version.to_string(), &new_version)
+            .unwrap_or_else(|err| print_exit!("Can't generate changelog: {:?}", err));
+
+        let tag_name = format!("v{}", new_version);
+        git::tag(&config, &tag_name, &tag_message)
+            .unwrap_or_else(|err| print_exit!("Failed to create git tag: {:?}", err));
+
+        if config.release_mode && config.can_push() {
+            push_to_github(&config, &tag_name);
+            release_on_github(&config, &tag_message, &tag_name);
+            release_on_cratesio(&config);
+            println!("{} v{} is released. 🚀🚀🚀", config.repository_name.unwrap(), new_version);
+        }
+    }
 }
