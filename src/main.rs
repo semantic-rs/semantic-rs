@@ -244,7 +244,6 @@ fn get_signature<'a>(repository_path: String) -> git2::Signature<'a> {
 fn get_user_and_repo(repository_path: &str) -> (Option<String>, Option<String>) {
     let repo = get_repo(repository_path);
     let remote_or_none = repo.find_remote("origin");
-
     match remote_or_none {
         Ok(remote) => {
             let url = remote.url().expect("Remote URL is not valid UTF-8").to_owned();
@@ -253,12 +252,6 @@ fn get_user_and_repo(repository_path: &str) -> (Option<String>, Option<String>) 
 
             (Some(user), Some(repo_name))
 
-            //We'll do that separately
-            // if github::is_github_url(&url) {
-            //     let gh_token = env::var("GH_TOKEN")
-            //         .unwrap_or_else(|err| print_exit!("GH_TOKEN not set: {:?}", err));
-            //     config_builder.gh_token(gh_token);
-            // }
 
             //We'll do that separately
             // let cargo_token = env::var("CARGO_TOKEN")
@@ -271,6 +264,28 @@ fn get_user_and_repo(repository_path: &str) -> (Option<String>, Option<String>) 
             logger::warn("semantic-rs can't push changes or create a release on GitHub");
             (None, None)
         }
+    }
+}
+
+fn get_github_token(repository_path: &str) -> Option<String> {
+    let repo = get_repo(repository_path);
+    let remote_or_none = repo.find_remote("origin");
+    match remote_or_none {
+        Ok(remote) => {
+            let url = remote.url().expect("Remote URL is not valid UTF-8").to_owned();
+            if github::is_github_url(&url) {
+                match env::var("GH_TOKEN") {
+                    Ok(token) => Some(token),
+                    Err(err) => {
+                        logger::warn(format!("GH_TOKEN not set: {:?}", err));
+                        None
+                    }
+                }
+            } else {
+                None
+            }
+        },
+        Err(_) => None
     }
 }
 
@@ -312,5 +327,9 @@ fn main() {
     }
     if repo.is_some() {
         config_builder.user(repo.unwrap());
+    }
+    let gh_token = get_github_token(&repository_path);
+    if gh_token.is_some() {
+        config_builder.gh_token(gh_token.unwrap());
     }
 }
