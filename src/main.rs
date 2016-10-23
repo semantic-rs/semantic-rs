@@ -325,7 +325,7 @@ fn main() {
         config_builder.user(user.unwrap());
     }
     if repo.is_some() {
-        config_builder.user(repo.unwrap());
+        config_builder.repository_name(repo.unwrap());
     }
     let gh_token = get_github_token(&repository_path);
     if gh_token.is_some() {
