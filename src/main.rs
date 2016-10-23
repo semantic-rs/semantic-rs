@@ -241,6 +241,39 @@ fn get_signature<'a>(repository_path: String) -> git2::Signature<'a> {
     signature.to_owned()
 }
 
+fn get_user_and_repo(repository_path: &str) -> (Option<String>, Option<String>) {
+    let repo = get_repo(repository_path);
+    let remote_or_none = repo.find_remote("origin");
+
+    match remote_or_none {
+        Ok(remote) => {
+            let url = remote.url().expect("Remote URL is not valid UTF-8").to_owned();
+            let (user, repo_name) = user_repo_from_url(&url)
+                .unwrap_or_else(|e| print_exit!("Could not extract user and repository name from URL: {:?}", e));
+
+            (Some(user), Some(repo_name))
+
+            //We'll do that separately
+            // if github::is_github_url(&url) {
+            //     let gh_token = env::var("GH_TOKEN")
+            //         .unwrap_or_else(|err| print_exit!("GH_TOKEN not set: {:?}", err));
+            //     config_builder.gh_token(gh_token);
+            // }
+
+            //We'll do that separately
+            // let cargo_token = env::var("CARGO_TOKEN")
+            //     .unwrap_or_else(|err| print_exit!("CARGO_TOKEN not set: {:?}", err));
+
+            // config_builder.cargo_token(cargo_token);
+        },
+        Err(err) => {
+            logger::warn(format!("Could not determine the origin remote url: {:?}", err));
+            logger::warn("semantic-rs can't push changes or create a release on GitHub");
+            (None, None)
+        }
+    }
+}
+
 fn main() {
     env_logger::init().expect("Can't instantiate env logger");
     println!("semantic.rs 🚀");
@@ -266,10 +299,18 @@ fn main() {
 
     // We can only release, if we are allowed to write
     let release_mode = write_mode && string_to_bool(&args.flag_release);
+    let repository_path = get_repository_path(&args);
 
     config_builder.write(write_mode);
     config_builder.release(release_mode);
     config_builder.branch(args.flag_branch.clone());
-    config_builder.repository_path(get_repository_path(&args));
-    config_builder.signature(get_signature(get_repository_path(&args)));
+    config_builder.repository_path(repository_path.clone());
+    config_builder.signature(get_signature(repository_path.clone()));
+    let (user, repo) = get_user_and_repo(&repository_path);
+    if user.is_some() {
+        config_builder.user(user.unwrap());
+    }
+    if repo.is_some() {
+        config_builder.user(repo.unwrap());
+    }
 }
