@@ -208,6 +208,16 @@ fn package_crate(config: &config::Config, repository_path: &str, new_version: &s
     }
 }
 
+fn get_repo(repository_path: &str) -> git2::Repository {
+    match git2::Repository::open(repository_path) {
+        Ok(repo) => repo,
+        Err(e) => {
+            logger::stderr(format!("Could not open the git repository: {:?}", e));
+            process::exit(1);
+        }
+    }
+}
+
 fn get_repository_path(args: &Args) -> String {
     let path = Path::new(&args.flag_path);
     let path = fs::canonicalize(path)
@@ -218,13 +228,7 @@ fn get_repository_path(args: &Args) -> String {
 }
 
 fn get_signature<'a>(repository_path: String) -> git2::Signature<'a> {
-    let repo = match git2::Repository::open(repository_path) {
-        Ok(repo) => repo,
-        Err(e) => {
-            logger::stderr(format!("Could not open the git repository: {:?}", e));
-            process::exit(1);
-        }
-    };
+    let repo = get_repo(&repository_path);
     let signature = match git::get_signature(&repo) {
         Ok(sig) => sig,
             Err(e) => {
