@@ -269,10 +269,7 @@ fn get_github_token(repository_path: &str) -> Option<String> {
             if github::is_github_url(&url) {
                 match env::var("GH_TOKEN") {
                     Ok(token) => Some(token),
-                    Err(err) => {
-                        logger::warn(format!("GH_TOKEN not set: {:?}", err));
-                        None
-                    }
+                    Err(_) => None
                 }
             } else {
                 None
@@ -282,10 +279,31 @@ fn get_github_token(repository_path: &str) -> Option<String> {
     }
 }
 
-fn get_cargo_token() -> String {
-    let cargo_token = env::var("CARGO_TOKEN")
-        .unwrap_or_else(|err| print_exit!("CARGO_TOKEN not set: {:?}", err));
-    cargo_token
+fn get_cargo_token() -> Option<String> {
+    match env::var("CARGO_TOKEN") {
+        Ok(token) => Some(token),
+        Err(_) => None
+    }
+}
+
+fn validate_config(config: &config::Config) {
+    if config.write_mode && config.release_mode {
+        //When we want to write and release, certain properties must be in place
+        if config.user.is_none() {
+            print_exit!("User is not present");
+        }
+        if config.repository_name.is_none() {
+            print_exit!("Repository name is not present");
+        }
+
+        if config.gh_token.is_none() {
+            print_exit!("GH_TOKEN environment variable is not set");
+        }
+
+        if config.cargo_token.is_none() {
+            print_exit!("CARGO_TOKEN environment variable is not set");
+        }
+    }
 }
 
 fn main() {
@@ -332,7 +350,11 @@ fn main() {
         config_builder.gh_token(gh_token.unwrap());
     }
 
-    config_builder.cargo_token(get_cargo_token());
+    let cargo_token = get_cargo_token();
+    if cargo_token.is_some() {
+        config_builder.cargo_token(cargo_token.unwrap());
+    }
     config_builder.repository(get_repo(&repository_path));
     let config = config_builder.build();
+    validate_config(&config);
 }
