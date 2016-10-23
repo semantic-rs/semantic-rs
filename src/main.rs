@@ -306,20 +306,8 @@ fn validate_config(config: &config::Config) {
     }
 }
 
-fn main() {
-    env_logger::init().expect("Can't instantiate env logger");
-    println!("semantic.rs 🚀");
-
-    let args: Args = Docopt::new(USAGE)
-        .and_then(|d| d.decode())
-        .unwrap_or_else(|e| e.exit());
-
+fn assemble_configuration(args: Args) -> config::Config {
     let mut config_builder = ConfigBuilder::new();
-
-    if args.flag_version {
-        println!("semantic.rs 🚀 -- v{}", VERSION);
-        process::exit(0);
-    }
 
     // If write mode is requested OR denied,
     // adhere to the user's wish,
@@ -355,6 +343,23 @@ fn main() {
         config_builder.cargo_token(cargo_token.unwrap());
     }
     config_builder.repository(get_repo(&repository_path));
-    let config = config_builder.build();
+    config_builder.build()
+}
+
+fn main() {
+    env_logger::init().expect("Can't instantiate env logger");
+    println!("semantic.rs 🚀");
+
+    let args: Args = Docopt::new(USAGE)
+        .and_then(|d| d.decode())
+        .unwrap_or_else(|e| e.exit());
+
+
+    if args.flag_version {
+        println!("semantic.rs 🚀 -- v{}", VERSION);
+        process::exit(0);
+    }
+
+    let config = assemble_configuration(args);
     validate_config(&config);
 }
