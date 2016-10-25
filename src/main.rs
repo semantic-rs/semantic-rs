@@ -286,26 +286,6 @@ fn get_cargo_token() -> Option<String> {
     }
 }
 
-fn validate_config(config: &config::Config) {
-    if config.write_mode && config.release_mode {
-        //When we want to write and release, certain properties must be in place
-        if config.user.is_none() {
-            print_exit!("User is not present");
-        }
-        if config.repository_name.is_none() {
-            print_exit!("Repository name is not present");
-        }
-
-        if config.gh_token.is_none() {
-            print_exit!("GH_TOKEN environment variable is not set");
-        }
-
-        if config.cargo_token.is_none() {
-            print_exit!("CARGO_TOKEN environment variable is not set");
-        }
-    }
-}
-
 fn assemble_configuration(args: Args) -> config::Config {
     let mut config_builder = ConfigBuilder::new();
 
@@ -361,7 +341,6 @@ fn main() {
     }
 
     let config = assemble_configuration(args);
-    validate_config(&config);
 
     let branch = current_branch(&config.repository)
         .unwrap_or_else(|| print_exit!("Could not determine current branch."));
