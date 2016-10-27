@@ -12,6 +12,7 @@ mod error;
 mod github;
 mod config;
 mod utils;
+mod preflight;
 
 extern crate rustc_serialize;
 extern crate toml;
@@ -337,6 +338,19 @@ fn main() {
         println!("Current branch is '{}', releases are only done from branch '{}'", branch, config.branch);
         println!("No release done from a pull request either.");
         process::exit(0);
+    }
+
+    //Before we actually start, we do perform some preflight checks
+    //Here we check if everything is in place to do a GitHub release and a
+    //release on crates.io.
+    //The important bit is, if something's missing, we do not abort since the user can still do all
+    //other things except publishing
+
+    logger::stdout("Performing preflight checks now");
+    let warnings = preflight::check_for_github_release(&config);
+
+    for warning in warnings {
+        logger::warn(warning);
     }
 
     if config.release_mode && ci_env_set() {
