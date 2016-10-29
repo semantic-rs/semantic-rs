@@ -267,10 +267,7 @@ fn get_github_token(repository_path: &str) -> Option<String> {
         Ok(remote) => {
             let url = remote.url().expect("Remote URL is not valid UTF-8").to_owned();
             if github::is_github_url(&url) {
-                match env::var("GH_TOKEN") {
-                    Ok(token) => Some(token),
-                    Err(_) => None
-                }
+                env::var("GH_TOKEN").ok()
             } else {
                 None
             }
@@ -280,10 +277,7 @@ fn get_github_token(repository_path: &str) -> Option<String> {
 }
 
 fn get_cargo_token() -> Option<String> {
-    match env::var("CARGO_TOKEN") {
-        Ok(token) => Some(token),
-        Err(_) => None
-    }
+    env::var("CARGO_TOKEN").ok()
 }
 
 fn assemble_configuration(args: Args) -> config::Config {
