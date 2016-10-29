@@ -147,7 +147,7 @@ setup_dirs() {
   setup_dirs
 
   run semantic-rs --branch=hamster --release=no
-  [ "${lines[2]}" = "Current branch is 'master', releases are only done from branch 'hamster'" ]
+  [[ "$output" =~ "Current branch is 'master', releases are only done from branch 'hamster'" ]]
 }
 
 @test "Does not fail when project has no remote" {

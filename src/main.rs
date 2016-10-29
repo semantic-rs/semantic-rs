@@ -208,19 +208,80 @@ fn package_crate(config: &config::Config, repository_path: &str, new_version: &s
     }
 }
 
-fn main() {
-    env_logger::init().expect("Can't instantiate env logger");
-
-    let args: Args = Docopt::new(USAGE)
-        .and_then(|d| d.decode())
-        .unwrap_or_else(|e| e.exit());
-
-    let mut config_builder = ConfigBuilder::new();
-
-    if args.flag_version {
-        println!("semantic.rs 🚀 -- v{}", VERSION);
-        process::exit(0);
+fn get_repo(repository_path: &str) -> git2::Repository {
+    match git2::Repository::open(repository_path) {
+        Ok(repo) => repo,
+        Err(e) => {
+            logger::stderr(format!("Could not open the git repository: {:?}", e));
+            process::exit(1);
+        }
     }
+}
+
+fn get_repository_path(args: &Args) -> String {
+    let path = Path::new(&args.flag_path);
+    let path = fs::canonicalize(path)
+        .unwrap_or_else(|_| print_exit!("Path does not exist or a component is
+                                                            not a directory"));
+    let repo_path = path.to_str().unwrap_or_else(|| print_exit!("Path is not valid unicode"));
+    repo_path.to_string()
+}
+
+fn get_signature<'a>(repository_path: String) -> git2::Signature<'a> {
+    let repo = get_repo(&repository_path);
+    let signature = match git::get_signature(&repo) {
+        Ok(sig) => sig,
+            Err(e) => {
+                logger::stderr(format!("Failed to get the committer's name and email address: {}", e.description()));
+                logger::stderr(COMMITTER_ERROR_MESSAGE);
+                process::exit(1);
+            }
+    };
+
+    signature.to_owned()
+}
+
+fn get_user_and_repo(repository_path: &str) -> Option<(String, String)> {
+    let repo = get_repo(repository_path);
+    let remote_or_none = repo.find_remote("origin");
+    match remote_or_none {
+        Ok(remote) => {
+            let url = remote.url().expect("Remote URL is not valid UTF-8").to_owned();
+            let (user, repo_name) = user_repo_from_url(&url)
+                .unwrap_or_else(|e| print_exit!("Could not extract user and repository name from URL: {:?}", e));
+
+            Some((user, repo_name))
+        },
+        Err(err) => {
+            logger::warn(format!("Could not determine the origin remote url: {:?}", err));
+            logger::warn("semantic-rs can't push changes or create a release on GitHub");
+            None
+        }
+    }
+}
+
+fn get_github_token(repository_path: &str) -> Option<String> {
+    let repo = get_repo(repository_path);
+    let remote_or_none = repo.find_remote("origin");
+    match remote_or_none {
+        Ok(remote) => {
+            let url = remote.url().expect("Remote URL is not valid UTF-8").to_owned();
+            if github::is_github_url(&url) {
+                env::var("GH_TOKEN").ok()
+            } else {
+                None
+            }
+        },
+        Err(_) => None
+    }
+}
+
+fn get_cargo_token() -> Option<String> {
+    env::var("CARGO_TOKEN").ok()
+}
+
+fn assemble_configuration(args: Args) -> config::Config {
+    let mut config_builder = ConfigBuilder::new();
 
     // If write mode is requested OR denied,
     // adhere to the user's wish,
@@ -232,76 +293,42 @@ fn main() {
 
     // We can only release, if we are allowed to write
     let release_mode = write_mode && string_to_bool(&args.flag_release);
+    let repository_path = get_repository_path(&args);
 
     config_builder.write(write_mode);
     config_builder.release(release_mode);
-    config_builder.branch(args.flag_branch);
+    config_builder.branch(args.flag_branch.clone());
+    config_builder.repository_path(repository_path.clone());
+    config_builder.signature(get_signature(repository_path.clone()));
+    if let Some((user, repo)) = get_user_and_repo(&repository_path) {
+        config_builder.user(user);
+        config_builder.repository_name(repo);
+    }
+    if let Some(gh_token)  = get_github_token(&repository_path) {
+        config_builder.gh_token(gh_token);
+    }
+    if let Some(cargo_token) = get_cargo_token() {
+        config_builder.cargo_token(cargo_token);
+    }
+    config_builder.repository(get_repo(&repository_path));
+    config_builder.build()
+}
 
+fn main() {
+    env_logger::init().expect("Can't instantiate env logger");
     println!("semantic.rs 🚀");
 
-    logger::stdout("Analyzing your repository");
-    let path = Path::new(&args.flag_path);
-    let path = fs::canonicalize(path)
-        .unwrap_or_else(|_| print_exit!("Path does not exist or a component is not a directory"));
-    let repository_path = path.to_str()
-        .unwrap_or_else(|| print_exit!("Path is not valid unicode"));
+    let args: Args = Docopt::new(USAGE)
+        .and_then(|d| d.decode())
+        .unwrap_or_else(|e| e.exit());
 
-    let repo = match git2::Repository::open(repository_path) {
-        Ok(repo) => repo,
-        Err(e) => {
-            logger::stderr(format!("Could not open the git repository: {:?}", e));
-            process::exit(1);
-        }
-    };
 
-    config_builder.repository_path(repository_path.to_owned());
-
-    // extra scope scope to make sure borrow of `repo` is dropped
-    {
-        let signature = match git::get_signature(&repo) {
-            Ok(sig) => sig,
-            Err(e) => {
-                logger::stderr(format!("Failed to get the committer's name and email address: {}", e.description()));
-                logger::stderr(COMMITTER_ERROR_MESSAGE);
-                process::exit(1);
-            }
-        };
-
-        config_builder.signature(signature.to_owned());
+    if args.flag_version {
+        println!("semantic.rs 🚀 -- v{}", VERSION);
+        process::exit(0);
     }
 
-    // In case we are in write-mode AND release mode,
-    // we will make sure we got all configuration settings
-    if write_mode && release_mode {
-        let remote_or_none = repo.find_remote("origin");
-        match remote_or_none {
-            Ok(remote) => {
-                let url = remote.url().expect("Remote URL is not valid UTF-8").to_owned();
-                let (user, repo_name) = user_repo_from_url(&url)
-                    .unwrap_or_else(|e| print_exit!("Could not extract user and repository name from URL: {:?}", e));
-                config_builder.user(user);
-                config_builder.repository_name(repo_name);
-
-                if github::is_github_url(&url) {
-                    let gh_token = env::var("GH_TOKEN")
-                        .unwrap_or_else(|err| print_exit!("GH_TOKEN not set: {:?}", err));
-                    config_builder.gh_token(gh_token);
-                }
-
-                let cargo_token = env::var("CARGO_TOKEN")
-                    .unwrap_or_else(|err| print_exit!("CARGO_TOKEN not set: {:?}", err));
-
-                config_builder.cargo_token(cargo_token);
-            },
-            Err(err) => {
-                logger::warn(format!("Could not determine the origin remote url: {:?}", err));
-                logger::warn("semantic-rs can't push changes or create a release on GitHub");
-            }
-        }
-    }
-
-    config_builder.repository(repo);
-    let config = config_builder.build();
+    let config = assemble_configuration(args);
 
     let branch = current_branch(&config.repository)
         .unwrap_or_else(|| print_exit!("Could not determine current branch."));
@@ -327,7 +354,7 @@ fn main() {
             Err(travis_after_all::Error::FailedBuilds) => {
                 print_exit!("Some builds failed. Stopping here.");
             },
-            Err(e) => print_exit!("Waiting for other builds failed Reason: {:?}", e),
+            Err(e) => print_exit!("Waiting for other builds failed. Reason: {:?}", e),
         }
     }
 
@@ -340,33 +367,33 @@ fn main() {
     logger::stdout("Analyzing commits");
 
     let bump = git::version_bump_since_latest(&config.repository);
-    if write_mode {
+    if config.write_mode {
         logger::stdout(format!("Commits analyzed. Bump will be {:?}", bump));
     } else {
         logger::stdout(format!("Commits analyzed. Bump would be {:?}", bump));
     }
     let new_version = match version_bump(&version, bump) {
         Some(new_version) => new_version.to_string(),
-        None => {
-            logger::stdout("No version bump. Nothing to do.");
-            process::exit(0);
-        }
+            None => {
+                logger::stdout("No version bump. Nothing to do.");
+                process::exit(0);
+            }
     };
 
     if !config.write_mode {
-        let changelog = generate_changelog(repository_path, &version, &new_version);
+        let changelog = generate_changelog(&config.repository_path, &version, &new_version);
         print_changelog(&changelog);
     } else {
         logger::stdout(format!("New version: {}", new_version));
 
-        toml_file::write_new_version(repository_path, &new_version)
+        toml_file::write_new_version(&config.repository_path, &new_version)
             .unwrap_or_else(|err| print_exit!("Writing `Cargo.toml` failed: {:?}", err));
 
-        write_changelog(&repository_path, &version, &new_version);
-        package_crate(&config, &repository_path, &new_version);
+        write_changelog(&config.repository_path, &version, &new_version);
+        package_crate(&config, &config.repository_path, &new_version);
 
         logger::stdout("Creating annotated git tag");
-        let tag_message = changelog::generate(repository_path, &version.to_string(), &new_version)
+        let tag_message = changelog::generate(&config.repository_path, &version.to_string(), &new_version)
             .unwrap_or_else(|err| print_exit!("Can't generate changelog: {:?}", err));
 
         let tag_name = format!("v{}", new_version);
