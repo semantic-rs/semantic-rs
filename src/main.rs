@@ -351,10 +351,10 @@ fn main() {
         println!("I am the build leader. Waiting for other jobs to finish.");
         match build_run.wait_for_others() {
             Ok(()) => println!("Other jobs finished and succeeded. Doing my work now."),
-                Err(travis_after_all::Error::FailedBuilds) => {
-                    print_exit!("Some builds failed. Stopping here.");
-                },
-                Err(e) => print_exit!("Waiting for other builds failed Reason: {:?}", e),
+            Err(travis_after_all::Error::FailedBuilds) => {
+                print_exit!("Some builds failed. Stopping here.");
+            },
+            Err(e) => print_exit!("Waiting for other builds failed. Reason: {:?}", e),
         }
     }
 
