@@ -241,7 +241,7 @@ fn get_signature<'a>(repository_path: String) -> git2::Signature<'a> {
     signature.to_owned()
 }
 
-fn get_user_and_repo(repository_path: &str) -> (Option<String>, Option<String>) {
+fn get_user_and_repo(repository_path: &str) -> Option<(String, String)> {
     let repo = get_repo(repository_path);
     let remote_or_none = repo.find_remote("origin");
     match remote_or_none {
@@ -250,12 +250,12 @@ fn get_user_and_repo(repository_path: &str) -> (Option<String>, Option<String>) 
             let (user, repo_name) = user_repo_from_url(&url)
                 .unwrap_or_else(|e| print_exit!("Could not extract user and repository name from URL: {:?}", e));
 
-            (Some(user), Some(repo_name))
+            Some((user, repo_name))
         },
         Err(err) => {
             logger::warn(format!("Could not determine the origin remote url: {:?}", err));
             logger::warn("semantic-rs can't push changes or create a release on GitHub");
-            (None, None)
+            None
         }
     }
 }
@@ -306,12 +306,11 @@ fn assemble_configuration(args: Args) -> config::Config {
     config_builder.branch(args.flag_branch.clone());
     config_builder.repository_path(repository_path.clone());
     config_builder.signature(get_signature(repository_path.clone()));
-    let (user, repo) = get_user_and_repo(&repository_path);
-    if user.is_some() {
-        config_builder.user(user.unwrap());
-    }
-    if repo.is_some() {
-        config_builder.repository_name(repo.unwrap());
+    let user_and_repo = get_user_and_repo(&repository_path);
+    if user_and_repo.is_some() {
+        let (user, repo) = user_and_repo.unwrap();
+        config_builder.user(user);
+        config_builder.repository_name(repo);
     }
     let gh_token = get_github_token(&repository_path);
     if gh_token.is_some() {
