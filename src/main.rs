@@ -311,7 +311,13 @@ fn assemble_configuration(args: Args) -> config::Config {
     if let Some(cargo_token) = get_cargo_token() {
         config_builder.cargo_token(cargo_token);
     }
-    config_builder.repository(get_repo(&repository_path));
+    let repo = get_repo(&repository_path);
+    match repo.find_remote("origin") {
+        Ok(r) => config_builder.remote(Ok(r.name().unwrap().to_string())),
+        Err(err) => config_builder.remote(Err(err.description().to_string()))
+    };
+
+    config_builder.repository(repo);
     config_builder.build()
 }
 

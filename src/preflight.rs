@@ -7,5 +7,10 @@ pub fn check_for_github_release(config: &Config) -> Vec<String> {
         warnings.push("The GH_TOKEN environment variable is not configured".into());
     }
 
+    if let Err(ref err) = config.remote {
+        warnings.push(format!("Could not determine the origin remote url: {:?}", err));
+        warnings.push("semantic-rs can't push changes or create a release on GitHub".into());
+    }
+
     warnings
 }

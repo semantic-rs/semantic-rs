@@ -6,6 +6,8 @@ pub struct Config {
 
     pub branch: String,
 
+    pub remote: Result<String, String>,
+
     pub repository_path: String,
 
     pub write_mode: bool,
@@ -32,6 +34,8 @@ pub struct ConfigBuilder {
 
     repository_path: Option<String>,
 
+    remote: Option<Result<String, String>>,
+
     write_mode: bool,
     release_mode: bool,
 
@@ -55,6 +59,7 @@ impl ConfigBuilder {
             signature: None,
             gh_token: None,
             cargo_token: None,
+            remote: None
         }
     }
 
@@ -108,6 +113,11 @@ impl ConfigBuilder {
         self
     }
 
+    pub fn remote(&mut self, remote: Result<String, String>) -> &mut Self {
+        self.remote = Some(remote);
+        self
+    }
+
     pub fn build(self) -> Config {
         Config {
             user: self.user,
@@ -120,6 +130,7 @@ impl ConfigBuilder {
             signature: self.signature.unwrap(),
             gh_token: self.gh_token,
             cargo_token: self.cargo_token,
+            remote: self.remote.unwrap_or(Err("No remote found".into()))
         }
     }
 }
