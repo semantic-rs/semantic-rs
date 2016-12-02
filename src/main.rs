@@ -353,10 +353,10 @@ fn main() {
     //other things except publishing
 
     logger::stdout("Performing preflight checks now");
-    let warnings = preflight::check_for_github_release(&config);
+    let warnings = preflight::check(&config);
 
     for warning in warnings {
-        logger::warn(warning);
+        logger::warn(format!(">> {}", warning));
     }
 
     if config.release_mode && ci_env_set() {
