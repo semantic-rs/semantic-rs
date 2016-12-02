@@ -400,11 +400,18 @@ fn main() {
         git::tag(&config, &tag_name, &tag_message)
             .unwrap_or_else(|err| print_exit!("Failed to create git tag: {:?}", err));
 
-        if config.release_mode && config.can_push() {
-            push_to_github(&config, &tag_name);
-            release_on_github(&config, &tag_message, &tag_name);
+        if config.release_mode {
+            if config.can_push() {
+                push_to_github(&config, &tag_name);
+                release_on_github(&config, &tag_message, &tag_name);
+            }
             release_on_cratesio(&config);
-            println!("{} v{} is released. 🚀🚀🚀", config.repository_name.unwrap(), new_version);
+            if let Some(repo_name) = config.repository_name {
+                println!("{} v{} is released. 🚀🚀🚀", repo_name, new_version);
+            }
+            else {
+                println!("v{} is released. 🚀🚀🚀", new_version);
+            }
         }
     }
 }
