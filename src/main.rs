@@ -355,7 +355,7 @@ fn main() {
     logger::stdout("Performing preflight checks now");
     let warnings = preflight::check(&config);
 
-    if warnings.len() == 0 {
+    if warnings.is_empty() {
         logger::stdout("Checks done. Everything is ok");
     }
 
