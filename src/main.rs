@@ -12,6 +12,7 @@ mod error;
 mod github;
 mod config;
 mod utils;
+mod preflight;
 
 extern crate rustc_serialize;
 extern crate toml;
@@ -310,7 +311,13 @@ fn assemble_configuration(args: Args) -> config::Config {
     if let Some(cargo_token) = get_cargo_token() {
         config_builder.cargo_token(cargo_token);
     }
-    config_builder.repository(get_repo(&repository_path));
+    let repo = get_repo(&repository_path);
+    match repo.find_remote("origin") {
+        Ok(r) => config_builder.remote(Ok(r.name().unwrap().to_string())),
+        Err(err) => config_builder.remote(Err(err.description().to_string()))
+    };
+
+    config_builder.repository(repo);
     config_builder.build()
 }
 
@@ -337,6 +344,23 @@ fn main() {
         println!("Current branch is '{}', releases are only done from branch '{}'", branch, config.branch);
         println!("No release done from a pull request either.");
         process::exit(0);
+    }
+
+    //Before we actually start, we do perform some preflight checks
+    //Here we check if everything is in place to do a GitHub release and a
+    //release on crates.io.
+    //The important bit is, if something's missing, we do not abort since the user can still do all
+    //other things except publishing
+
+    logger::stdout("Performing preflight checks now");
+    let warnings = preflight::check(&config);
+
+    if warnings.is_empty() {
+        logger::stdout("Checks done. Everything is ok");
+    }
+
+    for warning in warnings {
+        logger::warn(format!(">> {}", warning));
     }
 
     if config.release_mode && ci_env_set() {
