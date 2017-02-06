@@ -14,7 +14,7 @@ docopt = "0.6.78"
 rustc-serialize = "0.3.16"
 git2 = "0.4.2"
 clog = "0.9.1"
-hubcaps = "0.2.3"
+hubcaps = "0.2.8"
 hyper = "0.9"
 url = "1.0"
 clippy = {version = "<0.1.0", optional = true}
