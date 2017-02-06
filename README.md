@@ -78,7 +78,7 @@ Requirements:
 - OpenSSL development package
   - Ubuntu: `libssl-dev`
   - Mac Homebrew: `openssl`
-- Rust 1.5 or later
+- Rust 1.15 or later
 
 ### For OS X > 10.10
 
