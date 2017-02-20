@@ -30,7 +30,7 @@ pub fn release(config: &Config, tag_name: &str, tag_message: &str) -> Result<(),
 
     let client = Client::new();
     let credentials = Credentials::Token(token.to_owned());
-    let github = Github::new(USERAGENT, &client, credentials);
+    let github = Github::new(USERAGENT, client, credentials);
 
     let opts = ReleaseOptions::builder(tag_name)
         .name(tag_name)
