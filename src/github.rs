@@ -1,5 +1,6 @@
 use hyper::Client;
-use hubcaps::{Github, ReleaseOptions, Credentials};
+use hubcaps::{Github, Credentials};
+use hubcaps::releases::ReleaseOptions;
 use error::Error;
 use super::USERAGENT;
 use config::Config;
