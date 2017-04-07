@@ -1,5 +1,6 @@
 use hyper::Client;
-use hubcaps::{Github, ReleaseOptions, Credentials};
+use hubcaps::{Github, Credentials};
+use hubcaps::releases::ReleaseOptions;
 use error::Error;
 use super::USERAGENT;
 use config::Config;
@@ -30,7 +31,7 @@ pub fn release(config: &Config, tag_name: &str, tag_message: &str) -> Result<(),
 
     let client = Client::new();
     let credentials = Credentials::Token(token.to_owned());
-    let github = Github::new(USERAGENT, &client, credentials);
+    let github = Github::new(USERAGENT, client, credentials);
 
     let opts = ReleaseOptions::builder(tag_name)
         .name(tag_name)

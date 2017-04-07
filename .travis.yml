@@ -3,6 +3,10 @@ cache: cargo
 sudo: required
 dist: trusty
 
+os:
+  - linux
+  - osx
+
 # run builds for both all the trains
 rust:
   - stable
@@ -15,8 +19,8 @@ before_script:
       git clone https://github.com/sstephenson/bats/ &&
       export WORKSPACE=$HOME/workspace &&
       mkdir $WORKSPACE &&
-      cp -ar $TRAVIS_BUILD_DIR/tests/integration/fixtures/* $WORKSPACE &&
-      export PATH=$HOME/.local/bin:$(pwd)/bats/bin:$TRAVIS_BUILD_DIR/target/debug:$PATH &&
+      cp -a $TRAVIS_BUILD_DIR/tests/integration/fixtures/* $WORKSPACE &&
+      export PATH=$HOME/.local/bin:$(pwd)/bats/bin:$TRAVIS_BUILD_DIR/target/debug:/Users/travis/Library/Python/2.7/bin:$PATH &&
       git config --global user.name semantic-rs &&
       git config --global user.email semantic@rs
 
