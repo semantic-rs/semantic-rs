@@ -22,7 +22,7 @@ pub struct Config {
 
 impl Config {
     pub fn can_push(&self) -> bool {
-        self.user.is_some() && self.repository_name.is_some()
+        self.user.is_some() && self.repository_name.is_some() && self.gh_token.is_some()
     }
 }
 
