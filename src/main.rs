@@ -26,6 +26,7 @@ extern crate hubcaps;
 extern crate url;
 extern crate travis_after_all;
 extern crate env_logger;
+extern crate hyper_native_tls;
 
 use docopt::Docopt;
 use commit_analyzer::CommitType;
