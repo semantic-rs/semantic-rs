@@ -1,4 +1,6 @@
 use hyper::Client;
+use hyper::net::HttpsConnector;
+use hyper_native_tls::NativeTlsClient;
 use hubcaps::{Github, Credentials};
 use hubcaps::releases::ReleaseOptions;
 use error::Error;
@@ -29,7 +31,11 @@ pub fn release(config: &Config, tag_name: &str, tag_message: &str) -> Result<(),
     let branch    = &config.branch[..];
     let token     = config.gh_token.as_ref().unwrap();
 
-    let client = Client::new();
+    let client = Client::with_connector(
+        HttpsConnector::new(
+            NativeTlsClient::new().unwrap()
+        )
+    );
     let credentials = Credentials::Token(token.to_owned());
     let github = Github::new(USERAGENT, client, credentials);
 
