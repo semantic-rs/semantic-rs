@@ -9,6 +9,7 @@ dependencies = [
  "git2 0.6.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "hubcaps 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "hyper 0.10.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "hyper-native-tls 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "regex 0.1.80 (registry+https://github.com/rust-lang/crates.io-index)",
  "rustc-serialize 0.3.23 (registry+https://github.com/rust-lang/crates.io-index)",
  "semver 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
