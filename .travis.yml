@@ -23,6 +23,8 @@ before_script:
       export PATH=$HOME/.local/bin:$(pwd)/bats/bin:$TRAVIS_BUILD_DIR/target/debug:/Users/travis/Library/Python/2.7/bin:$PATH &&
       git config --global user.name semantic-rs &&
       git config --global user.email semantic@rs
+  - if [ $TRAVIS_OS_NAME = osx ]; then brew install libssh2; fi
+
 
 script:
   - |
