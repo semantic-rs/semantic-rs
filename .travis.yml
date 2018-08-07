@@ -24,6 +24,7 @@ before_script:
       git config --global user.name semantic-rs &&
       git config --global user.email semantic@rs
   - if [ $TRAVIS_OS_NAME = osx ]; then brew install libssh2; fi
+  - if [ $TRAVIS_OS_NAME = osx ]; then export PKG_CONFIG_PATH=/usr/local/Cellar/openssl/1.0.2l/lib/pkgconfig; fi
 
 
 script:
