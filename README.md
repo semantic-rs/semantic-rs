@@ -76,7 +76,7 @@ To run semantic-rs's tests:
 Requirements:
 - cmake
 - OpenSSL development package
-  - Ubuntu: `libssl-dev`
+  - Ubuntu: `libssl-dev`, `pkg-config`, `zlib1g-dev`
   - Mac Homebrew: `openssl`
 - Rust 1.15 or later
 
