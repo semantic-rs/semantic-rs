@@ -22,7 +22,15 @@ pub struct Config {
 
 impl Config {
     pub fn can_push(&self) -> bool {
-        self.user.is_some() && self.repository_name.is_some() && self.gh_token.is_some()
+        self.user.is_some() && self.repository_name.is_some()
+    }
+
+    pub fn can_release_to_github(&self) -> bool {
+        self.can_push() && self.gh_token.is_some()
+    }
+
+    pub fn can_release_to_cratesio(&self) -> bool {
+        self.cargo_token.is_some()
     }
 }
 

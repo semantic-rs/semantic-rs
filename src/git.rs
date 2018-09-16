@@ -76,6 +76,15 @@ fn create_tag(config: &Config, tag_name: &str, message: &str) -> Result<(), git2
         .map(|_| ())
 }
 
+fn is_https_remote(maybe_remote: Option<&str>) -> bool {
+    if let Some(remote) = maybe_remote {
+        remote.to_string()
+              .starts_with("https://")
+    } else {
+        false
+    }
+}
+
 pub fn latest_tag(repo: &Repository) -> Option<Version> {
     let tags = match repo.tag_names(None) {
         Ok(tags) => tags,
@@ -147,7 +156,7 @@ pub fn push(config: &Config, tag_name: &str) -> Result<(), Error> {
     let mut cbs = RemoteCallbacks::new();
     let mut opts = PushOptions::new();
 
-    if config.gh_token.as_ref().is_some() {
+    if is_https_remote(remote.url()) {
         cbs.credentials(|_url, _username, _allowed| {
             Cred::userpass_plaintext(&token.unwrap(), "")
         });
