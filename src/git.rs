@@ -78,8 +78,7 @@ fn create_tag(config: &Config, tag_name: &str, message: &str) -> Result<(), git2
 
 fn is_https_remote(maybe_remote: Option<&str>) -> bool {
     if let Some(remote) = maybe_remote {
-        remote.to_string()
-              .starts_with("https://")
+        remote.starts_with("https://")
     } else {
         false
     }
