@@ -18,7 +18,6 @@ extern crate rustc_serialize;
 extern crate toml;
 extern crate regex;
 extern crate semver;
-extern crate docopt;
 extern crate git2;
 extern crate clog;
 extern crate hyper;
@@ -27,8 +26,9 @@ extern crate url;
 extern crate travis_after_all;
 extern crate env_logger;
 extern crate hyper_native_tls;
+extern crate clap;
 
-use docopt::Docopt;
+use clap::{Arg, ArgMatches, App};
 use commit_analyzer::CommitType;
 use config::ConfigBuilder;
 use std::process;
@@ -43,21 +43,6 @@ use utils::user_repo_from_url;
 
 const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 const USERAGENT: &'static str = concat!("semantic-rs/", env!("CARGO_PKG_VERSION"));
-const USAGE: &'static str = "
-semantic.rs 🚀
-
-Usage:
-  semantic-rs [options]
-  semantic-rs --version
-
-Options:
-  -h --help              Show this screen.
-  --version              Show version.
-  -p PATH, --path=PATH   Specifies the repository path. [default: .]
-  -w W, --write=W        Write changes to files (default: yes if CI is set, otherwise no).
-  -r R, --release=R      Create release on GitHub and publish on crates.io (only in write mode) [default: yes].
-  -b B, --branch=B       The branch on which releases should happen. [default: master].
-";
 
 const COMMITTER_ERROR_MESSAGE: &'static str = r"
 A release commit needs a committer name and email address.
@@ -83,15 +68,6 @@ macro_rules! print_exit {
         logger::stderr(format!($fmt, $($arg)*));
         process::exit(1);
     }};
-}
-
-#[derive(Debug, RustcDecodable)]
-struct Args {
-    flag_path: String,
-    flag_write: Option<String>,
-    flag_version: bool,
-    flag_release: String,
-    flag_branch: String,
 }
 
 fn string_to_bool(answer: &str) -> bool {
@@ -220,8 +196,8 @@ fn get_repo(repository_path: &str) -> git2::Repository {
     }
 }
 
-fn get_repository_path(args: &Args) -> String {
-    let path = Path::new(&args.flag_path);
+fn get_repository_path(matches: &ArgMatches) -> String {
+    let path = Path::new(matches.value_of("path").unwrap_or("."));
     let path = fs::canonicalize(path)
         .unwrap_or_else(|_| print_exit!("Path does not exist or a component is
                                                             not a directory"));
@@ -282,24 +258,29 @@ fn get_cargo_token() -> Option<String> {
     env::var("CARGO_TOKEN").ok()
 }
 
-fn assemble_configuration(args: Args) -> config::Config {
+fn assemble_configuration(args: ArgMatches) -> config::Config {
     let mut config_builder = ConfigBuilder::new();
 
     // If write mode is requested OR denied,
     // adhere to the user's wish,
     // otherwise we decide based on whether we are running in CI.
-    let write_mode = match args.flag_write {
-        None => ci_env_set(),
-        Some(ref flag) => string_to_bool(flag)
+    let write_mode = match args.value_of("write") {
+        Some(write_mode) => string_to_bool(write_mode),
+        None => ci_env_set()
+    };
+
+    let release_flag = match args.value_of("release") {
+        Some(release_mode) => string_to_bool(release_mode),
+        None => false
     };
 
     // We can only release, if we are allowed to write
-    let release_mode = write_mode && string_to_bool(&args.flag_release);
+    let release_mode = write_mode && release_flag;
     let repository_path = get_repository_path(&args);
 
     config_builder.write(write_mode);
     config_builder.release(release_mode);
-    config_builder.branch(args.flag_branch.clone());
+    config_builder.branch(args.value_of("branch").unwrap_or("master").to_string());
     config_builder.repository_path(repository_path.clone());
     config_builder.signature(get_signature(repository_path.clone()));
     if let Some((user, repo)) = get_user_and_repo(&repository_path) {
@@ -326,17 +307,38 @@ fn main() {
     env_logger::init().expect("Can't instantiate env logger");
     println!("semantic.rs 🚀");
 
-    let args: Args = Docopt::new(USAGE)
-        .and_then(|d| d.decode())
-        .unwrap_or_else(|e| e.exit());
 
+    let clap_args =  App::new("semantic-rs")
+        .version(VERSION)
+        .author("Jan Schulte <hello@unexpected-code> & Jan-Erik Rediger <janerik@fnordig.de>")
+        .about("Crate publishing done right")
+        .arg(Arg::with_name("write")
+             .short("w")
+             .long("write")
+             .help("Write changes to files (default: yes if CI is set, otherwise no).")
+             .value_name("WRITE_MODE")
+             .takes_value(true))
+        .arg(Arg::with_name("release")
+            .short("r")
+            .long("release")
+            .help("Create release on GitHub and publish on crates.io (only in write mode) [default: yes].")
+            .value_name("RELEASE_MODE")
+            .takes_value(true))
+        .arg(Arg::with_name("branch")
+             .short("b")
+             .long("branch")
+             .help("The branch on which releases should happen. [default: master].")
+             .value_name("BRANCH")
+             .takes_value(true))
+        .arg(Arg::with_name("path")
+             .short("p")
+             .long("path")
+             .help("Specifies the repository path. [default: .]")
+             .value_name("PATH")
+             .takes_value(true))
+        .get_matches();
 
-    if args.flag_version {
-        println!("semantic.rs 🚀 -- v{}", VERSION);
-        process::exit(0);
-    }
-
-    let config = assemble_configuration(args);
+    let config = assemble_configuration(clap_args);
 
     let branch = current_branch(&config.repository)
         .unwrap_or_else(|| print_exit!("Could not determine current branch."));
