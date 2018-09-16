@@ -429,7 +429,13 @@ fn main() {
 
         if config.release_mode && config.can_push() {
             push_to_github(&config, &tag_name);
+        }
+
+        if config.release_mode && config.can_release_to_github() {
             release_on_github(&config, &tag_message, &tag_name);
+        }
+
+        if config.release_mode && config.can_release_to_cratesio() {
             release_on_cratesio(&config);
             println!("{} v{} is released. 🚀🚀🚀", config.repository_name.unwrap(), new_version);
         }
