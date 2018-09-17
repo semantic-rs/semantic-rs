@@ -22,6 +22,15 @@ semantic-rs automates all these steps for you so you can focus more on developin
 
 ## Usage
 
+### Installation via crates.io
+
+Ubuntu:
+
+```
+$ sudo apt-get install -y cmake libssl-dev pkg-config zlib1g-dev
+$ cargo install semantic-rs
+```
+
 ### Prerequisites
 
 You need the following data beforehand:
@@ -51,7 +60,7 @@ By default it runs in dry-run mode. This means it doesn't perform changes automa
 To perform the changes, pass `-w` as an argument:
 
 ```bash
-$ semantic-rs -w yes
+$ semantic-rs -w=yes
 ```
 This performs the following operations:
 - Create or update `Changelog.md` containing everything that changed
@@ -62,14 +71,6 @@ This performs the following operations:
 - A new version published to [crates.io](crates.io)
 - A new release on GitHub
 - Push the new commit and tag to GitHub
-
-
-## Running the tests
-
-To run semantic-rs's tests:
-
-- unit tests: `cargo test`.
-- integration tests: `./tests/integration/run-locally.sh`.
 
 ## Development
 
@@ -145,6 +146,14 @@ Would create annotated git tag
 ```
 
 Since `-w yes` was not passed, it only prints out what it would do. Note that if you run it on your local machine the output may differ.
+
+### Running the tests
+
+To run semantic-rs's tests:
+
+- unit tests: `cargo test`.
+- integration tests: `./tests/integration/run-locally.sh`.
+
 
 ## Run semantic-rs in CI environment
 
