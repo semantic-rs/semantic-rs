@@ -1,7 +1,7 @@
 language: rust
 cache: cargo
 sudo: required
-dist: trusty
+dist: xenial
 
 os:
   - linux
