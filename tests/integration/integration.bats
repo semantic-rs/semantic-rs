@@ -115,7 +115,7 @@ setup_dirs() {
   setup_dirs
 
   CI=true semantic-rs --release=no
-  grep -q 'version = "1.0.0"' Cargo.toml
+  grep -q 'version = "0.2.0"' Cargo.toml
 }
 
 @test "Runs in dry-run-mode with CI=true but dry-run forced" {
