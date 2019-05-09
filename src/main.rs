@@ -79,14 +79,42 @@ fn string_to_bool(answer: &str) -> bool {
 
 fn version_bump(version: &Version, bump: CommitType) -> Option<Version> {
     let mut version = version.clone();
-    match bump {
-        CommitType::Unknown => return None,
-        CommitType::Patch => version.increment_patch(),
-        CommitType::Minor => version.increment_minor(),
-        CommitType::Major => version.increment_major(),
+
+    // NB: According to the Semver spec, major version zero is for
+    // the initial development phase is treated slightly differently.
+    // The minor version is incremented for breaking changes
+    // and major is kept at zero until the public API has become more stable.
+    if version.major == 0 {
+        match bump {
+            CommitType::Unknown => return None,
+            CommitType::Patch => version.increment_patch(),
+            CommitType::Minor => version.increment_patch(),
+            CommitType::Major => version.increment_minor(),
+        }
+    } else {
+        match bump {
+            CommitType::Unknown => return None,
+            CommitType::Patch => version.increment_patch(),
+            CommitType::Minor => version.increment_minor(),
+            CommitType::Major => version.increment_major(),
+        }
     }
 
     Some(version)
+}
+
+#[test]
+fn test_breaking_bump_major_zero() {
+    let buggy_release = Version::parse("0.2.0").unwrap();
+    let bumped_version = version_bump(&buggy_release, CommitType::Major).unwrap();
+    assert_eq!(bumped_version, Version::parse("0.3.0").unwrap());
+}
+
+#[test]
+fn test_breaking_bump_major_one() {
+    let buggy_release = Version::parse("1.0.0").unwrap();
+    let bumped_version = version_bump(&buggy_release, CommitType::Major).unwrap();
+    assert_eq!(bumped_version, Version::parse("2.0.0").unwrap());
 }
 
 fn ci_env_set() -> bool {
