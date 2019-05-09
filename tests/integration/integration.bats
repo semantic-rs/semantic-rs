@@ -46,12 +46,12 @@ setup_dirs() {
   [ "$status" -eq 1 ]
 }
 
-@test "Initializes to v1.0.0" {
+@test "Initializes to v0.1.0" {
   cd initial-release
   setup_dirs
 
   semantic-rs --write=yes --release=no
-  grep -q 'version = "1.0.0"' Cargo.toml
+  grep -q 'version = "0.1.0"' Cargo.toml
 }
 
 @test "Bumps to next minor" {
