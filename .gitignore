@@ -1,4 +1,5 @@
-build
-/**/build
+target
+**/target
 .DS_Store
-node_modules
+Cargo.lock
+.idea/
