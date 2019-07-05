@@ -1,0 +1,6 @@
+# Use this file to define your project-specific formatting rules
+#
+# By default empty file does nothing and tells Rustfmt to use the default settings
+#
+# To learn more about Rustfmt configuration visit
+# https://github.com/rust-lang/rustfmt/blob/master/Configurations.md
