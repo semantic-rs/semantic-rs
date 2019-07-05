@@ -22,7 +22,7 @@ There are many ways to drive open source development. Documenting the problem in
 
 ### Conventions and Specifications
 
-This repository has some strong opinions built in like circleci, semantic-rs, editorconfig. So feel free to fork and change it at your own discretion. It is only meant to be a starting point. That being said:
+This repository has some strong opinions built in like circleci, semantic-rs, editorconfig, stable Rust. So feel free to fork and change it at your own discretion. It is only meant to be a starting point. That being said:
 
 Using conventions, documentation and specifications make it easier to:
 - communicate the problem you are solving
