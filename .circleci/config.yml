@@ -1,0 +1,144 @@
+version: 2
+
+aliases:
+  # -------------------------
+  #      ALIASES: Caches
+  # -------------------------
+  - &restore-deps-cache
+    key: deps-cache-{{ arch }}-{{ checksum "Cargo.toml" }}
+
+  - &save-deps-cache
+    key: deps-cache-{{ arch }}-{{ checksum "Cargo.toml" }}
+    paths:
+      - /usr/local/cargo/registry
+      - ~/project/target/
+
+  - &restore-cargo-binaries
+    key: cargo-bin-{{ arch }}-{{ .Environment.CACHE_VERSION }}
+
+  - &save-cargo-binaries
+    key: cargo-bin-{{ arch }}-{{ .Environment.CACHE_VERSION }}
+    paths:
+      - /usr/local/cargo/bin/semantic-rs
+
+  # -------------------------
+  #  ALIASES: Branch Filters
+  # -------------------------
+  - &filter-only-master
+    branches:
+      only: master
+  - &filter-only-semantic-pr
+    branches:
+      only:  /^(pull|fix|feat)\/.*$/
+
+defaults: &defaults
+  working_directory: ~/project
+  environment:
+    RUST_BACKTRACE: 1
+
+jobs:
+  build:
+    <<: *defaults
+    docker:
+      - image: rust:latest
+    steps:
+      - checkout
+      - restore_cache: *restore-deps-cache
+      - run: cargo build
+      - save_cache: *save-deps-cache
+
+  test:
+    <<: *defaults
+    docker:
+      - image: rust:latest
+    steps:
+      - checkout
+      - restore_cache: *restore-deps-cache
+      - run: cargo test --all
+      - save_cache: *save-deps-cache
+
+  clippy:
+    <<: *defaults
+    docker:
+      - image: rust:latest
+    steps:
+      - checkout
+      - restore_cache: *restore-deps-cache
+      - run: rustup component add clippy
+      - run: cargo clippy
+      - save_cache: *save-deps-cache
+
+  rustfmt:
+    <<: *defaults
+    docker:
+      - image: rust:latest
+    steps:
+      - checkout
+      - run: rustup component add rustfmt
+      - run: cargo fmt -- --check
+
+  release-dry-run:
+    <<: *defaults
+    docker:
+      - image: rust:latest
+    steps:
+      - checkout
+      - restore_cache: *restore-cargo-binaries
+      - run: which semantic-rs || cargo install --git https://github.com/mandrean/semantic-rs.git --branch feat/support-major-zero
+      - persist_to_workspace:
+          root: /usr/local/cargo/bin/
+          paths:
+            - semantic-rs
+      - save_cache: *save-cargo-binaries
+      - run: pwd && ls -la
+      - run: semantic-rs -w=false
+
+  release:
+    <<: *defaults
+    docker:
+      - image: rust:latest
+    steps:
+      - checkout
+      - attach_workspace:
+          at: /workspace
+      - run: /workspace/semantic-rs -w=true
+
+workflows:
+  version: 2
+  analysis:
+    jobs:
+      - build:
+          filters: *filter-only-semantic-pr
+      - test:
+          filters: *filter-only-semantic-pr
+      - clippy:
+          filters: *filter-only-semantic-pr
+      - rustfmt:
+          filters: *filter-only-semantic-pr
+
+  release:
+    jobs:
+      - build:
+          filters: *filter-only-master
+      - test:
+          filters: *filter-only-master
+      - clippy:
+          filters: *filter-only-master
+      - rustfmt:
+          filters: *filter-only-master
+      - release-dry-run:
+          filters: *filter-only-master
+          requires:
+            - build
+            - test
+            - clippy
+            - rustfmt
+      - hold:
+          filters: *filter-only-master
+          type: approval
+          requires:
+            - release-dry-run
+      - release:
+          filters: *filter-only-master
+          requires:
+            - hold
