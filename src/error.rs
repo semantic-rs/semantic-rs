@@ -1,11 +1,11 @@
 use git2::Error as GitError;
+use hubcaps::Error as HubcapsError;
 use std::env::VarError;
 use std::error::Error as StdError;
 use std::io::Error as IoError;
-use hubcaps::Error as HubcapsError;
 
-use std::fmt;
 use std::convert::From;
+use std::fmt;
 
 use self::Error::*;
 
@@ -49,7 +49,6 @@ impl fmt::Display for Error {
             Io(ref e) => e.fmt(f),
             GitHub(ref e) => e.fmt(f),
         }
-
     }
 }
 

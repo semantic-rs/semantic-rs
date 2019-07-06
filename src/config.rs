@@ -67,7 +67,7 @@ impl ConfigBuilder {
             signature: None,
             gh_token: None,
             cargo_token: None,
-            remote: None
+            remote: None,
         }
     }
 
@@ -138,7 +138,7 @@ impl ConfigBuilder {
             signature: self.signature.unwrap(),
             gh_token: self.gh_token,
             cargo_token: self.cargo_token,
-            remote: self.remote.unwrap_or(Err("No remote found".into()))
+            remote: self.remote.unwrap_or(Err("No remote found".into())),
         }
     }
 }

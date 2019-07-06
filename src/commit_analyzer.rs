@@ -1,7 +1,7 @@
-use clog::Clog;
 use clog::error::Error;
+use clog::Clog;
 
-#[derive(PartialEq,Eq,Debug,PartialOrd,Ord)]
+#[derive(PartialEq, Eq, Debug, PartialOrd, Ord)]
 pub enum CommitType {
     Unknown,
     Patch,

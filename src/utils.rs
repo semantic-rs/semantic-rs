@@ -1,25 +1,20 @@
-use url::{Url, ParseError};
+use url::{ParseError, Url};
 
 pub fn user_repo_from_url(url: &str) -> Result<(String, String), String> {
     let path = match Url::parse(url) {
-        Err(ParseError::RelativeUrlWithoutBase) => {
-            match url.rfind(":") {
-                None => return Err("Can't parse path from remote URL".into()),
-                Some(colon_pos) => {
-                    Some(url[colon_pos+1..].split('/')
-                                           .map(|s| s.to_owned())
-                                           .collect::<Vec<_>>())
-                }
-            }
-        }
+        Err(ParseError::RelativeUrlWithoutBase) => match url.rfind(":") {
+            None => return Err("Can't parse path from remote URL".into()),
+            Some(colon_pos) => Some(
+                url[colon_pos + 1..]
+                    .split('/')
+                    .map(|s| s.to_owned())
+                    .collect::<Vec<_>>(),
+            ),
+        },
         Err(_) => return Err("Can't parse remote URL".into()),
-        Ok(url) => {
-            url.path_segments()
-                .map(|path| {
-                    path.map(|seg| seg.to_owned())
-                        .collect::<Vec<_>>()
-                })
-        }
+        Ok(url) => url
+            .path_segments()
+            .map(|path| path.map(|seg| seg.to_owned()).collect::<Vec<_>>()),
     };
 
     let path = match path {
@@ -53,10 +48,8 @@ mod test {
         let urls = [
             "https://github.com/user/repo.git",
             "https://github.com/user/repo",
-
             "git@github.com:user/repo.git",
             "git@github.com:user/repo",
-
             "ssh://github.com/user/repo",
             "ssh://github.com/user/repo.git",
         ];
@@ -72,9 +65,11 @@ mod test {
 
     #[test]
     fn parses_other_urls() {
-        let urls = [
-            ("https://github.com/user/repo.git.repo", "user", "repo.git.repo"),
-        ];
+        let urls = [(
+            "https://github.com/user/repo.git.repo",
+            "user",
+            "repo.git.repo",
+        )];
 
         for &(url, exp_user, exp_repo) in &urls {
             println!("Testing '{:?}'", url);
