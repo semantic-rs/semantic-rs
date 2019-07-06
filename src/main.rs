@@ -308,7 +308,7 @@ fn assemble_configuration(args: ArgMatches) -> Result<config::Config, error::Err
         None => false,
     };
 
-    let force_https_flag = args.is_present("force_https");
+    let force_https_flag = args.is_present("force-https");
     config_builder.force_https(force_https_flag);
 
     // We can only release, if we are allowed to write
@@ -414,7 +414,7 @@ fn main() {
             .multiple(true))
         .arg(Arg::with_name("force-https")
             .long("force-https")
-            .help("Force https remote (will rewrite git:// remote with https://")
+            .help("Force https remote (will rewrite git:// remote with https://)")
             .takes_value(false))
         .get_matches();
 
