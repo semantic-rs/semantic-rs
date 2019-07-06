@@ -58,14 +58,14 @@ jobs:
   install:
     <<: *defaults
     docker:
-      - image: rust:latest
+      - image: ekidd/rust-musl-builder
     steps:
       - checkout
       - restore_cache: *restore-deps-cache
       - run: apt update && apt install -y cmake
-      - run: cargo install --path . --force --debug
+      - run: cargo build --release
       - persist_to_workspace:
-          root: /usr/local/cargo/bin/
+          root: target/release/
           paths:
             - semantic-rs
       - save_cache: *save-deps-cache
