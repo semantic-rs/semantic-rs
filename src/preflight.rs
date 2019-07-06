@@ -77,7 +77,16 @@ pub fn apply_overrides(config: &mut Config) -> Result<(), Error> {
                 std::process::exit(1);
             }
 
-            git::set_remote_url(config, &remote_name, new_url.as_ref().unwrap())?;
+            match new_url {
+                None => {
+                    log::error!("{} is not supported for https forcing, please consider opening an issue at https://github.com/etclabscore/semantic-rs/issues/new/choose", remote_url);
+                    std::process::exit(1);
+                }
+                Some(new_url) => {
+                    log::info!("Overriding git remote url: {} -> {}", remote_url, new_url);
+                    git::set_remote_url(config, &remote_name, &new_url)?;
+                }
+            }
         }
     }
 
