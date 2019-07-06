@@ -35,6 +35,7 @@ jobs:
       - image: rust:latest
     steps:
       - checkout
+      - run: apt update && apt install -y cmake
       - restore_cache: *restore-deps-cache
       - run: cargo build
       - save_cache: *save-deps-cache
@@ -46,7 +47,7 @@ jobs:
     steps:
       - checkout
       - restore_cache: *restore-deps-cache
-      - run: apt update && apt install build-essential
+      - run: apt update && apt install -y cmake
       - run: rustup component add clippy
       - run: rustup component add rustfmt
       - run: cargo test --all
@@ -61,7 +62,7 @@ jobs:
     steps:
       - checkout
       - restore_cache: *restore-deps-cache
-      - run: apt update && apt install build-essential
+      - run: apt update && apt install -y cmake
       - run: cargo install --force --debug
       - persist_to_workspace:
           root: /usr/local/cargo/bin/
