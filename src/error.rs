@@ -1,4 +1,5 @@
 use git2::Error as GitError;
+use github_rs::errors::Error as GithubError;
 use hubcaps::Error as HubcapsError;
 use std::env::VarError;
 use std::error::Error as StdError;
@@ -8,13 +9,16 @@ use std::convert::From;
 use std::fmt;
 
 use self::Error::*;
+use std::fmt::Display;
 
 #[derive(Debug)]
 pub enum Error {
     Git(GitError),
     Var(VarError),
     Io(IoError),
-    GitHub(HubcapsError),
+    Hubcaps(HubcapsError),
+    GitHub(GithubError),
+    Custom(String),
 }
 
 impl From<GitError> for Error {
@@ -37,6 +41,12 @@ impl From<IoError> for Error {
 
 impl From<HubcapsError> for Error {
     fn from(err: HubcapsError) -> Error {
+        Error::Hubcaps(err)
+    }
+}
+
+impl From<GithubError> for Error {
+    fn from(err: GithubError) -> Self {
         Error::GitHub(err)
     }
 }
@@ -44,10 +54,12 @@ impl From<HubcapsError> for Error {
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            Git(ref e) => e.fmt(f),
-            Var(ref e) => e.fmt(f),
-            Io(ref e) => e.fmt(f),
-            GitHub(ref e) => e.fmt(f),
+            Git(ref e) => Display::fmt(e, f),
+            Var(ref e) => Display::fmt(e, f),
+            Io(ref e) => Display::fmt(e, f),
+            Hubcaps(ref e) => Display::fmt(e, f),
+            GitHub(ref e) => Display::fmt(e, f),
+            Custom(ref e) => Display::fmt(e, f),
         }
     }
 }
@@ -58,7 +70,9 @@ impl StdError for Error {
             Git(ref e) => e.description(),
             Var(ref e) => e.description(),
             Io(ref e) => e.description(),
+            Hubcaps(ref e) => e.description(),
             GitHub(ref e) => e.description(),
+            Custom(ref e) => e.as_str(),
         }
     }
 }

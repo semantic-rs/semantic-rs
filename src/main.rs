@@ -2,6 +2,7 @@
 #![cfg_attr(feature = "dev", feature(plugin))]
 #![cfg_attr(feature = "dev", plugin(clippy))]
 
+mod asset;
 mod cargo;
 mod changelog;
 mod commit_analyzer;
@@ -13,6 +14,7 @@ mod preflight;
 mod toml_file;
 mod utils;
 
+use crate::asset::Asset;
 use clap::{App, Arg, ArgMatches};
 use commit_analyzer::CommitType;
 use config::ConfigBuilder;
@@ -290,7 +292,7 @@ fn get_cargo_token() -> Option<String> {
     env::var("CARGO_TOKEN").ok()
 }
 
-fn assemble_configuration(args: ArgMatches) -> config::Config {
+fn assemble_configuration(args: ArgMatches) -> Result<config::Config, error::Error> {
     let mut config_builder = ConfigBuilder::new();
 
     // If write mode is requested OR denied,
@@ -331,8 +333,22 @@ fn assemble_configuration(args: ArgMatches) -> config::Config {
         Err(err) => config_builder.remote(Err(err.description().to_string())),
     };
 
+    let assets = args
+        .values_of("asset")
+        .map(|values| {
+            values
+                .map(|p| Asset::from_path(&p))
+                .collect::<Result<Vec<_>, _>>()
+        })
+        .unwrap_or(Ok(vec![]))?;
+
+    for asset in assets {
+        config_builder.asset(asset);
+    }
+
     config_builder.repository(repo);
-    config_builder.build()
+
+    Ok(config_builder.build())
 }
 
 fn init_logger() {
@@ -386,9 +402,17 @@ fn main() {
              .help("Specifies the repository path. [default: .]")
              .value_name("PATH")
              .takes_value(true))
+        .arg(Arg::with_name("asset")
+            .short("a")
+            .long("asset")
+            .help("Asset filename to be attached in GitHub release")
+            .value_name("PATH")
+            .takes_value(true)
+            .multiple(true))
         .get_matches();
 
-    let config = assemble_configuration(clap_args);
+    let config = assemble_configuration(clap_args)
+        .unwrap_or_else(|e| print_exit!("Configuration error: {}", e));
 
     let branch = current_branch(&config.repository)
         .unwrap_or_else(|| print_exit!("Could not determine current branch."));
