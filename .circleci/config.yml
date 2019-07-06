@@ -4,15 +4,24 @@ aliases:
   # -------------------------
   #      ALIASES: Caches
   # -------------------------
-  - &restore-deps-cache
+  - &restore-deps-cache-rust
     key: deps-cache-{{ arch }}-{{ checksum "Cargo.toml" }}
 
-  - &save-deps-cache
+  - &save-deps-cache-rust
     key: deps-cache-{{ arch }}-{{ checksum "Cargo.toml" }}
     paths:
       - /usr/local/cargo/registry
       - ~/project/target/
 
+  - &restore-deps-cache-musl
+    key: deps-cache-musl-{{ arch }}-{{ checksum "Cargo.toml" }}
+
+  - &save-deps-cache-musl
+    key: deps-cache-musl-{{ arch }}-{{ checksum "Cargo.toml" }}
+    paths:
+      - ~/.rustup/
+      - ~/.cargo/
+      - ~/project/target/
   # -------------------------
   #  ALIASES: Branch Filters
   # -------------------------
@@ -36,9 +45,9 @@ jobs:
     steps:
       - checkout
       - run: apt update && apt install -y cmake
-      - restore_cache: *restore-deps-cache
+      - restore_cache: *restore-deps-cache-rust
       - run: cargo build
-      - save_cache: *save-deps-cache
+      - save_cache: *save-deps-cache-rust
 
   test:
     <<: *defaults
@@ -46,12 +55,12 @@ jobs:
       - image: rust:latest
     steps:
       - checkout
-      - restore_cache: *restore-deps-cache
+      - restore_cache: *restore-deps-cache-rust
       - run: apt update && apt install -y cmake
       - run: rustup component add clippy
       - run: rustup component add rustfmt
       - run: cargo test --all
-      - save_cache: *save-deps-cache
+      - save_cache: *save-deps-cache-rust
       - run: cargo clippy
       - run: cargo fmt -- --check
 
@@ -61,7 +70,9 @@ jobs:
       - image: ekidd/rust-musl-builder
     steps:
       - checkout
+      - restore_cache: *restore-deps-cache-musl
       - run: cargo build --release
+      - save_cache: *save-deps-cache-musl
       - persist_to_workspace:
           root: target/x86_64-unknown-linux-musl/release
           paths:
