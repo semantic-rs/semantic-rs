@@ -94,10 +94,15 @@ workflows:
   version: 2
   analysis:
     jobs:
-      - build:
-          filters: *filter-only-semantic-pr
       - test:
           filters: *filter-only-semantic-pr
+      - install:
+          filters: *filter-only-semantic-pr
+      - release-dry-run:
+          filters: *filter-only-semantic-pr
+          requires:
+            - test
+            - install
 
   release:
     jobs:
