@@ -78,7 +78,7 @@ jobs:
       - checkout
       - attach_workspace:
           at: /workspace
-      - run: /workspace/semantic-rs --write=no --release=no --branch=$CIRCLE_BRANCH
+      - run: /workspace/semantic-rs --write=no --release=no --branch=$CIRCLE_BRANCH --asset /workspace/semantic-rs --asset Changelog.md
 
   release:
     <<: *defaults
@@ -88,7 +88,7 @@ jobs:
       - checkout
       - attach_workspace:
           at: /workspace
-      - run: /workspace/semantic-rs --write=yes --release=yes
+      - run: /workspace/semantic-rs --write=yes --release=yes --asset /workspace/semantic-rs --asset Changelog.md
 
 workflows:
   version: 2
