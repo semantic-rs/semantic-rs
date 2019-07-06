@@ -27,7 +27,6 @@ use std::time::Duration;
 use std::{env, fs};
 use utils::user_repo_from_url;
 
-const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 const USERAGENT: &'static str = concat!("semantic-rs/", env!("CARGO_PKG_VERSION"));
 
 const COMMITTER_ERROR_MESSAGE: &'static str = r"
@@ -378,9 +377,9 @@ fn main() {
     log::info!("semantic.rs 🚀");
 
     let clap_args =  App::new("semantic-rs")
-        .version(VERSION)
-        .author("Jan Schulte <hello@unexpected-code> & Jan-Erik Rediger <janerik@fnordig.de>")
-        .about("Crate publishing done right")
+        .version(clap::crate_version!())
+        .author(clap::crate_authors!())
+        .about(clap::crate_description!())
         .arg(Arg::with_name("write")
              .short("w")
              .long("write")
