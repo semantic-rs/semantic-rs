@@ -49,11 +49,6 @@ For small documentation changes and fixes, these can be done quickly following t
     * Push local changes to your forked repository and make a pull request. Follow the [Convention Commits](CONVENTIONAL_COMMITS.md) guidelines for naming Github pull requests and what to put in the body.
 
 
-## Building
-
-Follow the build process is outlined in [BUILDING.md](BUILDING.md) to create a build.
-
-
 ## Releasing
 
 Follow the release process is outlined in [RELEASING.md](RELEASING.md) to create a release.

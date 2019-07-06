@@ -8,31 +8,26 @@ When using the name 'version' we mean the versioning scheme described in [VERSIO
 
 ## Introduction
 
-This document is to describe the release pipeline, which is taking the result of the artifacts created according to [BUILDING.md](BUILDING.md) and publish a release to the various release targets for the project.
+This document is to describe the release pipeline, which is taking the result of the artifacts created by `cargo` and publish a release to the various platforms for the project.
 
 We propose:
- - a set of release targets that are allowable
- - a pipeline for handling the release folder's artifacts
+ - a set of release platform targets that are allowable
+ - a pipeline for handling the release artifacts
 
-It is NOT the purpose of this document to describe how a project might create a build, NOR is it describing a strcture in which projects MUST write build artifacts to. It is describing the structure of the releases themselves.
+It is NOT the purpose of this document to describe how a project might create a build, NOR is it describing a structure in which projects MUST write build artifacts to. It is describing the structure of the releases themselves.
 
 ## Release Pipeline
 
-Each Pristine project MUST provide a `bin/release.sh` script which will make a release to the various targets.
-
-Each target may be scripted directly into the `bin/release.sh` shell script, or it may be broken down into files following the pattern:`./bin/release.{target}.sh`.
-
-While the `.sh` extension is mandatory, the scripts may be written with one of the following headers:
- - `#!bin/sh`
- - `#!bin/node`
- - `#!/usr/bin/env node`
+By default the project release pipeline is defined in the `.circleci/config.yml` and uses the `semantic-rs` tool for 
+ - crates.io crate publishing
+ - generating changelog from [semantic commits](CONVENTIONAL_COMMITS.md)
+ - publishing a GitHub release
+ 
+Documentation will automatically be available at [docs.rs](https://docs.rs) website after a few minutes since publishing a new release.
 
 ### Create a build from current branch
 
-Process is outlined in [BUILDING.md](BUILDING.md)
-
-1. Clean the build directory
-2. run: `bin/build.{target}.{ext}`
+For building please follow the `cargo` [documentation](https://doc.rust-lang.org/cargo/index.html)
 
 ### Bump the version of the project
 
