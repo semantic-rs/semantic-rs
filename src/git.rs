@@ -172,7 +172,9 @@ pub fn push(config: &Config, tag_name: &str) -> Result<(), Error> {
     let mut cbs = RemoteCallbacks::new();
     let mut opts = PushOptions::new();
 
-    log::info!("Current remote: {}", remote.url());
+    if let Some(remote) = remote.url() {
+        log::info!("Current remote: {}", remote);
+    }
 
     if is_https_remote(remote.url()) {
         cbs.credentials(|_url, _username, _allowed| Cred::userpass_plaintext(&token.unwrap(), ""));
