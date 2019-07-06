@@ -2,9 +2,9 @@
 
 A Rust Library open source repository in its original condition.
 
-Pristine Rust Library a fork of [Pristine](https://github.com/etclabscore/pristine).
+Pristine Rust Library is a fork of [Pristine](https://github.com/etclabscore/pristine).
 
-There are a lack of repositories to start from to build community driven open source projects. Pristine Rust Library is a complete starting point, it follows a Documentation Driven Development approach, and can be used as a resource to augment existing documentation.
+There is a lack of repositories to start from to build community driven open source projects. Pristine Rust Library is a complete starting point, it follows a Documentation Driven Development approach, and can be used as a resource to augment existing documentation.
 
 ## How to use Pristine in your project
 
