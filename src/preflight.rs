@@ -12,13 +12,19 @@ pub fn check(config: &Config) -> Vec<String> {
     }
 
     if let Err(ref err) = config.remote {
-        warnings.push(format!(
-            "Could not determine the origin remote url: {:?}",
-            err
-        ));
+        warnings.push(format!("Could not determine the origin remote: {:?}", err));
         warnings.push("semantic-rs can't push changes or create a release on GitHub".into());
     } else {
-        log::info!("Current remote: {}", config.remote.as_ref().unwrap());
+        let remote_name = config.remote.as_ref().unwrap();
+        let remote_url = crate::git::get_remote_url(config, remote_name);
+        match remote_url {
+            Ok(Some(remote_url)) => log::info!("Current remote: {}({})", remote_name, remote_url),
+            Ok(None) => log::info!("Current remote: {}", remote_name),
+            Err(err) => warnings.push(format!(
+                "Could not determine the origin remote url: {}",
+                err
+            )),
+        }
     }
 
     warnings

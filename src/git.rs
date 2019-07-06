@@ -157,6 +157,14 @@ pub fn tag(config: &Config, tag_name: &str, tag_message: &str) -> Result<(), Err
     create_tag(config, &tag_name, &tag_message).map_err(Error::from)
 }
 
+pub fn get_remote_url(config: &Config, remote: &str) -> Result<Option<String>, Error> {
+    Ok(config
+        .repository
+        .find_remote(remote)?
+        .url()
+        .map(ToOwned::to_owned))
+}
+
 pub fn push(config: &Config, tag_name: &str) -> Result<(), Error> {
     let repo = &config.repository;
 
