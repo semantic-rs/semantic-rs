@@ -17,6 +17,8 @@ pub fn check(config: &Config) -> Vec<String> {
             err
         ));
         warnings.push("semantic-rs can't push changes or create a release on GitHub".into());
+    } else {
+        log::info!("Current remote: {}", config.remote.as_ref().unwrap());
     }
 
     warnings
