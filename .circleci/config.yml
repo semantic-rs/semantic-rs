@@ -83,6 +83,7 @@ jobs:
       - image: rust:latest
     steps:
       - checkout
+      - run: apt update && apt install build-essential
       - run: cargo install --git https://github.com/etclabscore/semantic-rs.git
       - persist_to_workspace:
           root: /usr/local/cargo/bin/
