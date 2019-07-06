@@ -132,7 +132,7 @@ pub fn version_bump_since_tag(repo: &Repository, tag: &str) -> CommitType {
 }
 
 pub fn generate_commit_message(new_version: &str) -> String {
-    format!("Bump version to {}", new_version).into()
+    format!("chore(release): Version {} [skip ci]", new_version)
 }
 
 pub fn commit_files(config: &Config, new_version: &str) -> Result<(), Error> {
