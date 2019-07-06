@@ -453,6 +453,7 @@ fn main() {
     log::info!("Performing preflight overrides now");
     preflight::apply_overrides(&mut config)
         .unwrap_or_else(|err| print_exit!("failed to perform preflight overrides: {}", err));
+    log::info!("Finished preflight overrides");
 
     let version = toml_file::read_from_file(&config.repository_path)
         .unwrap_or_else(|err| print_exit!("Reading `Cargo.toml` failed: {:?}", err));
