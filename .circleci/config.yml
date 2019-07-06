@@ -107,25 +107,25 @@ workflows:
     jobs:
       - test:
           filters: *filter-only-semantic-pr
-      - install:
+      - build-linux-release:
           filters: *filter-only-semantic-pr
       - release-dry-run:
           filters: *filter-only-semantic-pr
           requires:
             - test
-            - install
+            - build-linux-release
 
   release:
     jobs:
       - test:
           filters: *filter-only-master
-      - install:
+      - build-linux-release:
           filters: *filter-only-master
       - release-dry-run:
           filters: *filter-only-master
           requires:
             - test
-            - install
+            - build-linux-release
       - hold:
           filters: *filter-only-master
           type: approval
