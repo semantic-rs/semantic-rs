@@ -62,7 +62,6 @@ jobs:
     steps:
       - checkout
       - restore_cache: *restore-deps-cache
-      - run: apt update && apt install -y cmake
       - run: cargo build --release
       - persist_to_workspace:
           root: target/release/
