@@ -7,7 +7,6 @@ use std::path::Path;
 
 use crate::config::Config;
 use crate::error::Error;
-use crate::error::Error::GitHub;
 use crate::USERAGENT;
 
 pub fn can_release(config: &Config) -> bool {

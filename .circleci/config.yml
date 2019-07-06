@@ -64,7 +64,7 @@ jobs:
       - run: cargo clippy
       - run: cargo fmt -- --check
 
-  install:
+  build-linux-release:
     <<: *defaults
     docker:
       - image: ekidd/rust-musl-builder
@@ -73,10 +73,11 @@ jobs:
       - restore_cache: *restore-deps-cache-musl
       - run: cargo build --release
       - save_cache: *save-deps-cache-musl
+      - run: mv target/x86_64-unknown-linux-musl/release/semantic-rs ./semantic-rs-linux
       - persist_to_workspace:
-          root: target/x86_64-unknown-linux-musl/release
+          root: .
           paths:
-            - semantic-rs
+            - semantic-rs-linux
 
   release-dry-run:
     <<: *defaults
@@ -86,7 +87,7 @@ jobs:
       - checkout
       - attach_workspace:
           at: /workspace
-      - run: /workspace/semantic-rs --write=no --release=no --branch=$CIRCLE_BRANCH --asset /workspace/semantic-rs --asset Changelog.md
+      - run: /workspace/semantic-rs-linux --write=no --release=no --branch=$CIRCLE_BRANCH --asset /workspace/semantic-rs-linux --asset Changelog.md --force-https
 
   release:
     <<: *defaults
@@ -96,7 +97,9 @@ jobs:
       - checkout
       - attach_workspace:
           at: /workspace
-      - run: /workspace/semantic-rs --write=yes --release=yes --asset /workspace/semantic-rs --asset Changelog.md
+      - restore_cache: *restore-deps-cache-rust
+      - run: /workspace/semantic-rs-linux --write=yes --release=yes --asset /workspace/semantic-rs-linux --asset Changelog.md --force-https
+      - save_cache: *restore-deps-cache-rust
 
 workflows:
   version: 2
@@ -104,25 +107,25 @@ workflows:
     jobs:
       - test:
           filters: *filter-only-semantic-pr
-      - install:
+      - build-linux-release:
           filters: *filter-only-semantic-pr
       - release-dry-run:
           filters: *filter-only-semantic-pr
           requires:
             - test
-            - install
+            - build-linux-release
 
   release:
     jobs:
       - test:
           filters: *filter-only-master
-      - install:
+      - build-linux-release:
           filters: *filter-only-master
       - release-dry-run:
           filters: *filter-only-master
           requires:
             - test
-            - install
+            - build-linux-release
       - hold:
           filters: *filter-only-master
           type: approval
