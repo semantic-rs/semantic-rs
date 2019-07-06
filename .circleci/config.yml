@@ -97,7 +97,9 @@ jobs:
       - checkout
       - attach_workspace:
           at: /workspace
+      - restore_cache: *restore-deps-cache-rust
       - run: /workspace/semantic-rs-linux --write=yes --release=yes --asset /workspace/semantic-rs-linux --asset Changelog.md
+      - save_cache: *restore-deps-cache-rust
 
 workflows:
   version: 2
