@@ -1,3 +1,4 @@
+use crate::asset::Asset;
 use git2::{Repository, Signature};
 
 pub struct Config {
@@ -18,6 +19,8 @@ pub struct Config {
 
     pub gh_token: Option<String>,
     pub cargo_token: Option<String>,
+
+    pub assets: Vec<Asset>,
 }
 
 impl Config {
@@ -52,6 +55,8 @@ pub struct ConfigBuilder {
 
     gh_token: Option<String>,
     cargo_token: Option<String>,
+
+    assets: Vec<Asset>,
 }
 
 impl ConfigBuilder {
@@ -68,6 +73,7 @@ impl ConfigBuilder {
             gh_token: None,
             cargo_token: None,
             remote: None,
+            assets: vec![],
         }
     }
 
@@ -126,6 +132,11 @@ impl ConfigBuilder {
         self
     }
 
+    pub fn asset(&mut self, asset: Asset) -> &mut Self {
+        self.assets.push(asset);
+        self
+    }
+
     pub fn build(self) -> Config {
         Config {
             user: self.user,
@@ -139,6 +150,7 @@ impl ConfigBuilder {
             gh_token: self.gh_token,
             cargo_token: self.cargo_token,
             remote: self.remote.unwrap_or(Err("No remote found".into())),
+            assets: self.assets,
         }
     }
 }
