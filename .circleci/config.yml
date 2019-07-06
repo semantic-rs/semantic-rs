@@ -64,7 +64,7 @@ jobs:
       - restore_cache: *restore-deps-cache
       - run: cargo build --release
       - persist_to_workspace:
-          root: target/release/
+          root: target/release/x86_64-unknown-linux-musl/
           paths:
             - semantic-rs
       - save_cache: *save-deps-cache
