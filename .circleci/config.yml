@@ -78,7 +78,7 @@ jobs:
       - checkout
       - attach_workspace:
           at: /workspace
-      - run: /workspace/semantic-rs -w=false
+      - run: /workspace/semantic-rs --write=no --release=no
 
   release:
     <<: *defaults
@@ -88,7 +88,7 @@ jobs:
       - checkout
       - attach_workspace:
           at: /workspace
-      - run: /workspace/semantic-rs -w=true
+      - run: /workspace/semantic-rs --write=yes --release=yes
 
 workflows:
   version: 2
