@@ -8,6 +8,10 @@ Right now if you're building a new crate publishing new versions includes a high
 If you need to repeat these steps every time, chances are high you make mistakes.
 semantic-rs automates all these steps for you so you can focus more on developing new features instead.
 
+## Pristine
+
+This project follows the Pristine convention: to know more check out the [README_PRISTINE.md](README_PRISTINE.md) or visit [pristine core repo](https://github.com/etclabscore/pristine) 
+
 ## Workflow
 
 - Install semantic-rs on your machine.
@@ -154,7 +158,6 @@ To run semantic-rs's tests:
 - unit tests: `cargo test`.
 - integration tests: `./tests/integration/run-locally.sh`.
 
-
 ## Run semantic-rs in CI environment
 
 Make sure to set the `CI=true` environment variable to disable dry-run mode.
@@ -168,3 +171,4 @@ This project is intended to be a safe, welcoming space for collaboration and dis
 ## License
 
 This project is licensed under the MIT license.
+

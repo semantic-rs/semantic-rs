@@ -1,2 +1,7 @@
 target
+**/target
+**/*.rs.bk
+.DS_Store
+Cargo.lock
+.idea/
 tests/integration/bats

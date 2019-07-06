@@ -1,9 +1,11 @@
 [package]
 name = "semantic-rs"
 version = "1.0.0"
-authors = ["Jan Schulte <hello@unexpected-co.de>", "Jan-Erik Rediger <janerik@fnordig.de>"]
+authors = ["Jan Schulte <hello@unexpected-co.de>", "Jan-Erik Rediger <janerik@fnordig.de>", Mike Lubinets <me@mkl.dev>]
 description = "Automatic crate publishing"
 license = "MIT"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 term = "0.2"
