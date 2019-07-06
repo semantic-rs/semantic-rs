@@ -101,8 +101,6 @@ workflows:
 
   release:
     jobs:
-      - build:
-          filters: *filter-only-master
       - test:
           filters: *filter-only-master
       - install:
@@ -110,7 +108,6 @@ workflows:
       - release-dry-run:
           filters: *filter-only-master
           requires:
-            - build
             - test
             - install
       - hold:
