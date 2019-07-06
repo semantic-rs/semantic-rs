@@ -22,8 +22,10 @@ pub fn check(config: &Config) -> Vec<String> {
         match remote_url {
             Ok(Some(remote_url)) => {
                 log::info!("Current remote: {}({})", remote_name, remote_url);
-                if git::is_https_remote(Some(&remote_url)) && !config.force_https {
-                    warnings.push("Git remote is not HTTPS: the publishing will fail if your environment doesn't hold your git ssh keys".into());
+                if !git::is_https_remote(Some(&remote_url)) && !config.force_https {
+                    warnings.push("Git remote is not HTTPS:".into());
+                    warnings.push("The publishing will fail if your environment doesn't hold your git ssh keys".into());
+                    warnings.push("Consider adding --force-https flag, that's most likely what you want if you're using GH_TOKEN authentication".into());
                 }
             }
             Ok(None) => log::info!("Current remote: {}", remote_name),
