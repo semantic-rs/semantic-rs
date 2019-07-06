@@ -30,3 +30,8 @@ http = "0.1.17"
 
 [features]
 default = []
+
+[profile.release]
+debug = true
+overflow-checks = true
+debug-assertions = true
