@@ -1,4 +1,4 @@
-use config::Config;
+use crate::config::Config;
 
 pub fn check(config: &Config) -> Vec<String> {
     let mut warnings = vec!();

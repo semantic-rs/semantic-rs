@@ -3,9 +3,10 @@ use hyper::net::HttpsConnector;
 use hyper_native_tls::NativeTlsClient;
 use hubcaps::{Github, Credentials};
 use hubcaps::releases::ReleaseOptions;
-use error::Error;
-use super::USERAGENT;
-use config::Config;
+
+use crate::error::Error;
+use crate::USERAGENT;
+use crate::config::Config;
 
 pub fn can_release(config: &Config) -> bool {
     let repo = &config.repository;

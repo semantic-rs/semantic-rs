@@ -4,7 +4,7 @@ use clog::fmt::MarkdownWriter;
 use std::path::PathBuf;
 
 pub fn write(repository_path: &str, old_version: &str, new_version: &str) -> Result<(), String> {
-    let mut clog = try!(Clog::with_dir(repository_path).map_err(|_| "Clog failed".to_owned()));
+    let mut clog = Clog::with_dir(repository_path).map_err(|_| "Clog failed".to_owned())?;
 
     let mut clog_file = PathBuf::from(repository_path);
     clog_file.push("Changelog.md");
@@ -18,7 +18,7 @@ pub fn write(repository_path: &str, old_version: &str, new_version: &str) -> Res
 }
 
 pub fn generate(repository_path: &str, old_version: &str, new_version: &str) -> Result<String, String> {
-    let mut clog = try!(Clog::with_dir(repository_path).map_err(|_| "Clog failed".to_owned()));
+    let mut clog = Clog::with_dir(repository_path).map_err(|_| "Clog failed".to_owned())?;
 
     clog
         .from(format!("v{}", old_version))
@@ -28,8 +28,8 @@ pub fn generate(repository_path: &str, old_version: &str, new_version: &str) -> 
 
     {
         let mut writer = MarkdownWriter::new(&mut out_buf);
-        try!(clog.write_changelog_with(&mut writer)
-             .map_err(|_| "Genearting changelog failed"))
+        clog.write_changelog_with(&mut writer)
+             .map_err(|_| "Genearting changelog failed")?
     }
 
     let out_buf = out_buf.into_inner().unwrap();
