@@ -1,11 +1,12 @@
-use hyper::Client;
-use hyper::net::HttpsConnector;
-use hyper_native_tls::NativeTlsClient;
-use hubcaps::{Github, Credentials};
 use hubcaps::releases::ReleaseOptions;
-use error::Error;
-use super::USERAGENT;
-use config::Config;
+use hubcaps::{Credentials, Github};
+use hyper::net::HttpsConnector;
+use hyper::Client;
+use hyper_native_tls::NativeTlsClient;
+
+use crate::config::Config;
+use crate::error::Error;
+use crate::USERAGENT;
 
 pub fn can_release(config: &Config) -> bool {
     let repo = &config.repository;
@@ -13,11 +14,11 @@ pub fn can_release(config: &Config) -> bool {
         Ok(remote) => {
             let url = match remote.url() {
                 Some(u) => u,
-                None => return false
+                None => return false,
             };
             is_github_url(url)
-        },
-        Err(_) => false
+        }
+        Err(_) => false,
     }
 }
 
@@ -26,16 +27,12 @@ pub fn is_github_url(url: &str) -> bool {
 }
 
 pub fn release(config: &Config, tag_name: &str, tag_message: &str) -> Result<(), Error> {
-    let user      = &config.user.as_ref().unwrap()[..];
+    let user = &config.user.as_ref().unwrap()[..];
     let repo_name = &config.repository_name.as_ref().unwrap()[..];
-    let branch    = &config.branch[..];
-    let token     = config.gh_token.as_ref().unwrap();
+    let branch = &config.branch[..];
+    let token = config.gh_token.as_ref().unwrap();
 
-    let client = Client::with_connector(
-        HttpsConnector::new(
-            NativeTlsClient::new().unwrap()
-        )
-    );
+    let client = Client::with_connector(HttpsConnector::new(NativeTlsClient::new().unwrap()));
     let credentials = Credentials::Token(token.to_owned());
     let github = Github::new(USERAGENT, client, credentials);
 
@@ -50,8 +47,5 @@ pub fn release(config: &Config, tag_name: &str, tag_message: &str) -> Result<(),
     let repo = github.repo(user, repo_name);
     let release = repo.releases();
 
-    release
-        .create(&opts)
-        .map(|_| ())
-        .map_err(Error::from)
+    release.create(&opts).map(|_| ()).map_err(Error::from)
 }

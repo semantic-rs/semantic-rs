@@ -13,14 +13,6 @@ aliases:
       - /usr/local/cargo/registry
       - ~/project/target/
 
-  - &restore-cargo-binaries
-    key: cargo-bin-{{ arch }}-{{ .Environment.CACHE_VERSION }}
-
-  - &save-cargo-binaries
-    key: cargo-bin-{{ arch }}-{{ .Environment.CACHE_VERSION }}
-    paths:
-      - /usr/local/cargo/bin/semantic-rs
-
   # -------------------------
   #  ALIASES: Branch Filters
   # -------------------------
@@ -43,6 +35,7 @@ jobs:
       - image: rust:latest
     steps:
       - checkout
+      - run: apt update && apt install -y cmake
       - restore_cache: *restore-deps-cache
       - run: cargo build
       - save_cache: *save-deps-cache
@@ -54,28 +47,28 @@ jobs:
     steps:
       - checkout
       - restore_cache: *restore-deps-cache
+      - run: apt update && apt install -y cmake
+      - run: rustup component add clippy
+      - run: rustup component add rustfmt
       - run: cargo test --all
+      - run: cargo clippy
+      - run: cargo fmt -- --check
       - save_cache: *save-deps-cache
 
-  clippy:
+  install:
     <<: *defaults
     docker:
       - image: rust:latest
     steps:
       - checkout
       - restore_cache: *restore-deps-cache
-      - run: rustup component add clippy
-      - run: cargo clippy
+      - run: apt update && apt install -y cmake
+      - run: cargo install --force --debug
+      - persist_to_workspace:
+          root: /usr/local/cargo/bin/
+          paths:
+            - semantic-rs
       - save_cache: *save-deps-cache
-
-  rustfmt:
-    <<: *defaults
-    docker:
-      - image: rust:latest
-    steps:
-      - checkout
-      - run: rustup component add rustfmt
-      - run: cargo fmt -- --check
 
   release-dry-run:
     <<: *defaults
@@ -83,13 +76,9 @@ jobs:
       - image: rust:latest
     steps:
       - checkout
-      - run: cargo install --git https://github.com/etclabscore/semantic-rs.git
-      - persist_to_workspace:
-          root: /usr/local/cargo/bin/
-          paths:
-            - semantic-rs
-      - run: pwd && ls -la
-      - run: semantic-rs -w=false
+      - attach_workspace:
+          at: /workspace
+      - run: /workspace/semantic-rs --write=no --release=no
 
   release:
     <<: *defaults
@@ -99,7 +88,7 @@ jobs:
       - checkout
       - attach_workspace:
           at: /workspace
-      - run: /workspace/semantic-rs -w=true
+      - run: /workspace/semantic-rs --write=yes --release=yes
 
 workflows:
   version: 2
@@ -109,28 +98,18 @@ workflows:
           filters: *filter-only-semantic-pr
       - test:
           filters: *filter-only-semantic-pr
-      - clippy:
-          filters: *filter-only-semantic-pr
-      - rustfmt:
-          filters: *filter-only-semantic-pr
 
   release:
     jobs:
-      - build:
-          filters: *filter-only-master
       - test:
           filters: *filter-only-master
-      - clippy:
-          filters: *filter-only-master
-      - rustfmt:
+      - install:
           filters: *filter-only-master
       - release-dry-run:
           filters: *filter-only-master
           requires:
-            - build
             - test
-            - clippy
-            - rustfmt
+            - install
       - hold:
           filters: *filter-only-master
           type: approval

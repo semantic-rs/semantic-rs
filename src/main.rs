@@ -2,42 +2,42 @@
 #![cfg_attr(feature = "dev", feature(plugin))]
 #![cfg_attr(feature = "dev", plugin(clippy))]
 
-mod logger;
-mod toml_file;
-mod git;
+mod cargo;
 mod changelog;
 mod commit_analyzer;
-mod cargo;
-mod error;
-mod github;
 mod config;
-mod utils;
+mod error;
+mod git;
+mod github;
+mod logger;
 mod preflight;
+mod toml_file;
+mod utils;
 
-extern crate rustc_serialize;
-extern crate toml;
-extern crate regex;
-extern crate semver;
-extern crate git2;
-extern crate clog;
-extern crate hyper;
-extern crate hubcaps;
-extern crate url;
-extern crate travis_after_all;
-extern crate env_logger;
-extern crate hyper_native_tls;
 extern crate clap;
+extern crate clog;
+extern crate env_logger;
+extern crate git2;
+extern crate hubcaps;
+extern crate hyper;
+extern crate hyper_native_tls;
+extern crate regex;
+extern crate rustc_serialize;
+extern crate semver;
+extern crate toml;
+extern crate travis_after_all;
+extern crate url;
 
-use clap::{Arg, ArgMatches, App};
+use clap::{App, Arg, ArgMatches};
 use commit_analyzer::CommitType;
 use config::ConfigBuilder;
-use std::process;
 use semver::Version;
-use std::{env,fs};
-use std::path::Path;
 use std::error::Error;
+use std::path::Path;
+use std::process;
 use std::thread;
 use std::time::Duration;
+use std::{env, fs};
 use travis_after_all::Build;
 use utils::user_repo_from_url;
 
@@ -73,7 +73,7 @@ macro_rules! print_exit {
 fn string_to_bool(answer: &str) -> bool {
     match &answer.to_lowercase()[..] {
         "yes" | "true" | "1" => true,
-        _ => false
+        _ => false,
     }
 }
 
@@ -123,7 +123,7 @@ fn ci_env_set() -> bool {
 
 fn current_branch(repo: &git2::Repository) -> Option<String> {
     if let Ok(branch) = env::var("TRAVIS_BRANCH") {
-        return Some(branch)
+        return Some(branch);
     }
 
     let head = repo.head().expect("No HEAD found for repository");
@@ -167,7 +167,10 @@ fn release_on_github(config: &config::Config, tag_message: &str, tag_name: &str)
 
 fn release_on_cratesio(config: &config::Config) {
     logger::stdout("Publishing crate on crates.io");
-    if !cargo::publish(&config.repository_path, &config.cargo_token.as_ref().unwrap()) {
+    if !cargo::publish(
+        &config.repository_path,
+        &config.cargo_token.as_ref().unwrap(),
+    ) {
         print_exit!("Failed to publish on crates.io");
     }
 }
@@ -226,10 +229,15 @@ fn get_repo(repository_path: &str) -> git2::Repository {
 
 fn get_repository_path(matches: &ArgMatches) -> String {
     let path = Path::new(matches.value_of("path").unwrap_or("."));
-    let path = fs::canonicalize(path)
-        .unwrap_or_else(|_| print_exit!("Path does not exist or a component is
-                                                            not a directory"));
-    let repo_path = path.to_str().unwrap_or_else(|| print_exit!("Path is not valid unicode"));
+    let path = fs::canonicalize(path).unwrap_or_else(|_| {
+        print_exit!(
+            "Path does not exist or a component is
+                                                            not a directory"
+        )
+    });
+    let repo_path = path
+        .to_str()
+        .unwrap_or_else(|| print_exit!("Path is not valid unicode"));
     repo_path.to_string()
 }
 
@@ -237,11 +245,14 @@ fn get_signature<'a>(repository_path: String) -> git2::Signature<'a> {
     let repo = get_repo(&repository_path);
     let signature = match git::get_signature(&repo) {
         Ok(sig) => sig,
-            Err(e) => {
-                logger::stderr(format!("Failed to get the committer's name and email address: {}", e.description()));
-                logger::stderr(COMMITTER_ERROR_MESSAGE);
-                process::exit(1);
-            }
+        Err(e) => {
+            logger::stderr(format!(
+                "Failed to get the committer's name and email address: {}",
+                e.description()
+            ));
+            logger::stderr(COMMITTER_ERROR_MESSAGE);
+            process::exit(1);
+        }
     };
 
     signature.to_owned()
@@ -252,14 +263,24 @@ fn get_user_and_repo(repository_path: &str) -> Option<(String, String)> {
     let remote_or_none = repo.find_remote("origin");
     match remote_or_none {
         Ok(remote) => {
-            let url = remote.url().expect("Remote URL is not valid UTF-8").to_owned();
-            let (user, repo_name) = user_repo_from_url(&url)
-                .unwrap_or_else(|e| print_exit!("Could not extract user and repository name from URL: {:?}", e));
+            let url = remote
+                .url()
+                .expect("Remote URL is not valid UTF-8")
+                .to_owned();
+            let (user, repo_name) = user_repo_from_url(&url).unwrap_or_else(|e| {
+                print_exit!(
+                    "Could not extract user and repository name from URL: {:?}",
+                    e
+                )
+            });
 
             Some((user, repo_name))
-        },
+        }
         Err(err) => {
-            logger::warn(format!("Could not determine the origin remote url: {:?}", err));
+            logger::warn(format!(
+                "Could not determine the origin remote url: {:?}",
+                err
+            ));
             logger::warn("semantic-rs can't push changes or create a release on GitHub");
             None
         }
@@ -271,14 +292,17 @@ fn get_github_token(repository_path: &str) -> Option<String> {
     let remote_or_none = repo.find_remote("origin");
     match remote_or_none {
         Ok(remote) => {
-            let url = remote.url().expect("Remote URL is not valid UTF-8").to_owned();
+            let url = remote
+                .url()
+                .expect("Remote URL is not valid UTF-8")
+                .to_owned();
             if github::is_github_url(&url) {
                 env::var("GH_TOKEN").ok()
             } else {
                 None
             }
-        },
-        Err(_) => None
+        }
+        Err(_) => None,
     }
 }
 
@@ -294,12 +318,12 @@ fn assemble_configuration(args: ArgMatches) -> config::Config {
     // otherwise we decide based on whether we are running in CI.
     let write_mode = match args.value_of("write") {
         Some(write_mode) => string_to_bool(write_mode),
-        None => ci_env_set()
+        None => ci_env_set(),
     };
 
     let release_flag = match args.value_of("release") {
         Some(release_mode) => string_to_bool(release_mode),
-        None => false
+        None => false,
     };
 
     // We can only release, if we are allowed to write
@@ -315,7 +339,7 @@ fn assemble_configuration(args: ArgMatches) -> config::Config {
         config_builder.user(user);
         config_builder.repository_name(repo);
     }
-    if let Some(gh_token)  = get_github_token(&repository_path) {
+    if let Some(gh_token) = get_github_token(&repository_path) {
         config_builder.gh_token(gh_token);
     }
     if let Some(cargo_token) = get_cargo_token() {
@@ -324,7 +348,7 @@ fn assemble_configuration(args: ArgMatches) -> config::Config {
     let repo = get_repo(&repository_path);
     match repo.find_remote("origin") {
         Ok(r) => config_builder.remote(Ok(r.name().unwrap().to_string())),
-        Err(err) => config_builder.remote(Err(err.description().to_string()))
+        Err(err) => config_builder.remote(Err(err.description().to_string())),
     };
 
     config_builder.repository(repo);
@@ -334,7 +358,6 @@ fn assemble_configuration(args: ArgMatches) -> config::Config {
 fn main() {
     env_logger::init().expect("Can't instantiate env logger");
     println!("semantic.rs 🚀");
-
 
     let clap_args =  App::new("semantic-rs")
         .version(VERSION)
@@ -372,7 +395,10 @@ fn main() {
         .unwrap_or_else(|| print_exit!("Could not determine current branch."));
 
     if !is_release_branch(&branch, &config.branch) {
-        println!("Current branch is '{}', releases are only done from branch '{}'", branch, config.branch);
+        println!(
+            "Current branch is '{}', releases are only done from branch '{}'",
+            branch, config.branch
+        );
         println!("No release done from a pull request either.");
         process::exit(0);
     }
@@ -395,8 +421,9 @@ fn main() {
     }
 
     if config.release_mode && ci_env_set() {
-        let build_run = Build::from_env()
-            .unwrap_or_else(|e| print_exit!("CI mode, but can't check other builds. Error: {:?}", e));
+        let build_run = Build::from_env().unwrap_or_else(|e| {
+            print_exit!("CI mode, but can't check other builds. Error: {:?}", e)
+        });
 
         if !build_run.is_leader() {
             println!("Not the build leader. Nothing to do. Bye.");
@@ -408,7 +435,7 @@ fn main() {
             Ok(()) => println!("Other jobs finished and succeeded. Doing my work now."),
             Err(travis_after_all::Error::FailedBuilds) => {
                 print_exit!("Some builds failed. Stopping here.");
-            },
+            }
             Err(e) => print_exit!("Waiting for other builds failed. Reason: {:?}", e),
         }
     }
@@ -429,10 +456,10 @@ fn main() {
     }
     let new_version = match version_bump(&version, bump) {
         Some(new_version) => new_version.to_string(),
-            None => {
-                logger::stdout("No version bump. Nothing to do.");
-                process::exit(0);
-            }
+        None => {
+            logger::stdout("No version bump. Nothing to do.");
+            process::exit(0);
+        }
     };
 
     if !config.write_mode {
@@ -448,8 +475,9 @@ fn main() {
         package_crate(&config, &config.repository_path, &new_version);
 
         logger::stdout("Creating annotated git tag");
-        let tag_message = changelog::generate(&config.repository_path, &version.to_string(), &new_version)
-            .unwrap_or_else(|err| print_exit!("Can't generate changelog: {:?}", err));
+        let tag_message =
+            changelog::generate(&config.repository_path, &version.to_string(), &new_version)
+                .unwrap_or_else(|err| print_exit!("Can't generate changelog: {:?}", err));
 
         let tag_name = format!("v{}", new_version);
         git::tag(&config, &tag_name, &tag_message)
@@ -465,7 +493,11 @@ fn main() {
 
         if config.release_mode && config.can_release_to_cratesio() {
             release_on_cratesio(&config);
-            println!("{} v{} is released. 🚀🚀🚀", config.repository_name.unwrap(), new_version);
+            println!(
+                "{} v{} is released. 🚀🚀🚀",
+                config.repository_name.unwrap(),
+                new_version
+            );
         }
     }
 }
