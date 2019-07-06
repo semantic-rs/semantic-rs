@@ -83,13 +83,11 @@ jobs:
       - image: rust:latest
     steps:
       - checkout
-      - restore_cache: *restore-cargo-binaries
-      - run: which semantic-rs || cargo install --git https://github.com/mandrean/semantic-rs.git --branch feat/support-major-zero
+      - run: cargo install --git https://github.com/etclabscore/semantic-rs.git
       - persist_to_workspace:
           root: /usr/local/cargo/bin/
           paths:
             - semantic-rs
-      - save_cache: *save-cargo-binaries
       - run: pwd && ls -la
       - run: semantic-rs -w=false
 
