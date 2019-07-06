@@ -78,7 +78,7 @@ jobs:
       - checkout
       - attach_workspace:
           at: /workspace
-      - run: /workspace/semantic-rs --write=no --release=no
+      - run: /workspace/semantic-rs --write=no --release=no --branch=$CIRCLE_BRANCH
 
   release:
     <<: *defaults
