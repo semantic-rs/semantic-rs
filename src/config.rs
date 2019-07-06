@@ -111,7 +111,7 @@ impl ConfigBuilder {
     }
 
     pub fn force_https(&mut self, mode: bool) -> &mut Self {
-        self.write_mode = mode;
+        self.force_https = mode;
         self
     }
 
