@@ -12,6 +12,8 @@ pub enum CommitType {
 use self::CommitType::*;
 
 pub fn analyze_single(commit: &str) -> Result<CommitType, Error> {
+    log::debug!("analyzing {:?}", commit);
+
     let clog = Clog::new().expect("Clog initialization failed");
     let commit = clog.parse_raw_commit(commit);
 

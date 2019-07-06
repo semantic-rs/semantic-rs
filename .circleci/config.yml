@@ -51,9 +51,9 @@ jobs:
       - run: rustup component add clippy
       - run: rustup component add rustfmt
       - run: cargo test --all
+      - save_cache: *save-deps-cache
       - run: cargo clippy
       - run: cargo fmt -- --check
-      - save_cache: *save-deps-cache
 
   install:
     <<: *defaults
@@ -78,7 +78,7 @@ jobs:
       - checkout
       - attach_workspace:
           at: /workspace
-      - run: /workspace/semantic-rs --write=no --release=no
+      - run: /workspace/semantic-rs --write=no --release=no --branch=$CIRCLE_BRANCH
 
   release:
     <<: *defaults

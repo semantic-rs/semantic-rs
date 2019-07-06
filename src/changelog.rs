@@ -23,6 +23,8 @@ pub fn generate(
     old_version: &str,
     new_version: &str,
 ) -> Result<String, String> {
+    log::debug!("generating changelog {}..{}", old_version, new_version);
+
     let mut clog = Clog::with_dir(repository_path).map_err(|_| "Clog failed".to_owned())?;
 
     clog.from(format!("v{}", old_version))
@@ -33,7 +35,7 @@ pub fn generate(
     {
         let mut writer = MarkdownWriter::new(&mut out_buf);
         clog.write_changelog_with(&mut writer)
-            .map_err(|_| "Genearting changelog failed")?
+            .map_err(|_| "Generating changelog failed")?
     }
 
     let out_buf = out_buf.into_inner().unwrap();
