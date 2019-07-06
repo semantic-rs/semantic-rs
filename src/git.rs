@@ -84,7 +84,7 @@ fn create_tag(config: &Config, tag_name: &str, message: &str) -> Result<(), git2
         .map(|_| ())
 }
 
-fn is_https_remote(maybe_remote: Option<&str>) -> bool {
+pub fn is_https_remote(maybe_remote: Option<&str>) -> bool {
     if let Some(remote) = maybe_remote {
         remote.starts_with("https://")
     } else {
@@ -163,6 +163,13 @@ pub fn get_remote_url(config: &Config, remote: &str) -> Result<Option<String>, E
         .find_remote(remote)?
         .url()
         .map(ToOwned::to_owned))
+}
+
+pub fn set_remote_url(config: &mut Config, remote: &str, url: &str) -> Result<(), Error> {
+    let repo = &mut config.repository;
+    repo.remote_set_url(remote, url)?;
+    repo.remote_set_pushurl(remote, Some(url))?;
+    Ok(())
 }
 
 pub fn push(config: &Config, tag_name: &str) -> Result<(), Error> {

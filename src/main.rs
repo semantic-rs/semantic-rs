@@ -308,6 +308,9 @@ fn assemble_configuration(args: ArgMatches) -> Result<config::Config, error::Err
         None => false,
     };
 
+    let force_https_flag = args.is_present("force_https");
+    config_builder.force_https(force_https_flag);
+
     // We can only release, if we are allowed to write
     let release_mode = write_mode && release_flag;
     let repository_path = get_repository_path(&args);
@@ -409,9 +412,13 @@ fn main() {
             .value_name("PATH")
             .takes_value(true)
             .multiple(true))
+        .arg(Arg::with_name("force-https")
+            .long("force-https")
+            .help("Force https remote (will rewrite git:// remote with https://")
+            .takes_value(false))
         .get_matches();
 
-    let config = assemble_configuration(clap_args)
+    let mut config = assemble_configuration(clap_args)
         .unwrap_or_else(|e| print_exit!("Configuration error: {}", e));
 
     let branch = current_branch(&config.repository)
@@ -443,6 +450,10 @@ fn main() {
     for warning in warnings {
         log::warn!("{}", warning);
     }
+
+    log::info!("Performing preflight overrides now");
+    preflight::apply_overrides(&mut config)
+        .unwrap_or_else(|err| print_exit!("failed to perform preflight overrides: {}", err));
 
     let version = toml_file::read_from_file(&config.repository_path)
         .unwrap_or_else(|err| print_exit!("Reading `Cargo.toml` failed: {:?}", err));

@@ -13,6 +13,7 @@ pub struct Config {
 
     pub write_mode: bool,
     pub release_mode: bool,
+    pub force_https: bool,
 
     pub repository: Repository,
     pub signature: Signature<'static>,
@@ -49,6 +50,7 @@ pub struct ConfigBuilder {
 
     write_mode: bool,
     release_mode: bool,
+    force_https: bool,
 
     repository: Option<Repository>,
     signature: Option<Signature<'static>>,
@@ -68,6 +70,7 @@ impl ConfigBuilder {
             repository_path: None,
             write_mode: false,
             release_mode: false,
+            force_https: false,
             repository: None,
             signature: None,
             gh_token: None,
@@ -103,6 +106,11 @@ impl ConfigBuilder {
     }
 
     pub fn write(&mut self, mode: bool) -> &mut Self {
+        self.write_mode = mode;
+        self
+    }
+
+    pub fn force_https(&mut self, mode: bool) -> &mut Self {
         self.write_mode = mode;
         self
     }
@@ -145,6 +153,7 @@ impl ConfigBuilder {
             repository_path: self.repository_path.unwrap(),
             write_mode: self.write_mode,
             release_mode: self.release_mode,
+            force_https: self.force_https,
             repository: self.repository.unwrap(),
             signature: self.signature.unwrap(),
             gh_token: self.gh_token,
