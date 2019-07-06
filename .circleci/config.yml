@@ -63,7 +63,7 @@ jobs:
       - checkout
       - restore_cache: *restore-deps-cache
       - run: apt update && apt install -y cmake
-      - run: cargo install --force --debug
+      - run: cargo install --path . --force --debug
       - persist_to_workspace:
           root: /usr/local/cargo/bin/
           paths:
