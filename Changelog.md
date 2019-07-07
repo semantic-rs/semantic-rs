@@ -1,3 +1,17 @@
+<a name="v1.2.0"></a>
+## v1.2.0 (2019-07-07)
+
+
+#### Features
+
+* **error-handling:**  transition to failure crate ([8d7d261a](8d7d261a))
+
+#### Bug Fixes
+
+* **github:**  rewrite asset puslishing with reqwest, now uploads are working ([d6046143](d6046143))
+
+
+
 <a name="v1.1.0"></a>
 ## v1.1.0 (2019-07-07)
 
