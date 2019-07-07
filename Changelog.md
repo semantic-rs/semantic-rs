@@ -1,3 +1,57 @@
+<a name="v1.1.0"></a>
+## v1.1.0 (2019-07-07)
+
+
+#### Bug Fixes
+
+*   remove travis-specific build order checks ([09e2f867](09e2f867))
+* **README.md:**  s/Typescript/Rust/g ([a0174450](a0174450))
+* **cargo.toml:**  typo in authors list ([b16b71f1](b16b71f1))
+* **ci:**
+  *  correct cargo install invocation ([5bfe0fae](5bfe0fae))
+  *  corrected invocation of semantic-rs ([095017b0](095017b0))
+  *  remove build stage from release pipeline as install does the build ([51839791](51839791))
+  *  install build-essential before building semantic-rs ([f7ae408d](f7ae408d))
+* **docs:**
+  *  remove irrelevant BUILDING.md and introduce rust-lib specific changes to the other documents ([0eb13871](0eb13871))
+  *  typos in README.md ([25627a8b](25627a8b))
+* **github-template:**  more rust lib oriented bug report template ([e06db885](e06db885))
+* **gitignore:**  remove Cargo.lock as it's a binary project ([beece801](beece801))
+
+#### Features
+
+*   https remote forcing flag ([17a4abd8](17a4abd8))
+*   asset upload for github ([1f291402](1f291402))
+*   Add support for major zero-style initial development ([60da0684](60da0684))
+* **ci:**
+  *  force HTTPS remote in semantic-rs by default ([5cdbcbb4](5cdbcbb4))
+  *  caching for release ([c76ecd66](c76ecd66))
+  *  more platform-specific build steps for future support of windows & macos ([f8421a9d](f8421a9d))
+  *  upload binary and the Changelog to the assets ([4134aacc](4134aacc))
+  *  build static musl binary in install phase ([1f6145fd](1f6145fd))
+  *  use current branch for dry-run ([04ae0cf8](04ae0cf8))
+  *  save deps after cargo test run as opposed to the end of test job ([eda1431c](eda1431c))
+  *  release-dry-run stage for PRs ([16befcf0](16befcf0))
+  *  preinstall apt build deps ([e587e46d](e587e46d))
+  *  merge clippy and rustfmt into test phase, introduce a separate install step ([e37b38f7](e37b38f7))
+  *  circleci config with automatic releases ([25560911](25560911))
+* **docs:**  merged pristine-rust ([0dad54a5](0dad54a5))
+* **git:**  add circleci special word to disable CI runs for release commits ([7a0fbc57](7a0fbc57))
+* **init:**
+  *  add rust-toolchain defaulting to current stable ([739f5718](739f5718))
+  *  initialize the cargo project ([4419b5f0](4419b5f0))
+  *  add empty .rustfmt.toml ([16b2c31d](16b2c31d))
+  *  add .editorconfig ([029ba110](029ba110))
+  *  add .gitignore ([f72f6843](f72f6843))
+* **logs:**
+  *  log the remote we're using ([869d40de](869d40de))
+  *  improved logging through log and env_logger ([438810ad](438810ad))
+* **style:**
+  *  cargo fmt --all ([c4e4ea70](c4e4ea70))
+  *  transition to Rust-2018 ([1b3f9116](1b3f9116))
+
+
+
 <a name="v1.0.0"></a>
 ## v1.0.0 (2018-09-16)
 
