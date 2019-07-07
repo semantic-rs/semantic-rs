@@ -31,9 +31,7 @@ impl Asset {
         // Create a name from the file path
         let name = path
             .file_name()
-            .ok_or_else(|| {
-                failure::format_err!("couldn't get a file stem for {}", path.display())
-            })?
+            .ok_or_else(|| failure::format_err!("couldn't get a file stem for {}", path.display()))?
             .to_str()
             .ok_or_else(|| {
                 failure::format_err!("{} is not a valid utf-8 path name", path.display())

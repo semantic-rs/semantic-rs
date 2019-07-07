@@ -1,14 +1,14 @@
+use crate::config::Config;
+use crate::utils::ResultExt;
+use crate::USERAGENT;
+use failure::Error;
+use http::header::HeaderValue;
 use hubcaps::releases::{Release, ReleaseOptions};
 use hubcaps::{Credentials, Github};
 use hyper::net::HttpsConnector;
 use hyper::Client;
 use hyper_native_tls::NativeTlsClient;
 use std::path::Path;
-use crate::utils::ResultExt;
-use crate::config::Config;
-use failure::Error;
-use crate::USERAGENT;
-use http::header::HeaderValue;
 
 pub fn can_release(config: &Config) -> bool {
     let repo = &config.repository;
@@ -60,8 +60,7 @@ fn upload_release_assets(config: &Config, release: Release) -> Result<(), Error>
     let user = &config.user.as_ref().unwrap()[..];
     let repo_name = &config.repository_name.as_ref().unwrap()[..];
     let token = config.gh_token.as_ref().unwrap();
-    let token_header_value = HeaderValue::from_str(&format!("token {}", token))
-        .unwrap();
+    let token_header_value = HeaderValue::from_str(&format!("token {}", token)).unwrap();
 
     let mut errored = false;
 
@@ -74,7 +73,11 @@ fn upload_release_assets(config: &Config, release: Release) -> Result<(), Error>
             asset.name(),
         );
 
-        log::info!("Uploading {}, mime-type {}", asset.name(), asset.content_type());
+        log::info!(
+            "Uploading {}, mime-type {}",
+            asset.name(),
+            asset.content_type()
+        );
         log::debug!("Upload url: {}", endpoint);
 
         let body = read_file(asset.path())?;
