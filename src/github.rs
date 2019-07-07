@@ -63,7 +63,7 @@ fn upload_release_assets(config: &Config, release: Release) -> Result<(), Error>
 
     let gh = GH::new(token)?;
 
-    let mut errored = true;
+    let mut errored = false;
 
     for asset in &config.assets {
         let endpoint = format!(
