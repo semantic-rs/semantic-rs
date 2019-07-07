@@ -1,6 +1,6 @@
 use crate::config::Config;
-use crate::error::Error;
 use crate::git;
+use failure::Error;
 
 pub fn check(config: &Config) -> Vec<String> {
     let mut warnings = vec![];

@@ -1,4 +1,4 @@
-use crate::error::Error;
+use failure::Error;
 use std::path::{Path, PathBuf};
 
 #[derive(Clone, Debug)]
@@ -14,29 +14,27 @@ impl Asset {
 
         // Check if path exists
         if !path.exists() {
-            return Err(Error::Custom(format!(
+            return Err(failure::format_err!(
                 "asset file not found at {}",
                 path.display()
-            )));
+            ));
         }
 
         // Check is asset is file
         if !path.is_file() {
-            return Err(Error::Custom(format!(
+            return Err(failure::format_err!(
                 "asset at {} is not a file",
                 path.display()
-            )));
+            ));
         }
 
         // Create a name from the file path
         let name = path
             .file_name()
-            .ok_or_else(|| {
-                Error::Custom(format!("couldn't get a file stem for {}", path.display()))
-            })?
+            .ok_or_else(|| failure::format_err!("couldn't get a file stem for {}", path.display()))?
             .to_str()
             .ok_or_else(|| {
-                Error::Custom(format!("{} is not a valid utf-8 path name", path.display()))
+                failure::format_err!("{} is not a valid utf-8 path name", path.display())
             })?
             .to_owned();
 

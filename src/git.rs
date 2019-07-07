@@ -5,7 +5,7 @@ use std::path::Path;
 
 use crate::commit_analyzer::{self, CommitType};
 use crate::config::Config;
-use crate::error::Error;
+use failure::Error;
 
 pub fn get_signature(repo: &Repository) -> Result<Signature, Error> {
     let author = {
