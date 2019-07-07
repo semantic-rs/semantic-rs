@@ -4,9 +4,9 @@ use hyper::net::HttpsConnector;
 use hyper::Client;
 use hyper_native_tls::NativeTlsClient;
 use std::path::Path;
-
+use crate::utils::ResultExt;
 use crate::config::Config;
-use crate::error::Error;
+use failure::Error;
 use crate::USERAGENT;
 
 pub fn can_release(config: &Config) -> bool {
@@ -48,9 +48,11 @@ pub fn release(config: &Config, tag_name: &str, tag_message: &str) -> Result<(),
     let repo = github.repo(user, repo_name);
     let releases = repo.releases();
 
-    releases.create(&opts).map_err(Error::from).map(|release| {
-        upload_release_assets(config, release).unwrap_or_else(|e| log::error!("{}", e))
-    })
+    let release = releases.create(&opts).sync()?;
+
+    upload_release_assets(config, release).unwrap_or_else(|e| log::error!("{}", e));
+
+    Ok(())
 }
 
 fn upload_release_assets(config: &Config, release: Release) -> Result<(), Error> {

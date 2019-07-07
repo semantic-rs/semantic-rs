@@ -7,7 +7,6 @@ mod cargo;
 mod changelog;
 mod commit_analyzer;
 mod config;
-mod error;
 mod git;
 mod github;
 mod preflight;
@@ -19,7 +18,7 @@ use clap::{App, Arg, ArgMatches};
 use commit_analyzer::CommitType;
 use config::ConfigBuilder;
 use semver::Version;
-use std::error::Error;
+use failure::Error;
 use std::path::Path;
 use std::process;
 use std::thread;
@@ -229,10 +228,10 @@ fn get_signature<'a>(repository_path: String) -> git2::Signature<'a> {
     let repo = get_repo(&repository_path);
     let signature = match git::get_signature(&repo) {
         Ok(sig) => sig,
-        Err(e) => {
+        Err(err) => {
             log::error!(
                 "Failed to get the committer's name and email address: {}",
-                e.description()
+                err
             );
             log::error!("{}", COMMITTER_ERROR_MESSAGE);
             process::exit(1);
@@ -291,7 +290,7 @@ fn get_cargo_token() -> Option<String> {
     env::var("CARGO_TOKEN").ok()
 }
 
-fn assemble_configuration(args: ArgMatches) -> Result<config::Config, error::Error> {
+fn assemble_configuration(args: ArgMatches) -> Result<config::Config, Error> {
     let mut config_builder = ConfigBuilder::new();
 
     // If write mode is requested OR denied,
@@ -332,7 +331,7 @@ fn assemble_configuration(args: ArgMatches) -> Result<config::Config, error::Err
     let repo = get_repo(&repository_path);
     match repo.find_remote("origin") {
         Ok(r) => config_builder.remote(Ok(r.name().unwrap().to_string())),
-        Err(err) => config_builder.remote(Err(err.description().to_string())),
+        Err(err) => config_builder.remote(Err(err.to_string())),
     };
 
     let assets = args

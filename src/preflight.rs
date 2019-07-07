@@ -1,5 +1,5 @@
 use crate::config::Config;
-use crate::error::Error;
+use failure::Error;
 use crate::git;
 
 pub fn check(config: &Config) -> Vec<String> {
