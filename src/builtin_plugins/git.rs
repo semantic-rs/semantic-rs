@@ -10,10 +10,11 @@ use crate::plugin::{PluginInterface, PluginStep};
 
 use std::collections::HashMap;
 
+use crate::plugin::proto::{GitRevision, Version};
+use crate::plugin::PluginStep::VerifyRelease;
 use failure::Fail;
-use git2::{self, Commit, Cred, PushOptions, Remote, RemoteCallbacks, Repository, Signature};
+use git2::{self, Commit, Cred, Oid, PushOptions, Remote, RemoteCallbacks, Repository, Signature};
 use hubcaps::repositories::Repo;
-use semver::Version;
 use serde::{Deserialize, Serialize};
 use std::cell::RefCell;
 use std::env;
@@ -206,7 +207,26 @@ impl PluginInterface for GitPlugin {
         &self,
         params: GetLastReleaseRequest,
     ) -> PluginResult<GetLastReleaseResponse> {
-        unimplemented!()
+        let mut response = PluginResponse::builder();
+
+        let data_bind = self.state.borrow();
+        let data = data_bind.as_initialized();
+
+        let version = match latest_tag(&data.repo) {
+            Some(version) => Version::Semver(version),
+            None => {
+                let earliest_commit = match earliest_revision(&data.repo) {
+                    Ok(oid) => oid,
+                    Err(err) => {
+                        response.error(err);
+                        return Ok(response.build());
+                    }
+                };
+                Version::None(earliest_commit.to_string())
+            }
+        };
+
+        Ok(response.body(version).build())
     }
 
     fn commit(&self, params: CommitRequest) -> PluginResult<CommitResponse> {
@@ -230,4 +250,23 @@ pub enum GitPluginError {
 
 fn is_https_remote(remote: &str) -> bool {
     remote.starts_with("https://")
+}
+
+fn latest_tag(repo: &Repository) -> Option<semver::Version> {
+    let tags = repo.tag_names(None).ok()?;
+
+    tags.iter()
+        .filter_map(|tag| tag.and_then(|s| semver::Version::parse(&s[1..]).ok()))
+        .max()
+}
+
+fn earliest_revision(repo: &Repository) -> Result<Oid, failure::Error> {
+    let mut revwalk = repo.revwalk()?;
+    revwalk.push_head();
+
+    let earliest_commit = revwalk
+        .last()
+        .expect("failed to find the earliest revision")?;
+
+    Ok(earliest_commit)
 }

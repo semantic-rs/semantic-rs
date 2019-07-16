@@ -17,7 +17,7 @@ pub type Error = String;
 
 pub enum Version {
     None(GitRevision),
-    Semver(GitRevision, semver::Version),
+    Semver(semver::Version),
 }
 
 pub mod request {
