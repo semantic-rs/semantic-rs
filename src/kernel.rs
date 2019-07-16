@@ -44,6 +44,7 @@ impl Kernel {
 
         // Run through the steps
         for step in STEPS_ORDER {
+            log::info!("Running step '{}'", step.as_str());
             step.execute(&self, &mut data).map_err(|err| {
                 log::error!("Step {:?} failed", step);
                 err
@@ -336,7 +337,6 @@ trait KernelRoutine {
 
     fn pre_flight(kernel: &Kernel, data: &mut KernelData) -> KernelRoutineResult<()> {
         execute_request(|| kernel.dispatcher.pre_flight(), all_responses_into_result)?;
-
         Ok(())
     }
 

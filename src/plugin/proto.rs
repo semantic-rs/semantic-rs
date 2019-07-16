@@ -15,6 +15,7 @@ pub type Warning = String;
 
 pub type Error = String;
 
+#[derive(Clone, Debug)]
 pub enum Version {
     None(GitRevision),
     Semver(semver::Version),

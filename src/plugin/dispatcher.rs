@@ -24,6 +24,7 @@ use crate::plugin::proto::request::{PluginRequest, PreFlightRequestData};
 use crate::plugin::{PluginState, PluginStep};
 use std::borrow::Borrow;
 use std::rc::Rc;
+use std::fmt::Debug;
 
 pub struct PluginDispatcher {
     config: CfgMap,
@@ -35,7 +36,7 @@ impl PluginDispatcher {
         PluginDispatcher { config, map }
     }
 
-    fn dispatch<RFR>(
+    fn dispatch<RFR: Debug>(
         &self,
         step: PluginStep,
         call_fn: impl Fn(&Plugin) -> PluginResult<RFR>,
@@ -45,7 +46,7 @@ impl PluginDispatcher {
         if let Some(plugins) = self.mapped_plugins(step) {
             for plugin in plugins {
                 let response = call_fn(&plugin)?;
-
+                log::debug!("{}: {:?}", plugin.name(), response);
                 response_map.insert(plugin.name().clone(), response);
             }
         }
@@ -53,13 +54,14 @@ impl PluginDispatcher {
         Ok(response_map)
     }
 
-    fn dispatch_singleton<RFR>(
+    fn dispatch_singleton<RFR: Debug>(
         &self,
         step: PluginStep,
         call_fn: impl Fn(&Plugin) -> PluginResult<RFR>,
     ) -> DispatchedSingletonResult<RFR> {
         let plugin = self.mapped_singleton(step);
         let response = call_fn(&plugin)?;
+        log::debug!("{}: {:?}", plugin.name(), response);
         Ok((plugin.name().to_owned(), response))
     }
 
