@@ -6,7 +6,7 @@ use failure::Fail;
 
 use crate::config::{CfgMap, Config, Map, PluginDefinitionMap, StepDefinition};
 use crate::plugin::discovery::{CapabilitiesDiscovery, Discovery as _};
-use crate::plugin::proto::request::PluginRequest;
+use crate::plugin::proto::request::{GenerateNotesRequestData, PluginRequest};
 use crate::plugin::proto::response::PluginResponse;
 use crate::plugin::proto::Version;
 use crate::plugin::resolver::PluginResolver;
@@ -314,6 +314,7 @@ enum KernelError {
 struct KernelData {
     last_version: Option<Version>,
     next_version: Option<semver::Version>,
+    changelog: Option<String>,
 }
 
 impl KernelData {
@@ -325,12 +326,20 @@ impl KernelData {
         self.next_version = Some(version)
     }
 
+    fn set_changelog(&mut self, changelog: String) {
+        self.changelog = Some(changelog)
+    }
+
     fn require_last_version(&self) -> Result<&Version, failure::Error> {
         Ok(Self::_require(|| self.last_version.as_ref())?)
     }
 
     fn require_next_version(&self) -> Result<&semver::Version, failure::Error> {
         Ok(Self::_require(|| self.next_version.as_ref())?)
+    }
+
+    fn require_changelog(&self) -> Result<&str, failure::Error> {
+        Ok(Self::_require(|| self.changelog.as_ref())?)
     }
 
     fn _require<T>(query_fn: impl Fn() -> Option<T>) -> Result<T, failure::Error> {
@@ -357,7 +366,14 @@ trait KernelRoutine {
     }
 
     fn derive_next_version(kernel: &Kernel, data: &mut KernelData) -> KernelRoutineResult<()> {
-        let responses = execute_request(|| kernel.dispatcher.derive_next_version(), all_responses_into_result)?;
+        let responses = execute_request(
+            || {
+                kernel
+                    .dispatcher
+                    .derive_next_version(data.require_last_version()?.clone())
+            },
+            all_responses_into_result,
+        )?;
         let next_version = responses
             .into_iter()
             .map(|(_, v)| v)
@@ -368,7 +384,30 @@ trait KernelRoutine {
     }
 
     fn generate_notes(kernel: &Kernel, data: &mut KernelData) -> KernelRoutineResult<()> {
-        unimplemented!()
+        let responses = execute_request(
+            || {
+                let params = GenerateNotesRequestData {
+                    start_rev: data.require_last_version()?.rev().to_owned(),
+                    new_version: data.require_next_version()?.clone(),
+                };
+                kernel.dispatcher.generate_notes(params)
+            },
+            all_responses_into_result,
+        )?;
+
+        let changelog = responses.values().fold(String::new(), |mut summary, part| {
+            summary.push_str(part);
+            summary
+        });
+
+        log::info!("Would write the following changelog: ");
+        log::info!("--------- BEGIN CHANGELOG ----------");
+        log::info!("{}", changelog);
+        log::info!("---------- END CHANGELOG -----------");
+
+        data.set_changelog(changelog);
+
+        Ok(())
     }
 
     fn prepare(kernel: &Kernel, data: &mut KernelData) -> KernelRoutineResult<()> {

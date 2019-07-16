@@ -20,11 +20,14 @@ use super::{
 
 use crate::config::StepDefinition::Shared;
 use crate::config::{CfgMap, Config, Map};
-use crate::plugin::proto::request::{PluginRequest, PreFlightRequestData};
+use crate::plugin::proto::request::{
+    GenerateNotesRequestData, PluginRequest, PreFlightRequestData,
+};
+use crate::plugin::proto::Version;
 use crate::plugin::{PluginState, PluginStep};
 use std::borrow::Borrow;
-use std::rc::Rc;
 use std::fmt::Debug;
+use std::rc::Rc;
 
 pub struct PluginDispatcher {
     config: CfgMap,
@@ -125,18 +128,26 @@ impl PluginDispatcher {
         })
     }
 
-    pub fn derive_next_version(&self) -> DispatchedMultiResult<DeriveNextVersionResponse> {
+    pub fn derive_next_version(
+        &self,
+        current_version: Version,
+    ) -> DispatchedMultiResult<DeriveNextVersionResponse> {
         self.dispatch(PluginStep::DeriveNextVersion, |p| {
-            p.as_interface()
-                .derive_next_version(PluginRequest::with_default_data(self.config.clone()))
+            p.as_interface().derive_next_version(PluginRequest::new(
+                self.config.clone(),
+                current_version.clone(),
+            ))
         })
     }
 
     pub fn generate_notes(
         &self,
-        params: GenerateNotesRequest,
+        params: GenerateNotesRequestData,
     ) -> DispatchedMultiResult<GenerateNotesResponse> {
-        unimplemented!()
+        self.dispatch(PluginStep::GenerateNotes, |p| {
+            p.as_interface()
+                .generate_notes(PluginRequest::new(self.config.clone(), params.clone()))
+        })
     }
 
     pub fn prepare(&self, params: PrepareRequest) -> DispatchedMultiResult<PrepareResponse> {

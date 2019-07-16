@@ -1,3 +1,4 @@
+use std::fmt::{self, Display};
 use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
@@ -7,7 +8,7 @@ pub type GitRevision = String;
 pub type Null = ();
 
 // TODO: consider using something more Markdown-oriented
-pub type ReleaseNotes = Vec<String>;
+pub type ReleaseNotes = String;
 
 pub type MethodName = String;
 
@@ -18,7 +19,16 @@ pub type Error = String;
 #[derive(Clone, Debug)]
 pub enum Version {
     None(GitRevision),
-    Semver(semver::Version),
+    Semver(GitRevision, semver::Version),
+}
+
+impl Version {
+    pub fn rev(&self) -> &str {
+        match self {
+            Version::None(rev) => &rev,
+            Version::Semver(rev, _) => &rev,
+        }
+    }
 }
 
 pub mod request {
@@ -58,14 +68,14 @@ pub mod request {
     pub type GetLastReleaseRequestData = Null;
 
     pub type DeriveNextVersionRequest = PluginRequest<DeriveNextVersionRequestData>;
-    pub type DeriveNextVersionRequestData = Null;
+    pub type DeriveNextVersionRequestData = Version;
 
     pub type GenerateNotesRequest = PluginRequest<GenerateNotesRequestData>;
+
+    #[derive(Clone, Debug)]
     pub struct GenerateNotesRequestData {
-        start_rev: String,
-        end_rev: String,
-        old_version: Version,
-        new_version: Version,
+        pub start_rev: String,
+        pub new_version: semver::Version,
     }
 
     pub type PrepareRequest = PluginRequest<PrepareRequestData>;

@@ -213,7 +213,7 @@ impl PluginInterface for GitPlugin {
         let data = data_bind.as_initialized();
 
         let version = match latest_tag(&data.repo) {
-            Some(version) => Version::Semver(version),
+            Some((rev, version)) => Version::Semver(rev.to_string(), version),
             None => {
                 let earliest_commit = match earliest_revision(&data.repo) {
                     Ok(oid) => oid,
@@ -252,12 +252,20 @@ fn is_https_remote(remote: &str) -> bool {
     remote.starts_with("https://")
 }
 
-fn latest_tag(repo: &Repository) -> Option<semver::Version> {
+fn latest_tag(repo: &Repository) -> Option<(GitRevision, semver::Version)> {
     let tags = repo.tag_names(None).ok()?;
 
-    tags.iter()
+    let opt_version = tags
+        .iter()
         .filter_map(|tag| tag.and_then(|s| semver::Version::parse(&s[1..]).ok()))
-        .max()
+        .max();
+
+    if let Some(version) = opt_version {
+        let tag_name = format!("v{}", version);
+        Some((tag_name, version))
+    } else {
+        None
+    }
 }
 
 fn earliest_revision(repo: &Repository) -> Result<Oid, failure::Error> {

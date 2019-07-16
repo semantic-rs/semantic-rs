@@ -40,4 +40,3 @@ pub enum RustPluginError {
     #[fail(display = "the CARGO_TOKEN environment variable is not configured")]
     TokenUndefined,
 }
-
