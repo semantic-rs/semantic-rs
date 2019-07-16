@@ -202,7 +202,7 @@ pub mod response {
 
     pub type GetLastReleaseResponse = Version;
 
-    pub type DeriveNextVersionResponse = Version;
+    pub type DeriveNextVersionResponse = semver::Version;
 
     pub type GenerateNotesResponse = ReleaseNotes;
 

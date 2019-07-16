@@ -125,11 +125,11 @@ impl PluginDispatcher {
         })
     }
 
-    pub fn derive_next_version(
-        &self,
-        params: DeriveNextVersionRequest,
-    ) -> DispatchedMultiResult<DeriveNextVersionResponse> {
-        unimplemented!()
+    pub fn derive_next_version(&self) -> DispatchedMultiResult<DeriveNextVersionResponse> {
+        self.dispatch(PluginStep::DeriveNextVersion, |p| {
+            p.as_interface()
+                .derive_next_version(PluginRequest::with_default_data(self.config.clone()))
+        })
     }
 
     pub fn generate_notes(

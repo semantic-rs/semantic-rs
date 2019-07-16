@@ -313,6 +313,7 @@ enum KernelError {
 #[derive(Default)]
 struct KernelData {
     last_version: Option<Version>,
+    next_version: Option<semver::Version>,
 }
 
 impl KernelData {
@@ -320,8 +321,16 @@ impl KernelData {
         self.last_version = Some(version)
     }
 
+    fn set_next_version(&mut self, version: semver::Version) {
+        self.next_version = Some(version)
+    }
+
     fn require_last_version(&self) -> Result<&Version, failure::Error> {
         Ok(Self::_require(|| self.last_version.as_ref())?)
+    }
+
+    fn require_next_version(&self) -> Result<&semver::Version, failure::Error> {
+        Ok(Self::_require(|| self.next_version.as_ref())?)
     }
 
     fn _require<T>(query_fn: impl Fn() -> Option<T>) -> Result<T, failure::Error> {
@@ -348,7 +357,14 @@ trait KernelRoutine {
     }
 
     fn derive_next_version(kernel: &Kernel, data: &mut KernelData) -> KernelRoutineResult<()> {
-        unimplemented!()
+        let responses = execute_request(|| kernel.dispatcher.derive_next_version(), all_responses_into_result)?;
+        let next_version = responses
+            .into_iter()
+            .map(|(_, v)| v)
+            .max()
+            .expect("iterator from response map cannot be empty: this is a bug, aborting.");
+        data.set_next_version(next_version);
+        Ok(())
     }
 
     fn generate_notes(kernel: &Kernel, data: &mut KernelData) -> KernelRoutineResult<()> {
