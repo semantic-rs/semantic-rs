@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 
-use crate::plugin::proto::request::{MethodsRequest, PluginRequest};
+use failure::Fail;
+
+use crate::plugin::proto::request::{MethodsRequest, PluginRequest, PreFlightRequest};
 use crate::plugin::proto::response::{
     MethodsResponse, PluginResponse, PluginResult, PreFlightResponse,
 };
@@ -22,4 +24,18 @@ impl PluginInterface for GithubPlugin {
         let resp = PluginResponse::builder().body(methods).build();
         Ok(resp)
     }
+
+    fn pre_flight(&self, params: PreFlightRequest) -> PluginResult<PreFlightResponse> {
+        let mut response = PluginResponse::builder();
+        if !params.env.contains_key("GH_TOKEN") {
+            response.error(GithubPluginError::TokenUndefined);
+        }
+        Ok(response.body(()).build())
+    }
+}
+
+#[derive(Fail, Debug)]
+pub enum GithubPluginError {
+    #[fail(display = "the GH_TOKEN environment variable is not configured")]
+    TokenUndefined,
 }
