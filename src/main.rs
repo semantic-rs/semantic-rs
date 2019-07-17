@@ -12,7 +12,7 @@ use std::env;
 
 fn main() -> Result<(), failure::Error> {
     init_logger();
-    dotenv::dotenv()?;
+    dotenv::dotenv().ok();
 
     log::info!("semantic.rs 🚀");
 
