@@ -79,12 +79,10 @@ pub mod request {
     }
 
     pub type Prepare = PluginRequest<PrepareData>;
-    pub type PrepareData = Null;
+    pub type PrepareData = semver::Version;
 
     pub type VerifyRelease = PluginRequest<VerifyReleaseData>;
-    pub struct VerifyReleaseData {
-        version: Version,
-    }
+    pub type VerifyReleaseData = Null;
 
     pub type Commit = PluginRequest<CommitData>;
     pub type CommitData = Null;

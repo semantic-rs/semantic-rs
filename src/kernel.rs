@@ -431,11 +431,23 @@ trait KernelRoutine {
     }
 
     fn prepare(kernel: &Kernel, data: &mut KernelData) -> KernelRoutineResult<()> {
-        unimplemented!()
+        execute_request(
+            || {
+                kernel
+                    .dispatcher
+                    .prepare(data.require_next_version()?.clone())
+            },
+            all_responses_into_result,
+        )?;
+        Ok(())
     }
 
     fn verify_release(kernel: &Kernel, data: &mut KernelData) -> KernelRoutineResult<()> {
-        unimplemented!()
+        execute_request(
+            || kernel.dispatcher.verify_release(),
+            all_responses_into_result,
+        )?;
+        Ok(())
     }
 
     fn commit(kernel: &Kernel, data: &mut KernelData) -> KernelRoutineResult<()> {

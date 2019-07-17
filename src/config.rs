@@ -121,7 +121,7 @@ pub enum StepDefinition {
 }
 
 impl<'de> Deserialize<'de> for StepsDefinitionMap {
-    fn deserialize<D>(mut de: D) -> Result<Self, D::Error>
+    fn deserialize<D>(de: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {

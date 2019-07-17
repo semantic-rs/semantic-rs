@@ -142,17 +142,23 @@ impl PluginDispatcher {
         &self,
         params: request::PrepareData,
     ) -> DispatchedMultiResult<response::Prepare> {
-        unimplemented!()
+        self.dispatch(PluginStep::Prepare, |p| {
+            p.as_interface()
+                .prepare(PluginRequest::new(self.config.clone(), params.clone()))
+        })
     }
 
-    pub fn verify_release(
+    pub fn verify_release(&self) -> DispatchedMultiResult<response::VerifyRelease> {
+        self.dispatch(PluginStep::VerifyRelease, |p| {
+            p.as_interface()
+                .verify_release(PluginRequest::with_default_data(self.config.clone()))
+        })
+    }
+
+    pub fn commit(
         &self,
-        params: request::VerifyReleaseData,
-    ) -> DispatchedMultiResult<response::VerifyRelease> {
-        unimplemented!()
-    }
-
-    pub fn commit(&self, params: request::CommitData) -> DispatchedMultiResult<response::Commit> {
+        params: request::CommitData,
+    ) -> DispatchedSingletonResult<response::Commit> {
         unimplemented!()
     }
 
@@ -163,7 +169,7 @@ impl PluginDispatcher {
         unimplemented!()
     }
 
-    pub fn notify(&self, params: request::NotifyData) -> PluginResponse<response::Notify> {
+    pub fn notify(&self, params: request::NotifyData) -> DispatchedMultiResult<response::Notify> {
         unimplemented!()
     }
 }
