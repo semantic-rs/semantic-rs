@@ -221,7 +221,8 @@ impl CfgMapExt for CfgMap {
     }
 
     fn is_dry_run(&self) -> Result<bool, failure::Error> {
-        let dry = self.get("dry")
+        let dry = self
+            .get("dry")
             .and_then(|v| v.as_bool())
             .ok_or(ConfigError::MissingDryRunFlag)?;
         Ok(dry)

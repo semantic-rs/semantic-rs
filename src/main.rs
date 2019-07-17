@@ -20,9 +20,11 @@ fn main() -> Result<(), failure::Error> {
         .version(clap::crate_version!())
         .author(clap::crate_authors!())
         .about(clap::crate_description!())
-        .arg(clap::Arg::with_name("dry")
-            .long("dry")
-            .help("Execute semantic-rs in dry-run more (no writes or publishes"))
+        .arg(
+            clap::Arg::with_name("dry")
+                .long("dry")
+                .help("Execute semantic-rs in dry-run more (no writes or publishes"),
+        )
         .get_matches();
 
     let dry_run = clap_args.is_present("dry");

@@ -23,14 +23,9 @@ const STEPS_DRY: &[PluginStep] = &[
     PluginStep::GenerateNotes,
     PluginStep::Prepare,
     PluginStep::VerifyRelease,
-
 ];
 
-const STEPS_WET: &[PluginStep] = &[
-    PluginStep::Commit,
-    PluginStep::Publish,
-    PluginStep::Notify,
-];
+const STEPS_WET: &[PluginStep] = &[PluginStep::Commit, PluginStep::Publish, PluginStep::Notify];
 
 pub struct Kernel {
     dispatcher: PluginDispatcher,
@@ -64,7 +59,9 @@ impl Kernel {
             run_step(step)?;
         }
 
-        if !self.dry_run {
+        if self.dry_run {
+            log::info!("DRY RUN: skipping steps {:?}", STEPS_WET);
+        } else {
             for &step in STEPS_WET {
                 run_step(step)?
             }
@@ -118,7 +115,10 @@ impl KernelBuilder {
         let dry_run = cfg_map.is_dry_run()?;
         let dispatcher = PluginDispatcher::new(cfg_map, steps_to_plugins);
 
-        Ok(Kernel { dispatcher, dry_run })
+        Ok(Kernel {
+            dispatcher,
+            dry_run,
+        })
     }
 
     fn plugin_def_map_to_vec(plugins: PluginDefinitionMap) -> Vec<Plugin> {
