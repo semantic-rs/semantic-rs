@@ -67,7 +67,7 @@ jobs:
   build-linux-release:
     <<: *defaults
     docker:
-      - image: ekidd/rust-musl-builder
+      - image: clux/muslrust
     steps:
       - checkout
       - restore_cache: *restore-deps-cache-musl
