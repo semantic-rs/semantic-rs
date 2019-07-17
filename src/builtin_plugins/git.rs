@@ -1,14 +1,12 @@
 use crate::config::{CfgMap, CfgMapExt};
-use crate::plugin::proto::request::{
-    CommitRequest, GetLastReleaseRequest, MethodsRequest, PluginRequest, PreFlightRequest,
-};
-use crate::plugin::proto::response::{
-    CommitResponse, GetLastReleaseResponse, MethodsResponse, PluginResponse, PluginResponseBuilder,
-    PluginResult, PreFlightResponse,
+use crate::plugin::proto::{
+    request,
+    response::{self, PluginResponse, PluginResponseBuilder},
 };
 use crate::plugin::{PluginInterface, PluginStep};
 
 use std::collections::HashMap;
+use std::ops::Try;
 
 use crate::plugin::proto::{GitRevision, Version};
 use crate::plugin::PluginStep::VerifyRelease;
@@ -153,45 +151,28 @@ impl GitPlugin {
 }
 
 impl PluginInterface for GitPlugin {
-    fn methods(&self, req: MethodsRequest) -> PluginResult<MethodsResponse> {
+    fn methods(&self, req: request::Methods) -> response::Methods {
         let mut methods = HashMap::new();
         methods.insert(PluginStep::PreFlight, true);
         methods.insert(PluginStep::GetLastRelease, true);
         methods.insert(PluginStep::Commit, true);
-        let resp = PluginResponse::builder().body(methods).build();
-        Ok(resp)
+        PluginResponse::from_ok(methods)
     }
 
-    fn pre_flight(&self, params: PreFlightRequest) -> PluginResult<PreFlightResponse> {
+    fn pre_flight(&self, params: request::PreFlight) -> response::PreFlight {
         let mut response = PluginResponse::builder();
 
-        let config_result = || -> Result<GitPluginConfig, failure::Error> {
+        let config = {
             let config_toml = params.cfg_map.get_sub_table("git")?;
-            Ok(toml::Value::Table(config_toml).try_into()?)
-        }();
-
-        let config = match config_result {
-            Ok(data) => data,
-            Err(err) => {
-                response.error(err);
-                return Ok(response.build());
-            }
+            toml::Value::Table(config_toml).try_into()?
         };
 
         log::debug!("git(config): {:?}", config);
 
-        let data_result = || -> Result<GitPluginStateData, failure::Error> {
+        let data = {
             let path = params.cfg_map.project_root()?;
             let repo = Repository::open(path)?;
-            Ok(GitPluginStateData::new(config, repo)?)
-        }();
-
-        let data = match data_result {
-            Ok(data) => data,
-            Err(err) => {
-                response.error(err);
-                return Ok(response.build());
-            }
+            GitPluginStateData::new(config, repo)?
         };
 
         data.perform_pre_flight_checks(&mut response);
@@ -200,36 +181,25 @@ impl PluginInterface for GitPlugin {
 
         self.state.replace(GitPluginState::Init(data));
 
-        Ok(response.body(()).build())
+        response.body(()).build()
     }
 
-    fn get_last_release(
-        &self,
-        params: GetLastReleaseRequest,
-    ) -> PluginResult<GetLastReleaseResponse> {
-        let mut response = PluginResponse::builder();
-
+    fn get_last_release(&self, params: request::GetLastRelease) -> response::GetLastRelease {
         let data_bind = self.state.borrow();
         let data = data_bind.as_initialized();
 
         let version = match latest_tag(&data.repo) {
             Some((rev, version)) => Version::Semver(rev.to_string(), version),
             None => {
-                let earliest_commit = match earliest_revision(&data.repo) {
-                    Ok(oid) => oid,
-                    Err(err) => {
-                        response.error(err);
-                        return Ok(response.build());
-                    }
-                };
+                let earliest_commit = earliest_revision(&data.repo)?;
                 Version::None(earliest_commit.to_string())
             }
         };
 
-        Ok(response.body(version).build())
+        PluginResponse::from_ok(version)
     }
 
-    fn commit(&self, params: CommitRequest) -> PluginResult<CommitResponse> {
+    fn commit(&self, params: request::Commit) -> response::Commit {
         unimplemented!()
     }
 }

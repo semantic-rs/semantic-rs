@@ -1,7 +1,9 @@
+use std::ops::Try;
+
 use failure::Fail;
 
 use crate::config::CfgMap;
-use crate::plugin::proto::request::{MethodsRequest, PluginRequest};
+use crate::plugin::proto::request::{Methods, PluginRequest};
 use crate::plugin::{Plugin, PluginStep};
 
 pub trait Discovery {
@@ -28,8 +30,7 @@ impl Discovery for CapabilitiesDiscovery {
     ) -> Result<Vec<PluginStep>, failure::Error> {
         let response = plugin
             .as_interface()
-            .methods(PluginRequest::with_default_data(Clone::clone(cfg_map)))?
-            .into_result()?;
+            .methods(PluginRequest::with_default_data(Clone::clone(cfg_map)))?;
 
         let capabilities = response
             .into_iter()

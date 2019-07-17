@@ -58,53 +58,51 @@ pub mod request {
         }
     }
 
-    pub type MethodsRequest = PluginRequest<MethodsRequestData>;
-    pub type MethodsRequestData = Null;
+    pub type Methods = PluginRequest<MethodsData>;
+    pub type MethodsData = Null;
 
-    pub type PreFlightRequest = PluginRequest<PreFlightRequestData>;
-    pub type PreFlightRequestData = Null;
+    pub type PreFlight = PluginRequest<PreFlightData>;
+    pub type PreFlightData = Null;
 
-    pub type GetLastReleaseRequest = PluginRequest<GetLastReleaseRequestData>;
-    pub type GetLastReleaseRequestData = Null;
+    pub type GetLastRelease = PluginRequest<GetLastReleaseData>;
+    pub type GetLastReleaseData = Null;
 
-    pub type DeriveNextVersionRequest = PluginRequest<DeriveNextVersionRequestData>;
-    pub type DeriveNextVersionRequestData = Version;
+    pub type DeriveNextVersion = PluginRequest<DeriveNextVersionData>;
+    pub type DeriveNextVersionData = Version;
 
-    pub type GenerateNotesRequest = PluginRequest<GenerateNotesRequestData>;
+    pub type GenerateNotes = PluginRequest<GenerateNotesData>;
 
     #[derive(Clone, Debug)]
-    pub struct GenerateNotesRequestData {
+    pub struct GenerateNotesData {
         pub start_rev: String,
         pub new_version: semver::Version,
     }
 
-    pub type PrepareRequest = PluginRequest<PrepareRequestData>;
-    pub type PrepareRequestData = Null;
+    pub type Prepare = PluginRequest<PrepareData>;
+    pub type PrepareData = Null;
 
-    pub type VerifyReleaseRequest = PluginRequest<VerifyReleaseRequestData>;
-    pub struct VerifyReleaseRequestData {
+    pub type VerifyRelease = PluginRequest<VerifyReleaseData>;
+    pub struct VerifyReleaseData {
         version: Version,
     }
 
-    pub type CommitRequest = PluginRequest<CommitRequestData>;
-    pub type CommitRequestData = Null;
+    pub type Commit = PluginRequest<CommitData>;
+    pub type CommitData = Null;
 
-    pub type PublishRequest = PluginRequest<PublishRequestData>;
-    pub type PublishRequestData = Null;
+    pub type Publish = PluginRequest<PublishData>;
+    pub type PublishData = Null;
 
-    pub type NotifyRequest = PluginRequest<NotifyRequestData>;
-    pub type NotifyRequestData = Null;
+    pub type Notify = PluginRequest<NotifyData>;
+    pub type NotifyData = Null;
 }
 
 pub mod response {
     use super::*;
-    use crate::plugin::proto::request::{GenerateNotesRequestData, PrepareRequestData};
     use crate::plugin::PluginStep;
     use failure::Fail;
     use std::borrow::Borrow;
     use std::collections::HashMap;
-
-    pub type PluginResult<T> = Result<PluginResponse<T>, failure::Error>;
+    use std::ops::Try;
 
     #[derive(Serialize, Deserialize, Clone, Debug)]
     pub struct PluginResponse<T> {
@@ -122,8 +120,13 @@ pub mod response {
         pub fn builder() -> PluginResponseBuilder<T> {
             PluginResponseBuilder::new()
         }
+    }
 
-        pub fn into_result(self) -> Result<T, failure::Error> {
+    impl<T> Try for PluginResponse<T> {
+        type Ok = T;
+        type Error = failure::Error;
+
+        fn into_result(self) -> Result<Self::Ok, Self::Error> {
             self.warnings.iter().for_each(|w| log::warn!("{}", w));
             match self.body {
                 PluginResponseBody::Error(errors) => {
@@ -135,6 +138,20 @@ pub mod response {
                     Err(failure::err_msg(error_msg))
                 }
                 PluginResponseBody::Data(data) => Ok(data),
+            }
+        }
+
+        fn from_error(v: Self::Error) -> Self {
+            PluginResponse {
+                warnings: vec![],
+                body: PluginResponseBody::Error(vec![format!("{}", v)]),
+            }
+        }
+
+        fn from_ok(v: Self::Ok) -> Self {
+            PluginResponse {
+                warnings: vec![],
+                body: PluginResponseBody::Data(v),
             }
         }
     }
@@ -206,23 +223,33 @@ pub mod response {
         }
     }
 
-    pub type MethodsResponse = HashMap<PluginStep, bool>;
+    pub type Methods = PluginResponse<MethodsData>;
+    pub type MethodsData = HashMap<PluginStep, bool>;
 
-    pub type PreFlightResponse = Null;
+    pub type PreFlight = PluginResponse<PreFlightData>;
+    pub type PreFlightData = Null;
 
-    pub type GetLastReleaseResponse = Version;
+    pub type GetLastRelease = PluginResponse<GetLastReleaseData>;
+    pub type GetLastReleaseData = Version;
 
-    pub type DeriveNextVersionResponse = semver::Version;
+    pub type DeriveNextVersion = PluginResponse<DeriveNextVersionData>;
+    pub type DeriveNextVersionData = semver::Version;
 
-    pub type GenerateNotesResponse = ReleaseNotes;
+    pub type GenerateNotes = PluginResponse<GenerateNotesData>;
+    pub type GenerateNotesData = ReleaseNotes;
 
-    pub type PrepareResponse = Null;
+    pub type Prepare = PluginResponse<PrepareData>;
+    pub type PrepareData = Null;
 
-    pub type VerifyReleaseResponse = Null;
+    pub type VerifyRelease = PluginResponse<VerifyReleaseData>;
+    pub type VerifyReleaseData = Null;
 
-    pub type CommitResponse = Null;
+    pub type Commit = PluginResponse<CommitData>;
+    pub type CommitData = Null;
 
-    pub type PublishResponse = Null;
+    pub type Publish = PluginResponse<PublishData>;
+    pub type PublishData = Null;
 
-    pub type NotifyResponse = Null;
+    pub type Notify = PluginResponse<NotifyData>;
+    pub type NotifyData = Null;
 }

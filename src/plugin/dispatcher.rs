@@ -4,27 +4,15 @@ use failure::Fail;
 
 use super::{
     proto::{
-        request::{
-            CommitRequest, DeriveNextVersionRequest, GenerateNotesRequest, GetLastReleaseRequest,
-            NotifyRequest, PreFlightRequest, PrepareRequest, PublishRequest, VerifyReleaseRequest,
-        },
-        response::{
-            CommitResponse, DeriveNextVersionResponse, GenerateNotesResponse,
-            GetLastReleaseResponse, NotifyResponse, PluginResponse, PluginResult,
-            PreFlightResponse, PrepareResponse, PublishResponse, VerifyReleaseResponse,
-        },
-        MethodName,
+        request::{self, PluginRequest},
+        response::{self, PluginResponse},
+        MethodName, Version,
     },
-    Plugin, PluginName, ResolvedPlugin,
+    Plugin, PluginName, PluginState, PluginStep, ResolvedPlugin,
 };
 
 use crate::config::StepDefinition::Shared;
 use crate::config::{CfgMap, Config, Map};
-use crate::plugin::proto::request::{
-    GenerateNotesRequestData, PluginRequest, PreFlightRequestData,
-};
-use crate::plugin::proto::Version;
-use crate::plugin::{PluginState, PluginStep};
 use std::borrow::Borrow;
 use std::fmt::Debug;
 use std::rc::Rc;
@@ -42,13 +30,13 @@ impl PluginDispatcher {
     fn dispatch<RFR: Debug>(
         &self,
         step: PluginStep,
-        call_fn: impl Fn(&Plugin) -> PluginResult<RFR>,
-    ) -> DispatchedMultiResult<RFR> {
+        call_fn: impl Fn(&Plugin) -> PluginResponse<RFR>,
+    ) -> DispatchedMultiResult<PluginResponse<RFR>> {
         let mut response_map = Map::new();
 
         if let Some(plugins) = self.mapped_plugins(step) {
             for plugin in plugins {
-                let response = call_fn(&plugin)?;
+                let response = call_fn(&plugin);
                 log::debug!("{}: {:?}", plugin.name(), response);
                 response_map.insert(plugin.name().clone(), response);
             }
@@ -60,10 +48,10 @@ impl PluginDispatcher {
     fn dispatch_singleton<RFR: Debug>(
         &self,
         step: PluginStep,
-        call_fn: impl Fn(&Plugin) -> PluginResult<RFR>,
-    ) -> DispatchedSingletonResult<RFR> {
+        call_fn: impl Fn(&Plugin) -> PluginResponse<RFR>,
+    ) -> DispatchedSingletonResult<PluginResponse<RFR>> {
         let plugin = self.mapped_singleton(step);
-        let response = call_fn(&plugin)?;
+        let response = call_fn(&plugin);
         log::debug!("{}: {:?}", plugin.name(), response);
         Ok((plugin.name().to_owned(), response))
     }
@@ -110,18 +98,18 @@ impl PluginDispatcher {
     }
 }
 
-pub type DispatchedMultiResult<T> = Result<Map<PluginName, PluginResponse<T>>, failure::Error>;
-pub type DispatchedSingletonResult<T> = Result<(PluginName, PluginResponse<T>), failure::Error>;
+pub type DispatchedMultiResult<T> = Result<Map<PluginName, T>, failure::Error>;
+pub type DispatchedSingletonResult<T> = Result<(PluginName, T), failure::Error>;
 
 impl PluginDispatcher {
-    pub fn pre_flight(&self) -> DispatchedMultiResult<PreFlightResponse> {
+    pub fn pre_flight(&self) -> DispatchedMultiResult<response::PreFlight> {
         self.dispatch(PluginStep::PreFlight, |p| {
             p.as_interface()
                 .pre_flight(PluginRequest::with_default_data(self.config.clone()))
         })
     }
 
-    pub fn get_last_release(&self) -> DispatchedSingletonResult<GetLastReleaseResponse> {
+    pub fn get_last_release(&self) -> DispatchedSingletonResult<response::GetLastRelease> {
         self.dispatch_singleton(PluginStep::GetLastRelease, |p| {
             p.as_interface()
                 .get_last_release(PluginRequest::with_default_data(self.config.clone()))
@@ -131,7 +119,7 @@ impl PluginDispatcher {
     pub fn derive_next_version(
         &self,
         current_version: Version,
-    ) -> DispatchedMultiResult<DeriveNextVersionResponse> {
+    ) -> DispatchedMultiResult<response::DeriveNextVersion> {
         self.dispatch(PluginStep::DeriveNextVersion, |p| {
             p.as_interface().derive_next_version(PluginRequest::new(
                 self.config.clone(),
@@ -142,40 +130,40 @@ impl PluginDispatcher {
 
     pub fn generate_notes(
         &self,
-        params: GenerateNotesRequestData,
-    ) -> DispatchedMultiResult<GenerateNotesResponse> {
+        params: request::GenerateNotesData,
+    ) -> DispatchedMultiResult<response::GenerateNotes> {
         self.dispatch(PluginStep::GenerateNotes, |p| {
             p.as_interface()
                 .generate_notes(PluginRequest::new(self.config.clone(), params.clone()))
         })
     }
 
-    pub fn prepare(&self, params: PrepareRequest) -> DispatchedMultiResult<PrepareResponse> {
+    pub fn prepare(
+        &self,
+        params: request::PrepareData,
+    ) -> DispatchedMultiResult<response::Prepare> {
         unimplemented!()
     }
 
     pub fn verify_release(
         &self,
-        params: VerifyReleaseRequest,
-    ) -> DispatchedMultiResult<VerifyReleaseResponse> {
+        params: request::VerifyReleaseData,
+    ) -> DispatchedMultiResult<response::VerifyRelease> {
         unimplemented!()
     }
 
-    pub fn commit(&self, params: CommitRequest) -> DispatchedMultiResult<CommitResponse> {
+    pub fn commit(&self, params: request::CommitData) -> DispatchedMultiResult<response::Commit> {
         unimplemented!()
     }
 
-    pub fn publish(&self, params: PublishRequest) -> DispatchedMultiResult<PublishResponse> {
+    pub fn publish(
+        &self,
+        params: request::PublishData,
+    ) -> DispatchedMultiResult<response::Publish> {
         unimplemented!()
     }
 
-    pub fn notify(&self, params: NotifyRequest) -> PluginResponse<NotifyResponse> {
+    pub fn notify(&self, params: request::NotifyData) -> PluginResponse<response::Notify> {
         unimplemented!()
     }
-}
-
-#[derive(Fail, Debug)]
-enum DispatcherError {
-    #[fail(display = "failed to resolve some modules: \n{:#?}", _0)]
-    UnresolvedModules(Vec<PluginName>),
 }

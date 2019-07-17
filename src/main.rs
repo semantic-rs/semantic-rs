@@ -1,3 +1,5 @@
+#![feature(try_trait)]
+
 mod builtin_plugins;
 mod config;
 mod kernel;

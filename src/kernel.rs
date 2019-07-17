@@ -1,12 +1,13 @@
 use std::collections::{HashMap, HashSet};
 use std::mem;
+use std::ops::Try;
 use std::rc::Rc;
 
 use failure::Fail;
 
 use crate::config::{CfgMap, Config, Map, PluginDefinitionMap, StepDefinition};
 use crate::plugin::discovery::{CapabilitiesDiscovery, Discovery as _};
-use crate::plugin::proto::request::{GenerateNotesRequestData, PluginRequest};
+use crate::plugin::proto::request::{GenerateNotesData, PluginRequest};
 use crate::plugin::proto::response::PluginResponse;
 use crate::plugin::proto::Version;
 use crate::plugin::resolver::PluginResolver;
@@ -386,7 +387,7 @@ trait KernelRoutine {
     fn generate_notes(kernel: &Kernel, data: &mut KernelData) -> KernelRoutineResult<()> {
         let responses = execute_request(
             || {
-                let params = GenerateNotesRequestData {
+                let params = GenerateNotesData {
                     start_rev: data.require_last_version()?.rev().to_owned(),
                     new_version: data.require_next_version()?.clone(),
                 };

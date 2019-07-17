@@ -1,16 +1,14 @@
 use std::collections::HashMap;
+use std::ops::Try;
 
 use clog::Clog;
 
-use crate::config::CfgMapExt;
-use crate::plugin::proto::request::{
-    DeriveNextVersionRequest, GenerateNotesRequest, MethodsRequest, PluginRequest,
+use crate::config::{CfgMap, CfgMapExt};
+use crate::plugin::proto::{
+    request,
+    response::{self, PluginResponse},
+    GitRevision, Version,
 };
-use crate::plugin::proto::response::{
-    DeriveNextVersionResponse, GenerateNotesResponse, MethodsResponse, PluginResponse,
-    PluginResult, PreFlightResponse,
-};
-use crate::plugin::proto::{GitRevision, Version};
 use crate::plugin::{PluginInterface, PluginStep};
 
 pub struct ClogPlugin {}
@@ -22,74 +20,61 @@ impl ClogPlugin {
 }
 
 impl PluginInterface for ClogPlugin {
-    fn methods(&self, req: MethodsRequest) -> PluginResult<MethodsResponse> {
+    fn methods(&self, req: request::Methods) -> response::Methods {
         let mut methods = HashMap::new();
         methods.insert(PluginStep::DeriveNextVersion, true);
         methods.insert(PluginStep::GenerateNotes, true);
-        let resp = PluginResponse::builder().body(methods).build();
-        Ok(resp)
+        PluginResponse::from_ok(methods)
     }
 
     fn derive_next_version(
         &self,
-        params: DeriveNextVersionRequest,
-    ) -> PluginResult<DeriveNextVersionResponse> {
-        let mut response = PluginResponse::builder();
+        params: request::DeriveNextVersion,
+    ) -> response::DeriveNextVersion {
         let (cfg, current_version) = (params.cfg_map, params.data);
 
-        let next_version = || -> Result<semver::Version, failure::Error> {
-            let bump = match &current_version {
-                Version::None(_) => CommitType::Major,
-                Version::Semver(rev, version) => {
-                    version_bump_since_rev(&cfg.project_root()?, &rev)?
-                }
-            };
+        let bump = match &current_version {
+            Version::None(_) => CommitType::Major,
+            Version::Semver(rev, version) => version_bump_since_rev(&cfg.project_root()?, &rev)?,
+        };
 
-            match current_version {
-                Version::None(_) => Ok(semver::Version::new(0, 1, 0)),
-                Version::Semver(_, mut version) => {
-                    // NB: According to the Semver spec, major version zero is for
-                    // the initial development phase is treated slightly differently.
-                    // The minor version is incremented for breaking changes
-                    // and major is kept at zero until the public API has become more stable.
-                    if version.major == 0 {
-                        match bump {
-                            CommitType::Unknown => (),
-                            CommitType::Patch => version.increment_patch(),
-                            CommitType::Minor => version.increment_patch(),
-                            CommitType::Major => version.increment_minor(),
-                        }
-                    } else {
-                        match bump {
-                            CommitType::Unknown => (),
-                            CommitType::Patch => version.increment_patch(),
-                            CommitType::Minor => version.increment_minor(),
-                            CommitType::Major => version.increment_major(),
-                        }
+        let next_version = match current_version {
+            Version::None(_) => semver::Version::new(0, 1, 0),
+            Version::Semver(_, mut version) => {
+                // NB: According to the Semver spec, major version zero is for
+                // the initial development phase is treated slightly differently.
+                // The minor version is incremented for breaking changes
+                // and major is kept at zero until the public API has become more stable.
+                if version.major == 0 {
+                    match bump {
+                        CommitType::Unknown => (),
+                        CommitType::Patch => version.increment_patch(),
+                        CommitType::Minor => version.increment_patch(),
+                        CommitType::Major => version.increment_minor(),
                     }
-                    Ok(version)
+                } else {
+                    match bump {
+                        CommitType::Unknown => (),
+                        CommitType::Patch => version.increment_patch(),
+                        CommitType::Minor => version.increment_minor(),
+                        CommitType::Major => version.increment_major(),
+                    }
                 }
-            }
-        }();
 
-        match next_version {
-            Ok(version) => Ok(response.body(version).build()),
-            Err(err) => Ok(response.error(err).build()),
-        }
+                version
+            }
+        };
+
+        PluginResponse::from_ok(next_version)
     }
 
-    fn generate_notes(&self, params: GenerateNotesRequest) -> PluginResult<GenerateNotesResponse> {
-        let mut response = PluginResponse::builder();
+    fn generate_notes(&self, params: request::GenerateNotes) -> response::GenerateNotes {
         let (cfg, data) = (params.cfg_map, params.data);
 
-        let changelog = || -> Result<String, failure::Error> {
-            generate_changelog(&cfg.project_root()?, &data.start_rev, &data.new_version)
-        }();
+        let changelog =
+            generate_changelog(&cfg.project_root()?, &data.start_rev, &data.new_version)?;
 
-        match changelog {
-            Ok(changelog) => Ok(response.body(changelog).build()),
-            Err(err) => Ok(response.error(err).build()),
-        }
+        PluginResponse::from_ok(changelog)
     }
 }
 
@@ -184,27 +169,29 @@ pub fn generate_changelog(
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+
     #[test]
     fn unknown_type() {
         let commit = "0\nThis commit message has no type";
-        assert_eq!(Unknown, analyze_single(commit).unwrap());
+        assert_eq!(CommitType::Unknown, analyze_single(commit).unwrap());
     }
 
     #[test]
     fn patch_commit() {
         let commit = "0\nfix: This commit fixes a bug";
-        assert_eq!(Patch, analyze_single(commit).unwrap());
+        assert_eq!(CommitType::Patch, analyze_single(commit).unwrap());
     }
 
     #[test]
     fn minor_commit() {
         let commit = "0\nfeat: This commit introduces a new feature";
-        assert_eq!(Minor, analyze_single(commit).unwrap());
+        assert_eq!(CommitType::Minor, analyze_single(commit).unwrap());
     }
 
     #[test]
     fn major_commit() {
         let commit = "0\nfeat: This commits breaks something\nBREAKING CHANGE: breaks things";
-        assert_eq!(Major, analyze_single(commit).unwrap());
+        assert_eq!(CommitType::Major, analyze_single(commit).unwrap());
     }
 }
