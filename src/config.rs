@@ -38,7 +38,7 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn from_toml<P: AsRef<Path>>(path: P) -> Result<Self, failure::Error> {
+    pub fn from_toml<P: AsRef<Path>>(path: P, dry: bool) -> Result<Self, failure::Error> {
         let mut file = File::open(path).map_err(|err| match err.kind() {
             std::io::ErrorKind::NotFound => ConfigError::FileNotFound.into(),
             other => failure::Error::from(err),
@@ -51,7 +51,7 @@ impl Config {
 
         config.check_step_arguments_correctness()?;
 
-        config.cfg.derive_missing_keys_from_env()?;
+        config.cfg.derive_missing_keys_from_env(dry)?;
 
         Ok(config)
     }
@@ -89,6 +89,8 @@ pub enum ConfigError {
     MissingProjectRootPath,
     #[fail(display = "expected a table for key {}, found {}", _0, _1)]
     PluginConfigIsNotTable(String, String),
+    #[fail(display = "dry run flag is not set")]
+    MissingDryRunFlag,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
@@ -187,7 +189,8 @@ impl PluginDefinition {
 }
 
 pub trait CfgMapExt {
-    fn derive_missing_keys_from_env(&mut self) -> Result<(), failure::Error>;
+    fn derive_missing_keys_from_env(&mut self, dry: bool) -> Result<(), failure::Error>;
+    fn is_dry_run(&self) -> Result<bool, failure::Error>;
     fn project_root(&self) -> Result<&str, failure::Error>;
     fn get_sub_table(
         &self,
@@ -200,7 +203,9 @@ pub trait CfgMapExt {
 }
 
 impl CfgMapExt for CfgMap {
-    fn derive_missing_keys_from_env(&mut self) -> Result<(), failure::Error> {
+    fn derive_missing_keys_from_env(&mut self, dry: bool) -> Result<(), failure::Error> {
+        self.insert("dry".into(), toml::Value::Boolean(dry));
+
         if !self.contains_key(CfgMap::project_root_path_key()) {
             let root = PathBuf::from("./");
             let root = root.canonicalize()?;
@@ -213,6 +218,13 @@ impl CfgMapExt for CfgMap {
         }
 
         Ok(())
+    }
+
+    fn is_dry_run(&self) -> Result<bool, failure::Error> {
+        let dry = self.get("dry")
+            .and_then(|v| v.as_bool())
+            .ok_or(ConfigError::MissingDryRunFlag)?;
+        Ok(dry)
     }
 
     fn project_root(&self) -> Result<&str, failure::Error> {
@@ -533,6 +545,6 @@ mod tests {
     fn read_full_config_from_file() {
         let filepath = concat!(env!("CARGO_MANIFEST_DIR"), "/releaserc.toml");
         eprintln!("filepath: {}", filepath);
-        Config::from_toml(filepath).unwrap();
+        Config::from_toml(filepath, true).unwrap();
     }
 }

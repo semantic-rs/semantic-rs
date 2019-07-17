@@ -87,7 +87,7 @@ jobs:
       - checkout
       - attach_workspace:
           at: /workspace
-      - run: /workspace/semantic-rs-linux
+      - run: /workspace/semantic-rs-linux --dry
 
   release:
     <<: *defaults

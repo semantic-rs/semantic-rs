@@ -240,7 +240,7 @@ fn latest_tag(repo: &Repository) -> Option<(GitRevision, semver::Version)> {
 
 fn earliest_revision(repo: &Repository) -> Result<Oid, failure::Error> {
     let mut revwalk = repo.revwalk()?;
-    revwalk.push_head();
+    revwalk.push_head()?;
 
     let earliest_commit = revwalk
         .last()

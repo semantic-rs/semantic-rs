@@ -16,7 +16,18 @@ fn main() -> Result<(), failure::Error> {
 
     log::info!("semantic.rs 🚀");
 
-    let config = Config::from_toml("./releaserc.toml")?;
+    let clap_args = clap::App::new("semantic-rs")
+        .version(clap::crate_version!())
+        .author(clap::crate_authors!())
+        .about(clap::crate_description!())
+        .arg(clap::Arg::with_name("dry")
+            .long("dry")
+            .help("Execute semantic-rs in dry-run more (no writes or publishes"))
+        .get_matches();
+
+    let dry_run = clap_args.is_present("dry");
+
+    let config = Config::from_toml("./releaserc.toml", dry_run)?;
     let kernel = Kernel::builder(config).build()?;
 
     if let Err(err) = kernel.run() {

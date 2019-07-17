@@ -5,7 +5,7 @@ use std::rc::Rc;
 
 use failure::Fail;
 
-use crate::config::{CfgMap, Config, Map, PluginDefinitionMap, StepDefinition};
+use crate::config::{CfgMap, CfgMapExt, Config, Map, PluginDefinitionMap, StepDefinition};
 use crate::plugin::discovery::{CapabilitiesDiscovery, Discovery as _};
 use crate::plugin::proto::request::{GenerateNotesData, PluginRequest};
 use crate::plugin::proto::response::PluginResponse;
@@ -16,13 +16,17 @@ use crate::plugin::{
     Plugin, PluginDispatcher, PluginName, PluginState, PluginStep, ResolvedPlugin,
 };
 
-const STEPS_ORDER: &[PluginStep] = &[
+const STEPS_DRY: &[PluginStep] = &[
     PluginStep::PreFlight,
     PluginStep::GetLastRelease,
     PluginStep::DeriveNextVersion,
     PluginStep::GenerateNotes,
     PluginStep::Prepare,
     PluginStep::VerifyRelease,
+
+];
+
+const STEPS_WET: &[PluginStep] = &[
     PluginStep::Commit,
     PluginStep::Publish,
     PluginStep::Notify,
@@ -30,6 +34,7 @@ const STEPS_ORDER: &[PluginStep] = &[
 
 pub struct Kernel {
     dispatcher: PluginDispatcher,
+    dry_run: bool,
 }
 
 impl Kernel {
@@ -43,13 +48,26 @@ impl Kernel {
     pub fn run(self) -> Result<(), failure::Error> {
         let mut data = KernelData::default();
 
-        // Run through the steps
-        for step in STEPS_ORDER {
+        let mut run_step = |step: PluginStep| -> Result<(), failure::Error> {
             log::info!("Running step '{}'", step.as_str());
+
             step.execute(&self, &mut data).map_err(|err| {
                 log::error!("Step {:?} failed", step);
                 err
-            })?
+            })?;
+
+            Ok(())
+        };
+
+        // Run through the "dry" steps
+        for &step in STEPS_DRY {
+            run_step(step)?;
+        }
+
+        if !self.dry_run {
+            for &step in STEPS_WET {
+                run_step(step)?
+            }
         }
 
         Ok(())
@@ -97,9 +115,10 @@ impl KernelBuilder {
 
         // Create a dispatcher
         let cfg_map = mem::replace(&mut self.config.cfg, CfgMap::new());
+        let dry_run = cfg_map.is_dry_run()?;
         let dispatcher = PluginDispatcher::new(cfg_map, steps_to_plugins);
 
-        Ok(Kernel { dispatcher })
+        Ok(Kernel { dispatcher, dry_run })
     }
 
     fn plugin_def_map_to_vec(plugins: PluginDefinitionMap) -> Vec<Plugin> {
