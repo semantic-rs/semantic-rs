@@ -87,7 +87,7 @@ jobs:
       - checkout
       - attach_workspace:
           at: /workspace
-      - run: /workspace/semantic-rs-linux --write=no --release=no --branch=$CIRCLE_BRANCH --asset /workspace/semantic-rs-linux --asset Changelog.md --force-https
+      - run: /workspace/semantic-rs-linux
 
   release:
     <<: *defaults
@@ -101,7 +101,7 @@ jobs:
       # This unset is VERY important: without it --force-https cannot work
       # For some reason CircleCI has a global override substituting git@ links instead of all https links
       - run: git config --global --unset url.ssh://git@github.com.insteadof
-      - run: /workspace/semantic-rs-linux --write=yes --release=yes --asset /workspace/semantic-rs-linux --asset Changelog.md --force-https
+      - run: /workspace/semantic-rs-linux
       - save_cache: *save-deps-cache-rust
 
 workflows:
