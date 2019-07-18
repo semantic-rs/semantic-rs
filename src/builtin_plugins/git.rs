@@ -3,7 +3,7 @@ use std::env;
 use std::ops::Try;
 
 use failure::Fail;
-use git2::{self, Oid, Repository, Signature, RemoteCallbacks, PushOptions, Cred};
+use git2::{self, Cred, Oid, PushOptions, RemoteCallbacks, Repository, Signature};
 use serde::{Deserialize, Serialize};
 
 use crate::config::CfgMapExt;
@@ -145,7 +145,8 @@ impl GitPluginStateData {
     fn perform_pre_flight_overrides(&mut self) -> Result<(), failure::Error> {
         if self.config.force_https {
             let remote_name = self.config.remote.clone();
-            let remote_url = self.repo
+            let remote_url = self
+                .repo
                 .find_remote(&remote_name)?
                 .url()
                 .map(str::to_string)
@@ -167,7 +168,9 @@ impl GitPluginStateData {
                     }
                 }
 
-                let url = new_url.ok_or(GitPluginError::RemoteNotSupportedForHttpsForcing(remote_url))?;
+                let url = new_url.ok_or(GitPluginError::RemoteNotSupportedForHttpsForcing(
+                    remote_url,
+                ))?;
 
                 self.set_remote_url(&url)?;
             }
@@ -178,19 +181,19 @@ impl GitPluginStateData {
 
     fn set_remote_url(&mut self, url: &str) -> Result<(), failure::Error> {
         self.repo.remote_set_url(&self.config.remote, url)?;
-        self.repo.remote_set_pushurl(&self.config.remote, Some(url))?;
+        self.repo
+            .remote_set_pushurl(&self.config.remote, Some(url))?;
         Ok(())
     }
 
     fn commit_files(&self, files: &[String], commit_msg: &str) -> Result<(), failure::Error> {
-        let files = files
-            .iter()
-            .filter(|filename| {
-                let path = Path::new(filename);
-                !self.repo
-                    .status_should_ignore(path)
-                    .expect("Determining ignore status of file failed")
-            });
+        let files = files.iter().filter(|filename| {
+            let path = Path::new(filename);
+            !self
+                .repo
+                .status_should_ignore(path)
+                .expect("Determining ignore status of file failed")
+        });
 
         self.add(files)?;
 
@@ -220,24 +223,26 @@ impl GitPluginStateData {
         let tree_oid = index.write_tree()?;
         let tree = self.repo.find_tree(tree_oid)?;
 
-        self.repo.commit(
-            Some(&update_ref),
-            &self.signature,
-            &self.signature,
-            message,
-            &tree,
-            &parents,
-        ).map(|_| ())
+        self.repo
+            .commit(
+                Some(&update_ref),
+                &self.signature,
+                &self.signature,
+                message,
+                &tree,
+                &parents,
+            )
+            .map(|_| ())
     }
 
     fn create_tag(&self, tag_name: &str, message: &str) -> Result<(), git2::Error> {
         let rev = format!("refs/heads/{}", self.config.branch);
         let obj = self.repo.revparse_single(&rev)?;
 
-        self.repo.tag(tag_name, &obj, &self.signature, message, false)
+        self.repo
+            .tag(tag_name, &obj, &self.signature, message, false)
             .map(|_| ())
     }
-
 
     pub fn push(&self, tag_name: &str) -> Result<(), failure::Error> {
         let repo = &self.repo;
@@ -260,7 +265,9 @@ impl GitPluginStateData {
             cbs.credentials(move |_url, _username, _allowed| Cred::userpass_plaintext(&token, ""));
             opts.remote_callbacks(cbs);
         } else {
-            cbs.credentials(|_url, username, _allowed| Cred::ssh_key_from_agent(&username.unwrap()));
+            cbs.credentials(|_url, username, _allowed| {
+                Cred::ssh_key_from_agent(&username.unwrap())
+            });
             opts.remote_callbacks(cbs);
         }
 
@@ -295,7 +302,6 @@ impl GitPluginStateData {
 
         Ok(earliest_commit)
     }
-
 }
 
 impl GitPlugin {
@@ -398,11 +404,13 @@ pub enum GitPluginError {
     GitRemoteUndefined,
     #[fail(display = "GH_TOKEN is undefined: cannot push changes")]
     GithubTokenUndefined,
-    #[fail(display = "{} is not supported for https forcing, please consider opening an issue at https://github.com/etclabscore/semantic-rs/issues/new/choose", _0)]
+    #[fail(
+        display = "{} is not supported for https forcing, please consider opening an issue at https://github.com/etclabscore/semantic-rs/issues/new/choose",
+        _0
+    )]
     RemoteNotSupportedForHttpsForcing(String),
 }
 
 fn is_https_remote(remote: &str) -> bool {
     remote.starts_with("https://")
 }
-

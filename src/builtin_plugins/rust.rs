@@ -86,10 +86,7 @@ impl PluginInterface for RustPlugin {
 
         cargo.set_version(params.data)?;
 
-        PluginResponse::from_ok(vec![
-            "Cargo.toml".into(),
-            "Cargo.lock".into()
-        ])
+        PluginResponse::from_ok(vec!["Cargo.toml".into(), "Cargo.lock".into()])
     }
 
     fn verify_release(&self, params: request::VerifyRelease) -> response::VerifyRelease {

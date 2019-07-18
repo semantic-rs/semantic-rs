@@ -353,11 +353,15 @@ impl KernelData {
     }
 
     fn require_last_version(&self) -> Result<&Version, failure::Error> {
-        Ok(Self::_require("last_version", || self.last_version.as_ref())?)
+        Ok(Self::_require("last_version", || {
+            self.last_version.as_ref()
+        })?)
     }
 
     fn require_next_version(&self) -> Result<&semver::Version, failure::Error> {
-        Ok(Self::_require("next_version", || self.next_version.as_ref())?)
+        Ok(Self::_require("next_version", || {
+            self.next_version.as_ref()
+        })?)
     }
 
     fn require_changelog(&self) -> Result<&str, failure::Error> {
@@ -365,14 +369,19 @@ impl KernelData {
     }
 
     fn require_files_to_commit(&self) -> Result<&[String], failure::Error> {
-        Ok(Self::_require("files_to_commit", || self.files_to_commit.as_ref())?)
+        Ok(Self::_require("files_to_commit", || {
+            self.files_to_commit.as_ref()
+        })?)
     }
 
     fn requite_tag_name(&self) -> Result<&str, failure::Error> {
         Ok(Self::_require("tag_name", || self.tag_name.as_ref())?)
     }
 
-    fn _require<T>(desc: &'static str, query_fn: impl Fn() -> Option<T>) -> Result<T, failure::Error> {
+    fn _require<T>(
+        desc: &'static str,
+        query_fn: impl Fn() -> Option<T>,
+    ) -> Result<T, failure::Error> {
         let data = query_fn().ok_or_else(|| KernelError::MissingRequiredData(desc))?;
         Ok(data)
     }
@@ -450,7 +459,8 @@ trait KernelRoutine {
             all_responses_into_result,
         )?;
 
-        let changed_files = responses.into_iter()
+        let changed_files = responses
+            .into_iter()
             .flat_map(|(_, v)| v.into_iter())
             .collect();
 
@@ -495,16 +505,10 @@ trait KernelRoutine {
             all_responses_into_result,
         )?;
         Ok(())
-
     }
 
     fn notify(kernel: &Kernel, data: &mut KernelData) -> KernelRoutineResult<()> {
-        execute_request(
-            || {
-                kernel.dispatcher.notify(())
-            },
-            all_responses_into_result,
-        )?;
+        execute_request(|| kernel.dispatcher.notify(()), all_responses_into_result)?;
         Ok(())
     }
 }

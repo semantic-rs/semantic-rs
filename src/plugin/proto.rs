@@ -89,7 +89,6 @@ pub mod request {
         pub changelog: String,
     }
 
-
     pub type Notify = PluginRequest<NotifyData>;
     pub type NotifyData = Null;
 }

@@ -1,8 +1,8 @@
 use std::ops::Try;
 use std::path::{Path, PathBuf};
 
-use failure::Fail;
 use failure::Error;
+use failure::Fail;
 use http::header::HeaderValue;
 use hubcaps::releases::ReleaseOptions;
 use hubcaps::{Credentials, Github};
@@ -11,13 +11,13 @@ use hyper::Client;
 use hyper_native_tls::NativeTlsClient;
 use serde::Deserialize;
 
+use crate::config::CfgMapExt;
 use crate::plugin::proto::{
     request,
     response::{self, PluginResponse},
 };
 use crate::plugin::{PluginInterface, PluginStep};
 use crate::utils::ResultExt;
-use crate::config::CfgMapExt;
 
 const USERAGENT: &str = concat!("semantic-rs/", env!("CARGO_PKG_VERSION"));
 
@@ -56,7 +56,7 @@ fn globs_to_assets<'a>(globs: impl Iterator<Item = &'a str>) -> Vec<Result<Asset
             Ok(paths) => paths,
             Err(err) => {
                 results.push(Err(err.into()));
-                continue
+                continue;
             }
         };
 
@@ -65,7 +65,7 @@ fn globs_to_assets<'a>(globs: impl Iterator<Item = &'a str>) -> Vec<Result<Asset
                 Ok(path) => path,
                 Err(err) => {
                     results.push(Err(err.into()));
-                    continue
+                    continue;
                 }
             };
 
@@ -91,21 +91,25 @@ impl PluginInterface for GithubPlugin {
         }
 
         // Try to parse config
-        let cfg: GithubPluginConfig = toml::Value::Table(params.cfg_map.get_sub_table("github")?).try_into()?;
+        let cfg: GithubPluginConfig =
+            toml::Value::Table(params.cfg_map.get_sub_table("github")?).try_into()?;
 
         // Try to parse assets
-        let project_root= Path::new(params.cfg_map.project_root()?);
+        let project_root = Path::new(params.cfg_map.project_root()?);
         globs_to_assets(cfg.assets.iter().map(String::as_str))
             .into_iter()
             .filter(Result::is_err)
             .map(Result::unwrap_err)
-            .for_each(|e| { response.error(e); });
+            .for_each(|e| {
+                response.error(e);
+            });
 
         response.body(()).build()
     }
 
     fn publish(&self, params: request::Publish) -> response::Publish {
-        let cfg: GithubPluginConfig = toml::Value::Table(params.cfg_map.get_sub_table("github")?).try_into()?;
+        let cfg: GithubPluginConfig =
+            toml::Value::Table(params.cfg_map.get_sub_table("github")?).try_into()?;
         let project_root = Path::new(params.cfg_map.project_root()?);
 
         let repo = git2::Repository::open(project_root)?;
@@ -119,8 +123,7 @@ impl PluginInterface for GithubPlugin {
         let branch = &cfg.branch;
         let tag_name = &params.data.tag_name;
         let changelog = &params.data.changelog;
-        let token = std::env::var("GH_TOKEN")
-            .map_err(|_| GithubPluginError::TokenUndefined)?;
+        let token = std::env::var("GH_TOKEN").map_err(|_| GithubPluginError::TokenUndefined)?;
 
         // Create release
         let client = Client::with_connector(HttpsConnector::new(NativeTlsClient::new().unwrap()));
@@ -192,7 +195,6 @@ impl PluginInterface for GithubPlugin {
         PluginResponse::from_ok(())
     }
 }
-
 
 #[derive(Clone, Debug)]
 pub struct Asset {
