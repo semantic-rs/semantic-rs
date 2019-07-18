@@ -13,7 +13,14 @@ use crate::config::Config;
 use crate::kernel::Kernel;
 use std::env;
 
-fn main() -> Result<(), failure::Error> {
+fn main() {
+    if let Err(err) = run() {
+        eprintln!("!! Error: {}", err);
+        std::process::exit(1);
+    }
+}
+
+fn run() -> Result<(), failure::Error> {
     init_logger();
     dotenv::dotenv().ok();
 
