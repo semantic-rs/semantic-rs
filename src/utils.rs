@@ -18,10 +18,10 @@ impl<T, E> ResultExt<T, E> for Result<T, E> {
     }
 }
 
-pub fn user_repo_from_url(url: &str) -> Result<(String, String), String> {
+pub fn user_repo_from_url(url: &str) -> Result<(String, String), failure::Error> {
     let path = match Url::parse(url) {
         Err(ParseError::RelativeUrlWithoutBase) => match url.rfind(':') {
-            None => return Err("Can't parse path from remote URL".into()),
+            None => return Err(failure::err_msg("Can't parse path from remote URL")),
             Some(colon_pos) => Some(
                 url[colon_pos + 1..]
                     .split('/')
@@ -29,7 +29,7 @@ pub fn user_repo_from_url(url: &str) -> Result<(String, String), String> {
                     .collect::<Vec<_>>(),
             ),
         },
-        Err(_) => return Err("Can't parse remote URL".into()),
+        Err(_) => return Err(failure::err_msg("Can't parse remote URL")),
         Ok(url) => url
             .path_segments()
             .map(|path| path.map(|seg| seg.to_owned()).collect::<Vec<_>>()),
@@ -37,7 +37,7 @@ pub fn user_repo_from_url(url: &str) -> Result<(String, String), String> {
 
     let path = match path {
         Some(ref path) if path.len() == 2 => path,
-        _ => return Err("URL should contain user and repository".into()),
+        _ => return Err(failure::err_msg("URL should contain user and repository")),
     };
 
     let user = path[0].clone();

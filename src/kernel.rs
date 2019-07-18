@@ -484,7 +484,18 @@ trait KernelRoutine {
     }
 
     fn publish(kernel: &Kernel, data: &mut KernelData) -> KernelRoutineResult<()> {
-        unimplemented!()
+        execute_request(
+            || {
+                let params = request::PublishData {
+                    tag_name: data.requite_tag_name()?.to_owned(),
+                    changelog: data.require_changelog()?.to_owned(),
+                };
+                kernel.dispatcher.publish(params)
+            },
+            all_responses_into_result,
+        )?;
+        Ok(())
+
     }
 
     fn notify(kernel: &Kernel, data: &mut KernelData) -> KernelRoutineResult<()> {

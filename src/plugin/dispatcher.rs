@@ -163,7 +163,10 @@ impl PluginDispatcher {
         &self,
         params: request::PublishData,
     ) -> DispatchedMultiResult<response::Publish> {
-        unimplemented!()
+        self.dispatch(PluginStep::Publish, |p| {
+            p.as_interface()
+                .publish(PluginRequest::new(self.config.clone(), params.clone()))
+        })
     }
 
     pub fn notify(&self, params: request::NotifyData) -> DispatchedMultiResult<response::Notify> {

@@ -82,7 +82,13 @@ pub mod request {
     }
 
     pub type Publish = PluginRequest<PublishData>;
-    pub type PublishData = Null;
+
+    #[derive(Clone, Debug)]
+    pub struct PublishData {
+        pub tag_name: String,
+        pub changelog: String,
+    }
+
 
     pub type Notify = PluginRequest<NotifyData>;
     pub type NotifyData = Null;
