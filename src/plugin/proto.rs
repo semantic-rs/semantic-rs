@@ -14,18 +14,9 @@ pub type Warning = String;
 pub type Error = String;
 
 #[derive(Clone, Debug)]
-pub enum Version {
-    None(GitRevision),
-    Semver(GitRevision, semver::Version),
-}
-
-impl Version {
-    pub fn rev(&self) -> &str {
-        match self {
-            Version::None(rev) => &rev,
-            Version::Semver(rev, _) => &rev,
-        }
-    }
+pub struct Version {
+    pub rev: GitRevision,
+    pub semver: Option<semver::Version>,
 }
 
 pub mod request {

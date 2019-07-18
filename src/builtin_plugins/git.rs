@@ -185,10 +185,16 @@ impl PluginInterface for GitPlugin {
         let data = data_bind.as_initialized();
 
         let version = match latest_tag(&data.repo) {
-            Some((rev, version)) => Version::Semver(rev.to_string(), version),
+            Some((rev, version)) => Version {
+                rev,
+                semver: Some(version),
+            },
             None => {
                 let earliest_commit = earliest_revision(&data.repo)?;
-                Version::None(earliest_commit.to_string())
+                Version {
+                    rev: earliest_commit.to_string(),
+                    semver: None,
+                }
             }
         };
 

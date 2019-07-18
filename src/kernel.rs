@@ -397,7 +397,7 @@ trait KernelRoutine {
         let responses = execute_request(
             || {
                 let params = request::GenerateNotesData {
-                    start_rev: data.require_last_version()?.rev().to_owned(),
+                    start_rev: data.require_last_version()?.rev.clone(),
                     new_version: data.require_next_version()?.clone(),
                 };
                 kernel.dispatcher.generate_notes(params)

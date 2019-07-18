@@ -6,7 +6,7 @@ use crate::config::CfgMapExt;
 use crate::plugin::proto::{
     request,
     response::{self, PluginResponse},
-    GitRevision, Version,
+    GitRevision,
 };
 use crate::plugin::{PluginInterface, PluginStep};
 
@@ -30,14 +30,14 @@ impl PluginInterface for ClogPlugin {
     ) -> response::DeriveNextVersion {
         let (cfg, current_version) = (params.cfg_map, params.data);
 
-        let bump = match &current_version {
-            Version::None(_) => CommitType::Major,
-            Version::Semver(rev, _) => version_bump_since_rev(&cfg.project_root()?, &rev)?,
+        let bump = match &current_version.semver {
+            None => CommitType::Major,
+            Some(_) => version_bump_since_rev(&cfg.project_root()?, &current_version.rev)?,
         };
 
-        let next_version = match current_version {
-            Version::None(_) => semver::Version::new(0, 1, 0),
-            Version::Semver(_, mut version) => {
+        let next_version = match current_version.semver {
+            None => semver::Version::new(0, 1, 0),
+            Some(mut version) => {
                 // NB: According to the Semver spec, major version zero is for
                 // the initial development phase is treated slightly differently.
                 // The minor version is incremented for breaking changes
