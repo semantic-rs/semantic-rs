@@ -19,7 +19,7 @@ derive_next_version = [ "clog" ]
 # the succession of runs in this case will be determined by the succession in the `plugins` list
 generate_notes = "discover"
 # Prepare the release (pre-release step for intermediate artifacts generation)
-prepare = ["rust"]
+prepare = ["clog", "rust"]
 # Check the release before publishing
 verify_release = ["rust"]
 # Commit & push changes to the VCS

@@ -31,6 +31,7 @@ impl PluginDispatcher {
 
         if let Some(plugins) = self.mapped_plugins(step) {
             for plugin in plugins {
+                log::info!("Invoking plugin '{}'", plugin.name());
                 let response = call_fn(&plugin);
                 log::debug!("{}: {:?}", plugin.name(), response);
                 response_map.insert(plugin.name().clone(), response);
@@ -46,6 +47,7 @@ impl PluginDispatcher {
         call_fn: impl Fn(&Plugin) -> PluginResponse<RFR>,
     ) -> DispatchedSingletonResult<PluginResponse<RFR>> {
         let plugin = self.mapped_singleton(step);
+        log::info!("Invoking singleton '{}'", plugin.name());
         let response = call_fn(&plugin);
         log::debug!("{}: {:?}", plugin.name(), response);
         Ok((plugin.name().to_owned(), response))

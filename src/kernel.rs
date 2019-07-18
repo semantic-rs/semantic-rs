@@ -106,9 +106,11 @@ impl KernelBuilder {
         let steps_to_plugins =
             Self::build_steps_to_plugins_map(&self.config, plugins, capabilities)?;
 
-        // Create a dispatcher
+        // Extract some configuration values from CfgMap
         let cfg_map = mem::replace(&mut self.config.cfg, CfgMap::new());
         let is_dry_run = cfg_map.is_dry_run()?;
+
+        // Create Dispatcher
         let dispatcher = PluginDispatcher::new(cfg_map, steps_to_plugins);
 
         Ok(Kernel {

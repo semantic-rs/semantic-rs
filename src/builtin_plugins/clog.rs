@@ -1,6 +1,11 @@
+use std::cell::RefCell;
+use std::io::BufWriter;
 use std::ops::Try;
+use std::path::{Path, PathBuf};
 
+use clog::fmt::MarkdownWriter;
 use clog::Clog;
+use git2::{Commit, Repository};
 
 use crate::config::CfgMapExt;
 use crate::plugin::proto::{
@@ -10,17 +15,45 @@ use crate::plugin::proto::{
 };
 use crate::plugin::{PluginInterface, PluginStep};
 
-pub struct ClogPlugin {}
+pub struct ClogPlugin {
+    state: RefCell<Option<request::GenerateNotesData>>,
+    dry_run_guard: RefCell<Option<DryRunGuard>>,
+}
 
 impl ClogPlugin {
     pub fn new() -> Self {
-        ClogPlugin {}
+        ClogPlugin {
+            state: RefCell::default(),
+            dry_run_guard: RefCell::default(),
+        }
     }
+}
+
+impl Drop for ClogPlugin {
+    fn drop(&mut self) {
+        let guard = self.dry_run_guard.borrow();
+        if let Some(guard) = guard.as_ref() {
+            log::info!("clog(dry-run): restoring original state of changelog file");
+            if let Err(err) = std::fs::write(&guard.changelog_path, &guard.original_changelog) {
+                log::error!("failed to restore original changelog, sorry x_x");
+                log::error!("{}", err);
+            }
+        }
+    }
+}
+
+struct DryRunGuard {
+    changelog_path: PathBuf,
+    original_changelog: Vec<u8>,
 }
 
 impl PluginInterface for ClogPlugin {
     fn methods(&self, _req: request::Methods) -> response::Methods {
-        let methods = vec![PluginStep::DeriveNextVersion, PluginStep::GenerateNotes];
+        let methods = vec![
+            PluginStep::DeriveNextVersion,
+            PluginStep::GenerateNotes,
+            PluginStep::Prepare,
+        ];
         PluginResponse::from_ok(methods)
     }
 
@@ -71,7 +104,40 @@ impl PluginInterface for ClogPlugin {
         let changelog =
             generate_changelog(&cfg.project_root()?, &data.start_rev, &data.new_version)?;
 
+        // Store this request as state
+        self.state.replace(Some(data));
+
         PluginResponse::from_ok(changelog)
+    }
+
+    fn prepare(&self, params: request::Prepare) -> response::Prepare {
+        let changelog_path = params.cfg_map.changelog_path()?;
+        let repo_path = params.cfg_map.project_root()?;
+
+        // Safely store the original changelog for restoration after dry-run is finished
+        if params.cfg_map.is_dry_run()? {
+            log::info!("clog(dry-run): saving original state of changelog file");
+            let original_changelog = std::fs::read(&changelog_path)?;
+            self.dry_run_guard.replace(Some(DryRunGuard {
+                changelog_path: Path::new(changelog_path).to_owned(),
+                original_changelog,
+            }));
+        }
+
+        let data_bind = self.state.borrow();
+        let data = data_bind
+            .as_ref()
+            .expect("state is None: this is a bug, aborting.");
+
+        let mut clog = Clog::with_dir(repo_path)?;
+        clog.changelog(changelog_path)
+            .from(&data.start_rev)
+            .version(format!("v{}", data.new_version));
+
+        log::info!("clog: writing updated changelog");
+        clog.write_changelog()?;
+
+        PluginResponse::from_ok(())
     }
 }
 
@@ -108,12 +174,9 @@ pub enum CommitType {
     Major,
 }
 
-use self::CommitType::*;
-use clog::fmt::MarkdownWriter;
-use git2::{Commit, Repository};
-use std::io::BufWriter;
-
 pub fn analyze_single(commit_str: &str) -> Result<CommitType, failure::Error> {
+    use CommitType::*;
+
     let message = commit_str.trim().split_terminator('\n').nth(1);
 
     let clog = Clog::new().expect("Clog initialization failed");
