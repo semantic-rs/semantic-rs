@@ -507,7 +507,7 @@ trait KernelRoutine {
         Ok(())
     }
 
-    fn notify(kernel: &Kernel, data: &mut KernelData) -> KernelRoutineResult<()> {
+    fn notify(kernel: &Kernel, _data: &mut KernelData) -> KernelRoutineResult<()> {
         execute_request(|| kernel.dispatcher.notify(()), all_responses_into_result)?;
         Ok(())
     }

@@ -6,6 +6,7 @@ use std::path::{Path, PathBuf};
 use clog::fmt::MarkdownWriter;
 use clog::Clog;
 use git2::{Commit, Repository};
+use serde::Deserialize;
 
 use crate::config::CfgMapExt;
 use crate::plugin::proto::{
@@ -47,14 +48,32 @@ struct DryRunGuard {
     original_changelog: Vec<u8>,
 }
 
+#[derive(Deserialize)]
+struct ClogPluginConfig {
+    #[serde(default = "default_changelog")]
+    changelog: String,
+}
+
+fn default_changelog() -> String {
+    "Changelog.md".into()
+}
+
 impl PluginInterface for ClogPlugin {
     fn methods(&self, _req: request::Methods) -> response::Methods {
         let methods = vec![
+            PluginStep::PreFlight,
             PluginStep::DeriveNextVersion,
             PluginStep::GenerateNotes,
             PluginStep::Prepare,
         ];
         PluginResponse::from_ok(methods)
+    }
+
+    fn pre_flight(&self, params: request::PreFlight) -> response::PreFlight {
+        // Try to deserialize configuration
+        let _: ClogPluginConfig =
+            toml::Value::Table(params.cfg_map.get_sub_table("clog")?).try_into()?;
+        PluginResponse::from_ok(())
     }
 
     fn derive_next_version(
@@ -111,7 +130,9 @@ impl PluginInterface for ClogPlugin {
     }
 
     fn prepare(&self, params: request::Prepare) -> response::Prepare {
-        let changelog_path = params.cfg_map.changelog_path()?;
+        let cfg: ClogPluginConfig =
+            toml::Value::Table(params.cfg_map.get_sub_table("clog")?).try_into()?;
+        let changelog_path = &cfg.changelog;
         let repo_path = params.cfg_map.project_root()?;
 
         // Safely store the original changelog for restoration after dry-run is finished

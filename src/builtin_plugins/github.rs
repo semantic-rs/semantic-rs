@@ -95,7 +95,6 @@ impl PluginInterface for GithubPlugin {
             toml::Value::Table(params.cfg_map.get_sub_table("github")?).try_into()?;
 
         // Try to parse assets
-        let project_root = Path::new(params.cfg_map.project_root()?);
         globs_to_assets(cfg.assets.iter().map(String::as_str))
             .into_iter()
             .filter(Result::is_err)

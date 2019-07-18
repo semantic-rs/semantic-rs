@@ -195,8 +195,6 @@ pub trait CfgMapExt {
 
     fn project_root(&self) -> Result<&str, failure::Error>;
 
-    fn changelog_path(&self) -> Result<&str, failure::Error>;
-
     fn get_sub_table(
         &self,
         name: &str,
@@ -204,10 +202,6 @@ pub trait CfgMapExt {
 
     fn project_root_path_key() -> &'static str {
         "project_root"
-    }
-
-    fn changelog_path_key() -> &'static str {
-        "changelog"
     }
 }
 
@@ -224,13 +218,6 @@ impl CfgMapExt for CfgMap {
                 .map(toml::Value::String)
                 .ok_or_else(|| failure::err_msg("failed to convert PathBuf into UTF-8 string"))?;
             self.insert(CfgMap::project_root_path_key().into(), root_value);
-        }
-
-        if !self.contains_key(CfgMap::changelog_path_key()) {
-            self.insert(
-                CfgMap::changelog_path_key().into(),
-                toml::Value::String("Changelog.md".into()),
-            );
         }
 
         Ok(())
@@ -250,14 +237,6 @@ impl CfgMapExt for CfgMap {
             .and_then(|v| v.as_str())
             .ok_or(ConfigError::MissingProjectRootPath)?;
         Ok(pr)
-    }
-
-    fn changelog_path(&self) -> Result<&str, failure::Error> {
-        let path = self
-            .get(CfgMap::changelog_path_key())
-            .and_then(|v| v.as_str())
-            .ok_or(ConfigError::MissingChangelogPath)?;
-        Ok(path)
     }
 
     fn get_sub_table(
