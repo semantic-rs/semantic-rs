@@ -28,12 +28,6 @@ impl Discovery for CapabilitiesDiscovery {
             .as_interface()
             .methods(PluginRequest::with_default_data(Clone::clone(cfg_map)))?;
 
-        let capabilities = response
-            .into_iter()
-            .filter(|(_, flag)| *flag)
-            .map(|(step, _)| step)
-            .collect();
-
-        Ok(capabilities)
+        Ok(response)
     }
 }

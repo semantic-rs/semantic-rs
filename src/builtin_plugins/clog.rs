@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::ops::Try;
 
 use clog::Clog;
@@ -21,9 +20,7 @@ impl ClogPlugin {
 
 impl PluginInterface for ClogPlugin {
     fn methods(&self, _req: request::Methods) -> response::Methods {
-        let mut methods = HashMap::new();
-        methods.insert(PluginStep::DeriveNextVersion, true);
-        methods.insert(PluginStep::GenerateNotes, true);
+        let methods = vec![PluginStep::DeriveNextVersion, PluginStep::GenerateNotes];
         PluginResponse::from_ok(methods)
     }
 

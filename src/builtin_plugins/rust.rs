@@ -1,5 +1,4 @@
 use std::cell::RefCell;
-use std::collections::HashMap;
 use std::fs::File;
 use std::io::{Read, Write};
 use std::ops::Try;
@@ -47,10 +46,11 @@ struct DryRunGuard {
 
 impl PluginInterface for RustPlugin {
     fn methods(&self, _req: request::Methods) -> response::Methods {
-        let mut methods = HashMap::new();
-        methods.insert(PluginStep::PreFlight, true);
-        methods.insert(PluginStep::Prepare, true);
-        methods.insert(PluginStep::VerifyRelease, true);
+        let methods = vec![
+            PluginStep::PreFlight,
+            PluginStep::Prepare,
+            PluginStep::VerifyRelease,
+        ];
         PluginResponse::from_ok(methods)
     }
 

@@ -1,5 +1,4 @@
 use std::cell::RefCell;
-use std::collections::HashMap;
 use std::env;
 use std::ops::Try;
 
@@ -148,10 +147,11 @@ impl GitPlugin {
 
 impl PluginInterface for GitPlugin {
     fn methods(&self, _req: request::Methods) -> response::Methods {
-        let mut methods = HashMap::new();
-        methods.insert(PluginStep::PreFlight, true);
-        methods.insert(PluginStep::GetLastRelease, true);
-        methods.insert(PluginStep::Commit, true);
+        let methods = vec![
+            PluginStep::PreFlight,
+            PluginStep::GetLastRelease,
+            PluginStep::Commit,
+        ];
         PluginResponse::from_ok(methods)
     }
 

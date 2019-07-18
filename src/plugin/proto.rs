@@ -94,7 +94,6 @@ pub mod request {
 pub mod response {
     use super::*;
     use crate::plugin::PluginStep;
-    use std::collections::HashMap;
     use std::ops::Try;
 
     #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -217,7 +216,7 @@ pub mod response {
     }
 
     pub type Methods = PluginResponse<MethodsData>;
-    pub type MethodsData = HashMap<PluginStep, bool>;
+    pub type MethodsData = Vec<PluginStep>;
 
     pub type PreFlight = PluginResponse<PreFlightData>;
     pub type PreFlightData = Null;
