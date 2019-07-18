@@ -92,8 +92,11 @@ pub enum ResolvedPlugin {
     Builtin(Box<dyn PluginInterface>),
 }
 
-#[derive(Serialize, Deserialize, Debug, Copy, Clone, Eq, PartialEq, Hash)]
+#[derive(
+    Serialize, Deserialize, Debug, Copy, Clone, Eq, PartialEq, Hash, EnumString, IntoStaticStr,
+)]
 #[serde(rename_all = "snake_case")]
+#[strum(serialize_all = "snake_case")]
 pub enum PluginStep {
     PreFlight,
     GetLastRelease,
@@ -108,17 +111,7 @@ pub enum PluginStep {
 
 impl PluginStep {
     pub fn as_str(self) -> &'static str {
-        match self {
-            PluginStep::PreFlight => "pre_flight",
-            PluginStep::GetLastRelease => "get_last_release",
-            PluginStep::DeriveNextVersion => "derive_next_release",
-            PluginStep::GenerateNotes => "generate_notes",
-            PluginStep::Prepare => "prepare",
-            PluginStep::VerifyRelease => "verify_release",
-            PluginStep::Commit => "commit",
-            PluginStep::Publish => "publish",
-            PluginStep::Notify => "notify",
-        }
+        self.into()
     }
 
     pub fn kind(self) -> PluginStepKind {
@@ -132,27 +125,6 @@ impl PluginStep {
             | PluginStep::Notify => PluginStepKind::Shared,
             PluginStep::GetLastRelease | PluginStep::Commit => PluginStepKind::Singleton,
         }
-    }
-}
-
-impl FromStr for PluginStep {
-    type Err = failure::Error;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let variant = match s {
-            "pre_flight" => PluginStep::PreFlight,
-            "get_last_release" => PluginStep::GetLastRelease,
-            "derive_next_version" => PluginStep::DeriveNextVersion,
-            "generate_notes" => PluginStep::GenerateNotes,
-            "prepare" => PluginStep::Prepare,
-            "verify_release" => PluginStep::VerifyRelease,
-            "commit" => PluginStep::Commit,
-            "publish" => PluginStep::Publish,
-            "notify" => PluginStep::Notify,
-            other => Err(failure::format_err!("unknown step '{}'", other))?,
-        };
-
-        Ok(variant)
     }
 }
 

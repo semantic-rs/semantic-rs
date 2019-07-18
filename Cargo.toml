@@ -32,6 +32,8 @@ serde = { version = "1.0.94", features = ["derive"] }
 linked-hash-map = { version = "0.5.2", features = ["serde_impl"] }
 serde-value = "0.6.0"
 dotenv = "0.14.1"
+strum = "0.15.0"
+strum_macros = "0.15.0"
 
 [features]
 default = []

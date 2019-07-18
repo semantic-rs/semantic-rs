@@ -1,5 +1,8 @@
 #![feature(try_trait)]
 
+#[macro_use]
+extern crate strum_macros;
+
 mod builtin_plugins;
 mod config;
 mod kernel;
