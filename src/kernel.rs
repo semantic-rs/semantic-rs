@@ -499,7 +499,13 @@ trait KernelRoutine {
     }
 
     fn notify(kernel: &Kernel, data: &mut KernelData) -> KernelRoutineResult<()> {
-        unimplemented!()
+        execute_request(
+            || {
+                kernel.dispatcher.notify(())
+            },
+            all_responses_into_result,
+        )?;
+        Ok(())
     }
 }
 

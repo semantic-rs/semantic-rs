@@ -170,6 +170,9 @@ impl PluginDispatcher {
     }
 
     pub fn notify(&self, params: request::NotifyData) -> DispatchedMultiResult<response::Notify> {
-        unimplemented!()
+        self.dispatch(PluginStep::Notify, |p| {
+            p.as_interface()
+                .notify(PluginRequest::new(self.config.clone(), params))
+        })
     }
 }
