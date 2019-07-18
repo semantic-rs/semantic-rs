@@ -8,8 +8,6 @@ pub mod traits;
 pub use self::dispatcher::PluginDispatcher;
 pub use self::traits::PluginInterface;
 
-use std::str::FromStr;
-
 use serde::{Deserialize, Serialize};
 
 pub type PluginName = String;

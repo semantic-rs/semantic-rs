@@ -56,7 +56,7 @@ impl PluginDispatcher {
             plugins.iter().map(|plugin| match plugin.state() {
                 PluginState::Started(_) => Rc::clone(plugin),
                 _other_state => panic!(
-                    "all plugins gmust be started before calling PluginDispatcher::mapped_plugins"
+                    "all plugins must be started before calling PluginDispatcher::mapped_plugins"
                 ),
             })
         })

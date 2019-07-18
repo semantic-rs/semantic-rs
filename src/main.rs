@@ -30,9 +30,9 @@ fn main() -> Result<(), failure::Error> {
         )
         .get_matches();
 
-    let dry_run = clap_args.is_present("dry");
+    let is_dry_run = clap_args.is_present("dry");
 
-    let config = Config::from_toml("./releaserc.toml", dry_run)?;
+    let config = Config::from_toml("./releaserc.toml", is_dry_run)?;
     let kernel = Kernel::builder(config).build()?;
 
     if let Err(err) = kernel.run() {

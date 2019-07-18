@@ -25,7 +25,7 @@ const STEPS_WET: &[PluginStep] = &[PluginStep::Commit, PluginStep::Publish, Plug
 
 pub struct Kernel {
     dispatcher: PluginDispatcher,
-    dry_run: bool,
+    is_dry_run: bool,
 }
 
 impl Kernel {
@@ -55,7 +55,7 @@ impl Kernel {
             run_step(step)?;
         }
 
-        if self.dry_run {
+        if self.is_dry_run {
             log::info!("DRY RUN: skipping steps {:?}", STEPS_WET);
         } else {
             for &step in STEPS_WET {
@@ -108,12 +108,12 @@ impl KernelBuilder {
 
         // Create a dispatcher
         let cfg_map = mem::replace(&mut self.config.cfg, CfgMap::new());
-        let dry_run = cfg_map.is_dry_run()?;
+        let is_dry_run = cfg_map.is_dry_run()?;
         let dispatcher = PluginDispatcher::new(cfg_map, steps_to_plugins);
 
         Ok(Kernel {
             dispatcher,
-            dry_run,
+            is_dry_run,
         })
     }
 
