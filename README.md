@@ -304,7 +304,7 @@ Requirements:
   - Ubuntu: `libssl-dev`, `pkg-config`, `zlib1g-dev`
   - Mac Homebrew: `openssl`
 - Nightly Rust
-   * Requires `try_trait` feature
+   * Requires `try_trait` and `external_doc` features
 
 ### For OS X > 10.10
 

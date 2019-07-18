@@ -4,7 +4,6 @@ pub type GitRevision = String;
 
 pub type Null = ();
 
-// TODO: consider using something more Markdown-oriented
 pub type ReleaseNotes = String;
 
 pub type MethodName = String;
@@ -233,12 +232,14 @@ pub mod response {
     pub type GenerateNotesData = ReleaseNotes;
 
     pub type Prepare = PluginResponse<PrepareData>;
+    /// List of changed files to be committed
     pub type PrepareData = Vec<String>;
 
     pub type VerifyRelease = PluginResponse<VerifyReleaseData>;
     pub type VerifyReleaseData = Null;
 
     pub type Commit = PluginResponse<CommitData>;
+    /// Name of the created git tag
     pub type CommitData = String;
 
     pub type Publish = PluginResponse<PublishData>;

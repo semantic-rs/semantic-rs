@@ -1,4 +1,6 @@
-#![feature(try_trait)]
+#![feature(try_trait, external_doc)]
+#![deny(missing_docs)]
+#![doc(include = "../README.md")]
 
 #[macro_use]
 extern crate strum_macros;
