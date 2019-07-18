@@ -8,8 +8,6 @@ use linked_hash_map::LinkedHashMap;
 use serde::{de::Deserializer, de::Error as _, Deserialize, Serialize};
 
 use crate::plugin::{PluginName, PluginStep, PluginStepKind, UnresolvedPlugin};
-use clog::error::Error::ConfigFormatErr;
-use hyper::status::StatusCode::PayloadTooLarge;
 
 /// Map type override used in configs
 ///
@@ -41,7 +39,7 @@ impl Config {
     pub fn from_toml<P: AsRef<Path>>(path: P, dry: bool) -> Result<Self, failure::Error> {
         let mut file = File::open(path).map_err(|err| match err.kind() {
             std::io::ErrorKind::NotFound => ConfigError::FileNotFound.into(),
-            other => failure::Error::from(err),
+            _other => failure::Error::from(err),
         })?;
 
         let mut contents = String::new();

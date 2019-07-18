@@ -1,23 +1,19 @@
-use crate::config::{CfgMap, CfgMapExt};
+use std::cell::RefCell;
+use std::collections::HashMap;
+use std::env;
+use std::ops::Try;
+
+use failure::Fail;
+use git2::{self, Oid, Repository, Signature};
+use serde::{Deserialize, Serialize};
+
+use crate::config::CfgMapExt;
 use crate::plugin::proto::{
     request,
     response::{self, PluginResponse, PluginResponseBuilder},
 };
-use crate::plugin::{PluginInterface, PluginStep};
-
-use std::collections::HashMap;
-use std::ops::Try;
-
 use crate::plugin::proto::{GitRevision, Version};
-use crate::plugin::PluginStep::VerifyRelease;
-use failure::Fail;
-use git2::{self, Commit, Cred, Oid, PushOptions, Remote, RemoteCallbacks, Repository, Signature};
-use hubcaps::repositories::Repo;
-use serde::{Deserialize, Serialize};
-use std::cell::RefCell;
-use std::env;
-use std::path::Path;
-use toml::map::Map;
+use crate::plugin::{PluginInterface, PluginStep};
 
 pub struct GitPlugin {
     state: RefCell<GitPluginState>,
@@ -151,7 +147,7 @@ impl GitPlugin {
 }
 
 impl PluginInterface for GitPlugin {
-    fn methods(&self, req: request::Methods) -> response::Methods {
+    fn methods(&self, _req: request::Methods) -> response::Methods {
         let mut methods = HashMap::new();
         methods.insert(PluginStep::PreFlight, true);
         methods.insert(PluginStep::GetLastRelease, true);
@@ -184,7 +180,7 @@ impl PluginInterface for GitPlugin {
         response.body(()).build()
     }
 
-    fn get_last_release(&self, params: request::GetLastRelease) -> response::GetLastRelease {
+    fn get_last_release(&self, _params: request::GetLastRelease) -> response::GetLastRelease {
         let data_bind = self.state.borrow();
         let data = data_bind.as_initialized();
 
@@ -199,7 +195,7 @@ impl PluginInterface for GitPlugin {
         PluginResponse::from_ok(version)
     }
 
-    fn commit(&self, params: request::Commit) -> response::Commit {
+    fn commit(&self, _params: request::Commit) -> response::Commit {
         unimplemented!()
     }
 }

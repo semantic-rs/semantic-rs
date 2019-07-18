@@ -1,21 +1,16 @@
-use std::collections::HashMap;
-
-use failure::Fail;
+use std::fmt::Debug;
+use std::rc::Rc;
 
 use super::{
     proto::{
         request::{self, PluginRequest},
         response::{self, PluginResponse},
-        MethodName, Version,
+        Version,
     },
-    Plugin, PluginName, PluginState, PluginStep, ResolvedPlugin,
+    Plugin, PluginName, PluginState, PluginStep,
 };
 
-use crate::config::StepDefinition::Shared;
-use crate::config::{CfgMap, Config, Map};
-use std::borrow::Borrow;
-use std::fmt::Debug;
-use std::rc::Rc;
+use crate::config::{CfgMap, Map};
 
 pub struct PluginDispatcher {
     config: CfgMap,

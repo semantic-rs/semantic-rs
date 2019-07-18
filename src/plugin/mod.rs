@@ -8,10 +8,9 @@ pub mod traits;
 pub use self::dispatcher::PluginDispatcher;
 pub use self::traits::PluginInterface;
 
-use std::path::PathBuf;
+use std::str::FromStr;
 
 use serde::{Deserialize, Serialize};
-use std::str::FromStr;
 
 pub type PluginName = String;
 
@@ -91,7 +90,6 @@ pub enum UnresolvedPlugin {
 
 pub enum ResolvedPlugin {
     Builtin(Box<dyn PluginInterface>),
-    Binary(PathBuf),
 }
 
 #[derive(Serialize, Deserialize, Debug, Copy, Clone, Eq, PartialEq, Hash)]
@@ -109,7 +107,7 @@ pub enum PluginStep {
 }
 
 impl PluginStep {
-    pub fn as_str(&self) -> &'static str {
+    pub fn as_str(self) -> &'static str {
         match self {
             PluginStep::PreFlight => "pre_flight",
             PluginStep::GetLastRelease => "get_last_release",
@@ -123,7 +121,7 @@ impl PluginStep {
         }
     }
 
-    pub fn kind(&self) -> PluginStepKind {
+    pub fn kind(self) -> PluginStepKind {
         match self {
             PluginStep::PreFlight
             | PluginStep::DeriveNextVersion

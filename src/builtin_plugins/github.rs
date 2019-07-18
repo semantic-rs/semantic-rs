@@ -3,11 +3,9 @@ use std::ops::Try;
 
 use failure::Fail;
 
-use crate::config::{CfgMap, CfgMapExt};
 use crate::plugin::proto::{
     request,
     response::{self, PluginResponse},
-    GitRevision, Version,
 };
 use crate::plugin::{PluginInterface, PluginStep};
 
@@ -20,7 +18,7 @@ impl GithubPlugin {
 }
 
 impl PluginInterface for GithubPlugin {
-    fn methods(&self, req: request::Methods) -> response::Methods {
+    fn methods(&self, _req: request::Methods) -> response::Methods {
         let mut methods = HashMap::new();
         methods.insert(PluginStep::PreFlight, true);
         methods.insert(PluginStep::Publish, true);

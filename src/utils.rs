@@ -20,7 +20,7 @@ impl<T, E> ResultExt<T, E> for Result<T, E> {
 
 pub fn user_repo_from_url(url: &str) -> Result<(String, String), String> {
     let path = match Url::parse(url) {
-        Err(ParseError::RelativeUrlWithoutBase) => match url.rfind(":") {
+        Err(ParseError::RelativeUrlWithoutBase) => match url.rfind(':') {
             None => return Err("Can't parse path from remote URL".into()),
             Some(colon_pos) => Some(
                 url[colon_pos + 1..]

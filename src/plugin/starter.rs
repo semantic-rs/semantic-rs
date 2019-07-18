@@ -1,16 +1,10 @@
-use crate::plugin::{
-    Plugin, PluginInterface, PluginName, PluginState, ResolvedPlugin, UnresolvedPlugin,
-};
+use crate::plugin::{Plugin, PluginInterface, PluginName, PluginState, ResolvedPlugin};
 
-pub struct PluginStarter {
-    binary: BinaryStarter,
-}
+pub struct PluginStarter {}
 
 impl PluginStarter {
     pub fn new() -> Self {
-        PluginStarter {
-            binary: BinaryStarter::new(),
-        }
+        PluginStarter {}
     }
 }
 
@@ -24,7 +18,6 @@ impl PluginStarter {
             PluginState::Started(started) => started,
             PluginState::Resolved(resolved) => match resolved {
                 ResolvedPlugin::Builtin(builtin) => builtin,
-                ResolvedPlugin::Binary(_) => self.binary.start(&name, &resolved)?,
             },
         };
         Ok(Plugin::new(name, PluginState::Started(started)))
@@ -37,22 +30,4 @@ trait Starter {
         name: &PluginName,
         meta: &ResolvedPlugin,
     ) -> Result<Box<dyn PluginInterface>, failure::Error>;
-}
-
-struct BinaryStarter;
-
-impl BinaryStarter {
-    pub fn new() -> BinaryStarter {
-        BinaryStarter
-    }
-}
-
-impl Starter for BinaryStarter {
-    fn start(
-        &self,
-        name: &PluginName,
-        meta: &ResolvedPlugin,
-    ) -> Result<Box<dyn PluginInterface>, failure::Error> {
-        unimplemented!()
-    }
 }

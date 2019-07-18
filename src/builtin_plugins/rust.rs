@@ -1,21 +1,19 @@
+use std::cell::RefCell;
 use std::collections::HashMap;
+use std::fs::File;
+use std::io::{Read, Write};
 use std::ops::Try;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use failure::Fail;
 
-use crate::config::{CfgMap, CfgMapExt};
+use crate::config::CfgMapExt;
 use crate::plugin::proto::{
     request,
     response::{self, PluginResponse},
-    GitRevision, Version,
 };
 use crate::plugin::{PluginInterface, PluginStep};
-use std::cell::RefCell;
-use std::ffi::OsString;
-use std::fs::File;
-use std::io::{Read, Write};
-use std::path::{Path, PathBuf};
 
 pub struct RustPlugin {
     dry_run_guard: RefCell<Option<DryRunGuard>>,
@@ -36,6 +34,7 @@ impl Drop for RustPlugin {
             log::info!("rust(dry-run): restoring original state of Cargo.toml");
             if let Err(err) = guard.cargo.write_manifest_raw(&guard.original_manifest) {
                 log::error!("rust: failed to restore original manifest, sorry x_x");
+                log::error!("{}", err);
             }
         }
     }
@@ -47,7 +46,7 @@ struct DryRunGuard {
 }
 
 impl PluginInterface for RustPlugin {
-    fn methods(&self, req: request::Methods) -> response::Methods {
+    fn methods(&self, _req: request::Methods) -> response::Methods {
         let mut methods = HashMap::new();
         methods.insert(PluginStep::PreFlight, true);
         methods.insert(PluginStep::Prepare, true);

@@ -1,6 +1,3 @@
-use std::fmt::{self, Display};
-use std::path::PathBuf;
-
 use serde::{Deserialize, Serialize};
 
 pub type GitRevision = String;
@@ -97,8 +94,6 @@ pub mod request {
 pub mod response {
     use super::*;
     use crate::plugin::PluginStep;
-    use failure::Fail;
-    use std::borrow::Borrow;
     use std::collections::HashMap;
     use std::ops::Try;
 

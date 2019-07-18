@@ -1,9 +1,5 @@
-use std::ops::Try;
-
-use failure::Fail;
-
 use crate::config::CfgMap;
-use crate::plugin::proto::request::{Methods, PluginRequest};
+use crate::plugin::proto::request::PluginRequest;
 use crate::plugin::{Plugin, PluginStep};
 
 pub trait Discovery {

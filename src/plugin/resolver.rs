@@ -1,6 +1,5 @@
 use failure::Fail;
 
-use crate::config::PluginDefinition;
 use crate::plugin::{
     Plugin, PluginInterface, PluginName, PluginState, ResolvedPlugin, UnresolvedPlugin,
 };
@@ -23,7 +22,7 @@ impl PluginResolver {
             return Ok(plugin);
         }
 
-        let (name, mut state) = plugin.decompose();
+        let (name, state) = plugin.decompose();
         let meta = state.as_unresolved().unwrap();
 
         let new_meta = match meta {
@@ -55,7 +54,7 @@ impl Resolver for BuiltinResolver {
     fn resolve(
         &self,
         name: &PluginName,
-        meta: &UnresolvedPlugin,
+        _meta: &UnresolvedPlugin,
     ) -> Result<ResolvedPlugin, failure::Error> {
         use crate::builtin_plugins::{ClogPlugin, GitPlugin, GithubPlugin, RustPlugin};
         let plugin: Box<dyn PluginInterface> = match name.as_str() {

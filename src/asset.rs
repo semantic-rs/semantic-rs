@@ -1,5 +1,5 @@
-use failure::Error;
 use std::path::{Path, PathBuf};
+use failure::Error;
 
 #[derive(Clone, Debug)]
 pub struct Asset {

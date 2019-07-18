@@ -3,7 +3,7 @@ use std::ops::Try;
 
 use clog::Clog;
 
-use crate::config::{CfgMap, CfgMapExt};
+use crate::config::CfgMapExt;
 use crate::plugin::proto::{
     request,
     response::{self, PluginResponse},
@@ -20,7 +20,7 @@ impl ClogPlugin {
 }
 
 impl PluginInterface for ClogPlugin {
-    fn methods(&self, req: request::Methods) -> response::Methods {
+    fn methods(&self, _req: request::Methods) -> response::Methods {
         let mut methods = HashMap::new();
         methods.insert(PluginStep::DeriveNextVersion, true);
         methods.insert(PluginStep::GenerateNotes, true);
@@ -35,7 +35,7 @@ impl PluginInterface for ClogPlugin {
 
         let bump = match &current_version {
             Version::None(_) => CommitType::Major,
-            Version::Semver(rev, version) => version_bump_since_rev(&cfg.project_root()?, &rev)?,
+            Version::Semver(rev, _) => version_bump_since_rev(&cfg.project_root()?, &rev)?,
         };
 
         let next_version = match current_version {
@@ -115,10 +115,9 @@ use self::CommitType::*;
 use clog::fmt::MarkdownWriter;
 use git2::{Commit, Repository};
 use std::io::BufWriter;
-use std::panic::RefUnwindSafe;
 
 pub fn analyze_single(commit_str: &str) -> Result<CommitType, failure::Error> {
-    let message = commit_str.trim().split_terminator("\n").nth(1);
+    let message = commit_str.trim().split_terminator('\n').nth(1);
 
     let clog = Clog::new().expect("Clog initialization failed");
     let commit = clog.parse_raw_commit(commit_str);

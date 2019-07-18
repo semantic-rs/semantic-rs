@@ -1,4 +1,3 @@
-use std::collections::{HashMap, HashSet};
 use std::mem;
 use std::ops::Try;
 use std::rc::Rc;
@@ -7,14 +6,11 @@ use failure::Fail;
 
 use crate::config::{CfgMap, CfgMapExt, Config, Map, PluginDefinitionMap, StepDefinition};
 use crate::plugin::discovery::{CapabilitiesDiscovery, Discovery as _};
-use crate::plugin::proto::request::{GenerateNotesData, PluginRequest};
-use crate::plugin::proto::response::PluginResponse;
 use crate::plugin::proto::Version;
+use crate::plugin::proto::{request, response::PluginResponse};
 use crate::plugin::resolver::PluginResolver;
 use crate::plugin::starter::PluginStarter;
-use crate::plugin::{
-    Plugin, PluginDispatcher, PluginName, PluginState, PluginStep, ResolvedPlugin,
-};
+use crate::plugin::{Plugin, PluginDispatcher, PluginName, PluginState, PluginStep};
 
 const STEPS_DRY: &[PluginStep] = &[
     PluginStep::PreFlight,
@@ -160,7 +156,7 @@ impl KernelBuilder {
             for step in plugin_caps {
                 capabilities
                     .entry(step)
-                    .or_insert_with(|| Vec::new())
+                    .or_insert_with(Vec::new)
                     .push(plugin.name().clone());
             }
         }
@@ -183,13 +179,7 @@ impl KernelBuilder {
         ) -> Vec<Rc<Plugin>> {
             plugins
                 .iter()
-                .filter(|p| {
-                    names
-                        .iter()
-                        .map(AsRef::as_ref)
-                        .find(|n| n == p.name())
-                        .is_some()
-                })
+                .filter(|p| names.iter().map(AsRef::as_ref).any(|n| n == p.name()))
                 .map(Rc::clone)
                 .collect::<Vec<_>>()
         }
@@ -373,13 +363,13 @@ type KernelRoutineResult<T> = Result<T, failure::Error>;
 trait KernelRoutine {
     fn execute(&self, kernel: &Kernel, data: &mut KernelData) -> KernelRoutineResult<()>;
 
-    fn pre_flight(kernel: &Kernel, data: &mut KernelData) -> KernelRoutineResult<()> {
+    fn pre_flight(kernel: &Kernel, _data: &mut KernelData) -> KernelRoutineResult<()> {
         execute_request(|| kernel.dispatcher.pre_flight(), all_responses_into_result)?;
         Ok(())
     }
 
     fn get_last_release(kernel: &Kernel, data: &mut KernelData) -> KernelRoutineResult<()> {
-        let (plugin_name, response) = kernel.dispatcher.get_last_release()?;
+        let (_, response) = kernel.dispatcher.get_last_release()?;
         let response = response.into_result()?;
         data.set_last_version(response);
         Ok(())
@@ -406,7 +396,7 @@ trait KernelRoutine {
     fn generate_notes(kernel: &Kernel, data: &mut KernelData) -> KernelRoutineResult<()> {
         let responses = execute_request(
             || {
-                let params = GenerateNotesData {
+                let params = request::GenerateNotesData {
                     start_rev: data.require_last_version()?.rev().to_owned(),
                     new_version: data.require_next_version()?.clone(),
                 };
@@ -442,7 +432,7 @@ trait KernelRoutine {
         Ok(())
     }
 
-    fn verify_release(kernel: &Kernel, data: &mut KernelData) -> KernelRoutineResult<()> {
+    fn verify_release(kernel: &Kernel, _data: &mut KernelData) -> KernelRoutineResult<()> {
         execute_request(
             || kernel.dispatcher.verify_release(),
             all_responses_into_result,
