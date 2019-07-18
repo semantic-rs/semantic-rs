@@ -51,15 +51,12 @@ impl PluginDispatcher {
         Ok((plugin.name().to_owned(), response))
     }
 
-    fn mapped_plugins<'a>(
-        &'a self,
-        step: PluginStep,
-    ) -> Option<impl Iterator<Item = Rc<Plugin>> + 'a> {
+    fn mapped_plugins(&self, step: PluginStep) -> Option<impl Iterator<Item = Rc<Plugin>> + '_> {
         self.map.get(&step).map(|plugins| {
             plugins.iter().map(|plugin| match plugin.state() {
                 PluginState::Started(_) => Rc::clone(plugin),
                 _other_state => panic!(
-                    "all plugins must be started before calling PluginDispatcher::mapped_plugins"
+                    "all plugins gmust be started before calling PluginDispatcher::mapped_plugins"
                 ),
             })
         })
