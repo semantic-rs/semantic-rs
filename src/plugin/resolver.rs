@@ -18,7 +18,7 @@ impl PluginResolver {
     }
 
     pub fn resolve(&self, plugin: Plugin) -> Result<Plugin, failure::Error> {
-        if !plugin.state.is_unresolved() {
+        if plugin.state.is_resolved() {
             return Ok(plugin);
         }
 
