@@ -116,12 +116,13 @@ impl PluginStep {
         match self {
             PluginStep::PreFlight
             | PluginStep::DeriveNextVersion
-            | PluginStep::GenerateNotes
             | PluginStep::Prepare
             | PluginStep::VerifyRelease
             | PluginStep::Publish
             | PluginStep::Notify => PluginStepKind::Shared,
-            PluginStep::GetLastRelease | PluginStep::Commit => PluginStepKind::Singleton,
+            PluginStep::GetLastRelease | PluginStep::GenerateNotes | PluginStep::Commit => {
+                PluginStepKind::Singleton
+            }
         }
     }
 }
