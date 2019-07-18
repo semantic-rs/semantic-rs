@@ -11,17 +11,39 @@ use crate::plugin::proto::{
     GitRevision, Version,
 };
 use crate::plugin::{PluginInterface, PluginStep};
+use std::cell::RefCell;
 use std::ffi::OsString;
 use std::fs::File;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 
-pub struct RustPlugin {}
+pub struct RustPlugin {
+    dry_run_guard: RefCell<Option<DryRunGuard>>,
+}
 
 impl RustPlugin {
     pub fn new() -> Self {
-        RustPlugin {}
+        RustPlugin {
+            dry_run_guard: RefCell::default(),
+        }
     }
+}
+
+impl Drop for RustPlugin {
+    fn drop(&mut self) {
+        let guard = self.dry_run_guard.borrow();
+        if let Some(guard) = guard.as_ref() {
+            log::info!("rust(dry-run): restoring original state of Cargo.toml");
+            if let Err(err) = guard.cargo.write_manifest_raw(&guard.original_manifest) {
+                log::error!("rust: failed to restore original manifest, sorry x_x");
+            }
+        }
+    }
+}
+
+struct DryRunGuard {
+    original_manifest: Vec<u8>,
+    cargo: Cargo,
 }
 
 impl PluginInterface for RustPlugin {
@@ -50,6 +72,19 @@ impl PluginInterface for RustPlugin {
 
         let cargo = Cargo::new(project_root, token)?;
 
+        // If we're in the dry-run mode, we don't wanna change the Cargo.toml manifest,
+        // so we save the original state of it, which would be written to
+        if params.cfg_map.is_dry_run()? {
+            log::info!("rust(dry-run): saving original state of Cargo.toml");
+
+            let guard = DryRunGuard {
+                original_manifest: cargo.load_manifest_raw()?,
+                cargo: cargo.clone(),
+            };
+
+            self.dry_run_guard.replace(Some(guard));
+        }
+
         cargo.set_version(params.data)?;
 
         PluginResponse::from_ok(())
@@ -72,6 +107,7 @@ impl PluginInterface for RustPlugin {
     }
 }
 
+#[derive(Clone, Debug)]
 struct Cargo {
     manifest_path: PathBuf,
     token: String,
@@ -147,18 +183,26 @@ impl Cargo {
         Ok(())
     }
 
-    pub fn load_manifest(&self) -> Result<toml::Value, failure::Error> {
+    pub fn load_manifest_raw(&self) -> Result<Vec<u8>, failure::Error> {
         let mut manifest_file = File::open(&self.manifest_path)?;
         let mut contents = Vec::new();
         manifest_file.read_to_end(&mut contents)?;
-        Ok(toml::from_slice(&contents)?)
+        Ok(contents)
+    }
+
+    pub fn load_manifest(&self) -> Result<toml::Value, failure::Error> {
+        Ok(toml::from_slice(&self.load_manifest_raw()?)?)
+    }
+
+    pub fn write_manifest_raw(&self, contents: &[u8]) -> Result<(), failure::Error> {
+        let mut manifest_file = File::create(&self.manifest_path)?;
+        manifest_file.write_all(contents)?;
+        Ok(())
     }
 
     pub fn write_manifest(&self, manifest: toml::Value) -> Result<(), failure::Error> {
-        let mut manifest_file = File::create(&self.manifest_path)?;
         let contents = toml::to_string_pretty(&manifest)?;
-        manifest_file.write_all(contents.as_bytes())?;
-        Ok(())
+        self.write_manifest_raw(contents.as_bytes())
     }
 
     pub fn set_version(&self, version: semver::Version) -> Result<(), failure::Error> {
