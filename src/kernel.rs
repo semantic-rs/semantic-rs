@@ -327,6 +327,8 @@ struct KernelData {
     last_version: Option<Version>,
     next_version: Option<semver::Version>,
     changelog: Option<String>,
+    files_to_commit: Option<Vec<String>>,
+    tag_name: Option<String>,
 }
 
 impl KernelData {
@@ -342,20 +344,36 @@ impl KernelData {
         self.changelog = Some(changelog)
     }
 
+    fn set_files_to_commit(&mut self, files: Vec<String>) {
+        self.files_to_commit = Some(files);
+    }
+
+    fn set_tag_name(&mut self, tag_name: String) {
+        self.tag_name = Some(tag_name);
+    }
+
     fn require_last_version(&self) -> Result<&Version, failure::Error> {
-        Ok(Self::_require(|| self.last_version.as_ref())?)
+        Ok(Self::_require("last_version", || self.last_version.as_ref())?)
     }
 
     fn require_next_version(&self) -> Result<&semver::Version, failure::Error> {
-        Ok(Self::_require(|| self.next_version.as_ref())?)
+        Ok(Self::_require("next_version", || self.next_version.as_ref())?)
     }
 
     fn require_changelog(&self) -> Result<&str, failure::Error> {
-        Ok(Self::_require(|| self.changelog.as_ref())?)
+        Ok(Self::_require("changelog", || self.changelog.as_ref())?)
     }
 
-    fn _require<T>(query_fn: impl Fn() -> Option<T>) -> Result<T, failure::Error> {
-        let data = query_fn().ok_or_else(|| KernelError::MissingRequiredData("last_version"))?;
+    fn require_files_to_commit(&self) -> Result<&[String], failure::Error> {
+        Ok(Self::_require("files_to_commit", || self.files_to_commit.as_ref())?)
+    }
+
+    fn requite_tag_name(&self) -> Result<&str, failure::Error> {
+        Ok(Self::_require("tag_name", || self.tag_name.as_ref())?)
+    }
+
+    fn _require<T>(desc: &'static str, query_fn: impl Fn() -> Option<T>) -> Result<T, failure::Error> {
+        let data = query_fn().ok_or_else(|| KernelError::MissingRequiredData(desc))?;
         Ok(data)
     }
 }
@@ -423,7 +441,7 @@ trait KernelRoutine {
     }
 
     fn prepare(kernel: &Kernel, data: &mut KernelData) -> KernelRoutineResult<()> {
-        execute_request(
+        let responses = execute_request(
             || {
                 kernel
                     .dispatcher
@@ -431,6 +449,13 @@ trait KernelRoutine {
             },
             all_responses_into_result,
         )?;
+
+        let changed_files = responses.into_iter()
+            .flat_map(|(_, v)| v.into_iter())
+            .collect();
+
+        data.set_files_to_commit(changed_files);
+
         Ok(())
     }
 
@@ -443,7 +468,19 @@ trait KernelRoutine {
     }
 
     fn commit(kernel: &Kernel, data: &mut KernelData) -> KernelRoutineResult<()> {
-        unimplemented!()
+        let params = request::CommitData {
+            files_to_commit: data.require_files_to_commit()?.to_owned(),
+            version: data.require_next_version()?.clone(),
+            changelog: data.require_changelog()?.to_owned(),
+        };
+
+        let (_, response) = kernel.dispatcher.commit(params)?;
+
+        let tag_name = response.into_result()?;
+
+        data.set_tag_name(tag_name);
+
+        Ok(())
     }
 
     fn publish(kernel: &Kernel, data: &mut KernelData) -> KernelRoutineResult<()> {

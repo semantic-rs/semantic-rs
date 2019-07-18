@@ -137,7 +137,7 @@ impl PluginInterface for ClogPlugin {
         log::info!("clog: writing updated changelog");
         clog.write_changelog()?;
 
-        PluginResponse::from_ok(())
+        PluginResponse::from_ok(vec![changelog_path.to_owned()])
     }
 }
 

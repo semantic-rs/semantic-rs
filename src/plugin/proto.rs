@@ -73,7 +73,13 @@ pub mod request {
     pub type VerifyReleaseData = Null;
 
     pub type Commit = PluginRequest<CommitData>;
-    pub type CommitData = Null;
+
+    #[derive(Clone, Debug)]
+    pub struct CommitData {
+        pub files_to_commit: Vec<String>,
+        pub version: semver::Version,
+        pub changelog: String,
+    }
 
     pub type Publish = PluginRequest<PublishData>;
     pub type PublishData = Null;
@@ -222,13 +228,13 @@ pub mod response {
     pub type GenerateNotesData = ReleaseNotes;
 
     pub type Prepare = PluginResponse<PrepareData>;
-    pub type PrepareData = Null;
+    pub type PrepareData = Vec<String>;
 
     pub type VerifyRelease = PluginResponse<VerifyReleaseData>;
     pub type VerifyReleaseData = Null;
 
     pub type Commit = PluginResponse<CommitData>;
-    pub type CommitData = Null;
+    pub type CommitData = String;
 
     pub type Publish = PluginResponse<PublishData>;
     pub type PublishData = Null;

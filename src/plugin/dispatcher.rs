@@ -44,7 +44,7 @@ impl PluginDispatcher {
     fn dispatch_singleton<RFR: Debug>(
         &self,
         step: PluginStep,
-        call_fn: impl Fn(&Plugin) -> PluginResponse<RFR>,
+        call_fn: impl FnOnce(&Plugin) -> PluginResponse<RFR>,
     ) -> DispatchedSingletonResult<PluginResponse<RFR>> {
         let plugin = self.mapped_singleton(step);
         log::info!("Invoking singleton '{}'", plugin.name());
@@ -104,7 +104,7 @@ impl PluginDispatcher {
     }
 
     pub fn get_last_release(&self) -> DispatchedSingletonResult<response::GetLastRelease> {
-        self.dispatch_singleton(PluginStep::GetLastRelease, |p| {
+        self.dispatch_singleton(PluginStep::GetLastRelease, move |p| {
             p.as_interface()
                 .get_last_release(PluginRequest::with_default_data(self.config.clone()))
         })
@@ -153,7 +153,10 @@ impl PluginDispatcher {
         &self,
         params: request::CommitData,
     ) -> DispatchedSingletonResult<response::Commit> {
-        unimplemented!()
+        self.dispatch_singleton(PluginStep::Commit, move |p| {
+            p.as_interface()
+                .commit(PluginRequest::new(self.config.clone(), params))
+        })
     }
 
     pub fn publish(
