@@ -1,7 +1,0 @@
-[package]
-name = "has-no-remote"
-version = "0.1.0"
-authors = ["Jan Schulte <hello@unexpected-co.de>", "Jan-Erik Rediger <janerik@fnordig.de>"]
-description = "has-no-remote"
-license = "MIT"
-

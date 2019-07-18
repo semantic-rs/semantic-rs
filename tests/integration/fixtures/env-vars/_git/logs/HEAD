@@ -1,7 +1,0 @@
-0000000000000000000000000000000000000000 a5307cd68d81579be3991131c8ef2aa3507fc935 Jan-Erik Rediger <janerik@fnordig.de> 1451325357 +0100	commit (initial): init
-a5307cd68d81579be3991131c8ef2aa3507fc935 ce1870ba71524d37c3350f7ba7c41d0e37c216f8 Jan-Erik Rediger <janerik@fnordig.de> 1451325402 +0100	commit: feat: It works
-ce1870ba71524d37c3350f7ba7c41d0e37c216f8 1fa4fce26790dd6f5a13d9acd79667895894e153 Jan-Erik Rediger <janerik@fnordig.de> 1456270639 +0100	commit: files
-1fa4fce26790dd6f5a13d9acd79667895894e153 a5307cd68d81579be3991131c8ef2aa3507fc935 Jan-Erik Rediger <janerik@fnordig.de> 1456270647 +0100	rebase -i (start): checkout HEAD~2
-a5307cd68d81579be3991131c8ef2aa3507fc935 7a764d7a1feb987acdb4a14a6d44ab464c6b7abe Jan-Erik Rediger <janerik@fnordig.de> 1456270647 +0100	rebase -i (pick): files
-7a764d7a1feb987acdb4a14a6d44ab464c6b7abe 4485b6a2418c6488fe2fe0dc64222304f59111fe Jan-Erik Rediger <janerik@fnordig.de> 1456270647 +0100	rebase -i (pick): feat: It works
-4485b6a2418c6488fe2fe0dc64222304f59111fe 4485b6a2418c6488fe2fe0dc64222304f59111fe Jan-Erik Rediger <janerik@fnordig.de> 1456270647 +0100	rebase -i (finish): returning to refs/heads/master

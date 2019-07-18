@@ -1,7 +1,0 @@
-0000000000000000000000000000000000000000 a5307cd68d81579be3991131c8ef2aa3507fc935 Jan-Erik Rediger <janerik@fnordig.de> 1451325357 +0100	commit (initial): init
-a5307cd68d81579be3991131c8ef2aa3507fc935 ce1870ba71524d37c3350f7ba7c41d0e37c216f8 Jan-Erik Rediger <janerik@fnordig.de> 1451325402 +0100	commit: feat: It works
-ce1870ba71524d37c3350f7ba7c41d0e37c216f8 c9e92bd2bfd6e6062652c1238cf29d2d9be1724e Jan-Erik Rediger <janerik@fnordig.de> 1456269912 +0100	commit: files
-c9e92bd2bfd6e6062652c1238cf29d2d9be1724e f89e0a56cb2c55efabca751458744e23f342573b Jan-Erik Rediger <janerik@fnordig.de> 1456269919 +0100	rebase -i (finish): refs/heads/master onto a5307cd68d81579be3991131c8ef2aa3507fc935
-f89e0a56cb2c55efabca751458744e23f342573b 5cad87da1cdf20580ec1903ba537167ffd6103da Jan-Erik Rediger <janerik@fnordig.de> 1456270158 +0100	commit: f
-5cad87da1cdf20580ec1903ba537167ffd6103da 06930168dc8513530a90417fee55f4c78777715c Jan-Erik Rediger <janerik@fnordig.de> 1456270165 +0100	rebase -i (finish): refs/heads/master onto 51a75f1b4fae0b3497e45b58031fbadc23956a56
-06930168dc8513530a90417fee55f4c78777715c 1e7e98bc929ba1cc761c9274f1fead33dd5914ec Jan-Erik Rediger <janerik@fnordig.de> 1456270176 +0100	rebase -i (finish): refs/heads/master onto 51a75f1b4fae0b3497e45b58031fbadc23956a56
