@@ -98,6 +98,8 @@ jobs:
       - attach_workspace:
           at: /workspace
       - restore_cache: *restore-deps-cache-rust
+      # Prepare binary for publishing
+      - run: mkdir bin/ && cp /workspace/semantic-rs-linux /bin/semantic-rs-linux
       # This unset is VERY important: without it --force-https cannot work
       # For some reason CircleCI has a global override substituting git@ links instead of all https links
       - run: git config --global --unset url.ssh://git@github.com.insteadof
