@@ -9,7 +9,7 @@ use crate::plugin::proto::Version;
 use crate::plugin::proto::{request, response::PluginResponse};
 use crate::plugin::resolver::PluginResolver;
 use crate::plugin::starter::PluginStarter;
-use crate::plugin::{Plugin, PluginDispatcher, PluginName, PluginState, PluginStep, StartedPlugin};
+use crate::plugin::{Plugin, PluginDispatcher, PluginStep, RawPlugin, RawPluginState};
 
 const STEPS_DRY: &[PluginStep] = &[
     PluginStep::PreFlight,
@@ -68,11 +68,11 @@ impl Kernel {
 
 pub struct KernelBuilder {
     config: Config,
-    additional_plugins: Vec<Plugin>,
+    additional_plugins: Vec<RawPlugin>,
 }
 
 impl KernelBuilder {
-    pub fn plugin(&mut self, plugin: Plugin) -> &mut Self {
+    pub fn plugin(&mut self, plugin: RawPlugin) -> &mut Self {
         self.additional_plugins.push(plugin);
         self
     }
@@ -117,14 +117,14 @@ impl KernelBuilder {
         })
     }
 
-    fn plugin_def_map_to_vec(plugins: PluginDefinitionMap) -> Vec<Plugin> {
+    fn plugin_def_map_to_vec(plugins: PluginDefinitionMap) -> Vec<RawPlugin> {
         plugins
             .into_iter()
-            .map(|(name, def)| Plugin::new(name, PluginState::Unresolved(def.into_full())))
+            .map(|(name, def)| RawPlugin::new(name, RawPluginState::Unresolved(def.into_full())))
             .collect()
     }
 
-    fn resolve_plugins(plugins: Vec<Plugin>) -> Result<Vec<Plugin>, failure::Error> {
+    fn resolve_plugins(plugins: Vec<RawPlugin>) -> Result<Vec<RawPlugin>, failure::Error> {
         log::info!("Resolving plugins");
         let resolver = PluginResolver::new();
         let plugins = plugins
@@ -134,7 +134,7 @@ impl KernelBuilder {
         Ok(plugins)
     }
 
-    fn start_plugins(plugins: Vec<Plugin>) -> Result<Vec<StartedPlugin>, failure::Error> {
+    fn start_plugins(plugins: Vec<RawPlugin>) -> Result<Vec<Plugin>, failure::Error> {
         log::info!("Starting plugins");
         let starter = PluginStarter::new();
         let plugins = plugins
@@ -146,8 +146,8 @@ impl KernelBuilder {
 
     fn discover_capabilities(
         cfg_map: &CfgMap,
-        plugins: &[StartedPlugin],
-    ) -> Result<Map<PluginStep, Vec<PluginName>>, failure::Error> {
+        plugins: &[Plugin],
+    ) -> Result<Map<PluginStep, Vec<String>>, failure::Error> {
         let discovery = CapabilitiesDiscovery::new();
         let mut capabilities = Map::new();
 
@@ -166,15 +166,12 @@ impl KernelBuilder {
 
     fn build_steps_to_plugins_map(
         config: &Config,
-        plugins: Vec<StartedPlugin>,
-        capabilities: Map<PluginStep, Vec<PluginName>>,
-    ) -> Result<Map<PluginStep, Vec<StartedPlugin>>, failure::Error> {
+        plugins: Vec<Plugin>,
+        capabilities: Map<PluginStep, Vec<String>>,
+    ) -> Result<Map<PluginStep, Vec<Plugin>>, failure::Error> {
         let mut map = Map::new();
 
-        fn copy_plugins_matching(
-            plugins: &[StartedPlugin],
-            names: &[impl AsRef<str>],
-        ) -> Vec<StartedPlugin> {
+        fn copy_plugins_matching(plugins: &[Plugin], names: &[impl AsRef<str>]) -> Vec<Plugin> {
             plugins
                 .iter()
                 .filter(|p| names.iter().map(AsRef::as_ref).any(|n| n == p.name))
@@ -246,7 +243,7 @@ impl KernelBuilder {
         Ok(map)
     }
 
-    fn check_all_resolved(plugins: &[Plugin]) -> Result<(), failure::Error> {
+    fn check_all_resolved(plugins: &[RawPlugin]) -> Result<(), failure::Error> {
         let unresolved = Self::list_not_resolved_plugins(plugins);
         if unresolved.is_empty() {
             Ok(())
@@ -255,7 +252,7 @@ impl KernelBuilder {
         }
     }
 
-    fn check_all_started(plugins: &[Plugin]) -> Result<(), failure::Error> {
+    fn check_all_started(plugins: &[RawPlugin]) -> Result<(), failure::Error> {
         let not_started = Self::list_not_started_plugins(plugins);
         if not_started.is_empty() {
             Ok(())
@@ -264,24 +261,24 @@ impl KernelBuilder {
         }
     }
 
-    fn list_not_resolved_plugins(plugins: &[Plugin]) -> Vec<PluginName> {
+    fn list_not_resolved_plugins(plugins: &[RawPlugin]) -> Vec<String> {
         Self::list_all_plugins_that(plugins, |plugin| match plugin.state() {
-            PluginState::Unresolved(_) => true,
-            PluginState::Resolved(_) | PluginState::Started(_) => false,
+            RawPluginState::Unresolved(_) => true,
+            RawPluginState::Resolved(_) | RawPluginState::Started(_) => false,
         })
     }
 
-    fn list_not_started_plugins(plugins: &[Plugin]) -> Vec<PluginName> {
+    fn list_not_started_plugins(plugins: &[RawPlugin]) -> Vec<String> {
         Self::list_all_plugins_that(plugins, |plugin| match plugin.state() {
-            PluginState::Unresolved(_) | PluginState::Resolved(_) => true,
-            PluginState::Started(_) => false,
+            RawPluginState::Unresolved(_) | RawPluginState::Resolved(_) => true,
+            RawPluginState::Started(_) => false,
         })
     }
 
     fn list_all_plugins_that(
-        plugins: &[Plugin],
-        filter: impl Fn(&Plugin) -> bool,
-    ) -> Vec<PluginName> {
+        plugins: &[RawPlugin],
+        filter: impl Fn(&RawPlugin) -> bool,
+    ) -> Vec<String> {
         plugins
             .iter()
             .filter_map(|plugin| {
@@ -298,9 +295,9 @@ impl KernelBuilder {
 #[derive(Fail, Debug)]
 enum KernelError {
     #[fail(display = "failed to resolve some modules: \n{:#?}", _0)]
-    FailedToResolvePlugins(Vec<PluginName>),
+    FailedToResolvePlugins(Vec<String>),
     #[fail(display = "failed to start some modules: \n{:#?}", _0)]
-    FailedToStartPlugins(Vec<PluginName>),
+    FailedToStartPlugins(Vec<String>),
     #[fail(
         display = "no plugins is capable of satisfying a non-null step {:?}",
         _0
@@ -310,7 +307,7 @@ enum KernelError {
         display = "step {:?} requested plugin {:?}, but it does not implement this step",
         _0, 1
     )]
-    PluginDoesNotImplementStep(PluginStep, PluginName),
+    PluginDoesNotImplementStep(PluginStep, String),
     #[fail(
         display = "required data '{}' was not provided by the previous steps",
         _0
@@ -536,8 +533,8 @@ where
 }
 
 fn all_responses_into_result<T>(
-    responses: Map<PluginName, PluginResponse<T>>,
-) -> Result<Map<PluginName, T>, failure::Error> {
+    responses: Map<String, PluginResponse<T>>,
+) -> Result<Map<String, T>, failure::Error> {
     responses
         .into_iter()
         .map(|(name, r)| {

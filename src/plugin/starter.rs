@@ -1,4 +1,4 @@
-use crate::plugin::{Plugin, PluginName, PluginState, ResolvedPlugin, StartedPlugin};
+use crate::plugin::{Plugin, RawPlugin, RawPluginState, ResolvedPlugin};
 
 pub struct PluginStarter {}
 
@@ -9,15 +9,15 @@ impl PluginStarter {
 }
 
 impl PluginStarter {
-    pub fn start(&self, plugin: Plugin) -> Result<StartedPlugin, failure::Error> {
+    pub fn start(&self, plugin: RawPlugin) -> Result<Plugin, failure::Error> {
         let (name, state) = plugin.decompose();
         let started = match state {
-            PluginState::Unresolved(_) => {
+            RawPluginState::Unresolved(_) => {
                 panic!("all plugins must be resolved before calling Starter::start")
             }
-            PluginState::Started(started) => started,
-            PluginState::Resolved(resolved) => match resolved {
-                ResolvedPlugin::Builtin(builtin) => StartedPlugin::new(builtin)?,
+            RawPluginState::Started(started) => started,
+            RawPluginState::Resolved(resolved) => match resolved {
+                ResolvedPlugin::Builtin(builtin) => Plugin::new(builtin)?,
             },
         };
         Ok(started)
@@ -25,9 +25,5 @@ impl PluginStarter {
 }
 
 trait Starter {
-    fn start(
-        &self,
-        name: &PluginName,
-        meta: &ResolvedPlugin,
-    ) -> Result<StartedPlugin, failure::Error>;
+    fn start(&self, name: &str, meta: &ResolvedPlugin) -> Result<Plugin, failure::Error>;
 }

@@ -12,47 +12,45 @@ use serde::{Deserialize, Serialize};
 use std::cell::{Ref, RefCell, RefMut};
 use std::rc::Rc;
 
-pub type PluginName = String;
-
-pub struct Plugin {
-    name: PluginName,
-    state: PluginState,
+pub struct RawPlugin {
+    name: String,
+    state: RawPluginState,
 }
 
-impl Plugin {
-    pub fn new(name: PluginName, state: PluginState) -> Self {
-        Plugin { name, state }
+impl RawPlugin {
+    pub fn new(name: String, state: RawPluginState) -> Self {
+        RawPlugin { name, state }
     }
 
-    pub fn name(&self) -> &PluginName {
+    pub fn name(&self) -> &String {
         &self.name
     }
 
-    pub fn state(&self) -> &PluginState {
+    pub fn state(&self) -> &RawPluginState {
         &self.state
     }
 
-    pub fn decompose(self) -> (PluginName, PluginState) {
+    pub fn decompose(self) -> (String, RawPluginState) {
         (self.name, self.state)
     }
 }
 
-pub enum PluginState {
+pub enum RawPluginState {
     Unresolved(UnresolvedPlugin),
     Resolved(ResolvedPlugin),
-    Started(StartedPlugin),
+    Started(Plugin),
 }
 
 #[derive(Clone)]
-pub struct StartedPlugin {
+pub struct Plugin {
     pub name: String,
     call: Rc<RefCell<Box<dyn PluginInterface>>>,
 }
 
-impl StartedPlugin {
+impl Plugin {
     pub fn new(plugin: Box<dyn PluginInterface>) -> Result<Self, failure::Error> {
         let name = plugin.name()?;
-        let plugin = StartedPlugin {
+        let plugin = Plugin {
             name,
             call: Rc::new(RefCell::new(plugin)),
         };
@@ -68,31 +66,31 @@ impl StartedPlugin {
     }
 }
 
-impl PluginState {
+impl RawPluginState {
     pub fn is_resolved(&self) -> bool {
         match self {
-            PluginState::Resolved(_) => true,
+            RawPluginState::Resolved(_) => true,
             _ => false,
         }
     }
 
     pub fn is_unresolved(&self) -> bool {
         match self {
-            PluginState::Unresolved(_) => true,
+            RawPluginState::Unresolved(_) => true,
             _ => false,
         }
     }
 
     pub fn is_started(&self) -> bool {
         match self {
-            PluginState::Started(_) => true,
+            RawPluginState::Started(_) => true,
             _ => false,
         }
     }
 
     pub fn as_unresolved(&self) -> Option<&UnresolvedPlugin> {
         match self {
-            PluginState::Unresolved(unresolved) => Some(unresolved),
+            RawPluginState::Unresolved(unresolved) => Some(unresolved),
             _ => None,
         }
     }

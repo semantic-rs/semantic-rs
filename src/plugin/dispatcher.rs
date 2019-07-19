@@ -6,19 +6,19 @@ use super::{
         response::{self, PluginResponse},
         Version,
     },
-    PluginName, PluginStep,
+    PluginStep,
 };
 
 use crate::config::{CfgMap, Map};
-use crate::plugin::{PluginInterface, StartedPlugin};
+use crate::plugin::{Plugin, PluginInterface};
 
 pub struct PluginDispatcher {
     config: CfgMap,
-    map: Map<PluginStep, Vec<StartedPlugin>>,
+    map: Map<PluginStep, Vec<Plugin>>,
 }
 
 impl PluginDispatcher {
-    pub fn new(config: CfgMap, map: Map<PluginStep, Vec<StartedPlugin>>) -> Self {
+    pub fn new(config: CfgMap, map: Map<PluginStep, Vec<Plugin>>) -> Self {
         PluginDispatcher { config, map }
     }
 
@@ -53,11 +53,11 @@ impl PluginDispatcher {
         Ok((plugin.name.clone(), response))
     }
 
-    fn mapped_plugins(&self, step: PluginStep) -> Option<impl Iterator<Item = StartedPlugin> + '_> {
+    fn mapped_plugins(&self, step: PluginStep) -> Option<impl Iterator<Item = Plugin> + '_> {
         self.map.get(&step).map(|plugins| plugins.iter().cloned())
     }
 
-    fn mapped_singleton(&self, step: PluginStep) -> StartedPlugin {
+    fn mapped_singleton(&self, step: PluginStep) -> Plugin {
         let no_plugins_found_panic = || {
             panic!(
                 "no plugins matching the singleton step {:?}: this is a bug, aborting.",
@@ -85,8 +85,8 @@ impl PluginDispatcher {
     }
 }
 
-pub type DispatchedMultiResult<T> = Result<Map<PluginName, T>, failure::Error>;
-pub type DispatchedSingletonResult<T> = Result<(PluginName, T), failure::Error>;
+pub type DispatchedMultiResult<T> = Result<Map<String, T>, failure::Error>;
+pub type DispatchedSingletonResult<T> = Result<(String, T), failure::Error>;
 
 impl PluginDispatcher {
     pub fn pre_flight(&self) -> DispatchedMultiResult<response::PreFlight> {

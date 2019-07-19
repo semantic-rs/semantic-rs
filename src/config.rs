@@ -7,7 +7,7 @@ use failure::Fail;
 use linked_hash_map::LinkedHashMap;
 use serde::{de::Deserializer, de::Error as _, Deserialize, Serialize};
 
-use crate::plugin::{PluginName, PluginStep, PluginStepKind, UnresolvedPlugin};
+use crate::plugin::{PluginStep, PluginStepKind, UnresolvedPlugin};
 
 /// Map type override used in configs
 ///
@@ -16,7 +16,7 @@ use crate::plugin::{PluginName, PluginStep, PluginStepKind, UnresolvedPlugin};
 pub type Map<K, V> = LinkedHashMap<K, V>;
 
 /// Map PluginName -> PluginDefinition
-pub type PluginDefinitionMap = Map<PluginName, PluginDefinition>;
+pub type PluginDefinitionMap = Map<String, PluginDefinition>;
 
 /// Map [PluginStep](crate::plugin::PluginStep) -> [PluginStep](self::StepDefinition)
 #[derive(Serialize, Debug, Clone, Eq, PartialEq)]
@@ -116,8 +116,8 @@ pub enum PluginDefinition {
 #[serde(rename_all = "snake_case")]
 pub enum StepDefinition {
     Discover,
-    Singleton(PluginName),
-    Shared(Vec<PluginName>),
+    Singleton(String),
+    Shared(Vec<String>),
 }
 
 impl<'de> Deserialize<'de> for StepsDefinitionMap {
@@ -160,8 +160,8 @@ impl<'de> Deserialize<'de> for StepDefinition {
         #[derive(Deserialize, Debug)]
         #[serde(untagged)]
         enum StepDefinitionRaw {
-            Unit(PluginName),
-            Array(Vec<PluginName>),
+            Unit(String),
+            Array(Vec<String>),
         }
 
         let raw = StepDefinitionRaw::deserialize(deserializer)?;
