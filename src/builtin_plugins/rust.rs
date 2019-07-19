@@ -1,4 +1,3 @@
-use std::cell::RefCell;
 use std::fs::File;
 use std::io::{Read, Write};
 use std::ops::Try;
@@ -15,21 +14,20 @@ use crate::plugin::proto::{
 use crate::plugin::{PluginInterface, PluginStep};
 
 pub struct RustPlugin {
-    dry_run_guard: RefCell<Option<DryRunGuard>>,
+    dry_run_guard: Option<DryRunGuard>,
 }
 
 impl RustPlugin {
     pub fn new() -> Self {
         RustPlugin {
-            dry_run_guard: RefCell::default(),
+            dry_run_guard: None,
         }
     }
 }
 
 impl Drop for RustPlugin {
     fn drop(&mut self) {
-        let guard = self.dry_run_guard.borrow();
-        if let Some(guard) = guard.as_ref() {
+        if let Some(guard) = self.dry_run_guard.as_ref() {
             log::info!("rust(dry-run): restoring original state of Cargo.toml");
             if let Err(err) = guard.cargo.write_manifest_raw(&guard.original_manifest) {
                 log::error!("rust: failed to restore original manifest, sorry x_x");
@@ -62,7 +60,7 @@ impl PluginInterface for RustPlugin {
         PluginResponse::from_ok(methods)
     }
 
-    fn pre_flight(&self, params: request::PreFlight) -> response::PreFlight {
+    fn pre_flight(&mut self, params: request::PreFlight) -> response::PreFlight {
         let mut response = PluginResponse::builder();
         if !params.env.contains_key("CARGO_TOKEN") {
             response.error(RustPluginError::TokenUndefined);
@@ -70,7 +68,7 @@ impl PluginInterface for RustPlugin {
         response.body(()).build()
     }
 
-    fn prepare(&self, params: request::Prepare) -> response::Prepare {
+    fn prepare(&mut self, params: request::Prepare) -> response::Prepare {
         let project_root = params.cfg_map.project_root()?;
         let token = params
             .env
@@ -89,7 +87,7 @@ impl PluginInterface for RustPlugin {
                 cargo: cargo.clone(),
             };
 
-            self.dry_run_guard.replace(Some(guard));
+            self.dry_run_guard.replace(guard);
         }
 
         cargo.set_version(params.data)?;
@@ -97,7 +95,7 @@ impl PluginInterface for RustPlugin {
         PluginResponse::from_ok(vec!["Cargo.toml".into(), "Cargo.lock".into()])
     }
 
-    fn verify_release(&self, params: request::VerifyRelease) -> response::VerifyRelease {
+    fn verify_release(&mut self, params: request::VerifyRelease) -> response::VerifyRelease {
         let project_root = params.cfg_map.project_root()?;
         let token = params
             .env

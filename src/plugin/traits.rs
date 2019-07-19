@@ -15,38 +15,38 @@ pub trait PluginInterface {
             .build()
     }
 
-    fn pre_flight(&self, _params: request::PreFlight) -> response::PreFlight {
+    fn pre_flight(&mut self, _params: request::PreFlight) -> response::PreFlight {
         not_implemented_response()
     }
 
-    fn get_last_release(&self, _params: request::GetLastRelease) -> response::GetLastRelease {
+    fn get_last_release(&mut self, _params: request::GetLastRelease) -> response::GetLastRelease {
         not_implemented_response()
     }
 
     fn derive_next_version(
-        &self,
+        &mut self,
         _params: request::DeriveNextVersion,
     ) -> response::DeriveNextVersion {
         not_implemented_response()
     }
 
-    fn generate_notes(&self, _params: request::GenerateNotes) -> response::GenerateNotes {
+    fn generate_notes(&mut self, _params: request::GenerateNotes) -> response::GenerateNotes {
         not_implemented_response()
     }
 
-    fn prepare(&self, _params: request::Prepare) -> response::Prepare {
+    fn prepare(&mut self, _params: request::Prepare) -> response::Prepare {
         not_implemented_response()
     }
 
-    fn verify_release(&self, _params: request::VerifyRelease) -> response::VerifyRelease {
+    fn verify_release(&mut self, _params: request::VerifyRelease) -> response::VerifyRelease {
         not_implemented_response()
     }
 
-    fn commit(&self, _params: request::Commit) -> response::Commit {
+    fn commit(&mut self, _params: request::Commit) -> response::Commit {
         not_implemented_response()
     }
 
-    fn publish(&self, _params: request::Publish) -> response::Publish {
+    fn publish(&mut self, _params: request::Publish) -> response::Publish {
         not_implemented_response()
     }
 

@@ -25,14 +25,14 @@ impl PluginDispatcher {
     fn dispatch<RFR: Debug>(
         &self,
         step: PluginStep,
-        call_fn: impl Fn(&dyn PluginInterface) -> PluginResponse<RFR>,
+        call_fn: impl Fn(&mut dyn PluginInterface) -> PluginResponse<RFR>,
     ) -> DispatchedMultiResult<PluginResponse<RFR>> {
         let mut response_map = Map::new();
 
         if let Some(plugins) = self.mapped_plugins(step) {
-            for plugin in plugins {
+            for mut plugin in plugins {
                 log::info!("Invoking plugin '{}'", plugin.name);
-                let response = call_fn(&**plugin.as_interface());
+                let response = call_fn(&mut **plugin.as_interface_mut());
                 log::debug!("{}: {:?}", plugin.name, response);
                 response_map.insert(plugin.name.clone(), response);
             }
@@ -44,11 +44,11 @@ impl PluginDispatcher {
     fn dispatch_singleton<RFR: Debug>(
         &self,
         step: PluginStep,
-        call_fn: impl FnOnce(&dyn PluginInterface) -> PluginResponse<RFR>,
+        call_fn: impl FnOnce(&mut dyn PluginInterface) -> PluginResponse<RFR>,
     ) -> DispatchedSingletonResult<PluginResponse<RFR>> {
-        let plugin = self.mapped_singleton(step);
+        let mut plugin = self.mapped_singleton(step);
         log::info!("Invoking singleton '{}'", plugin.name);
-        let response = call_fn(&**plugin.as_interface());
+        let response = call_fn(&mut **plugin.as_interface_mut());
         log::debug!("{}: {:?}", plugin.name, response);
         Ok((plugin.name.clone(), response))
     }

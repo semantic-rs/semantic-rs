@@ -1,4 +1,3 @@
-use std::cell::RefCell;
 use std::io::BufWriter;
 use std::ops::Try;
 use std::path::{Path, PathBuf};
@@ -17,23 +16,22 @@ use crate::plugin::proto::{
 use crate::plugin::{PluginInterface, PluginStep};
 
 pub struct ClogPlugin {
-    state: RefCell<Option<request::GenerateNotesData>>,
-    dry_run_guard: RefCell<Option<DryRunGuard>>,
+    state: Option<request::GenerateNotesData>,
+    dry_run_guard: Option<DryRunGuard>,
 }
 
 impl ClogPlugin {
     pub fn new() -> Self {
         ClogPlugin {
-            state: RefCell::default(),
-            dry_run_guard: RefCell::default(),
+            state: None,
+            dry_run_guard: None,
         }
     }
 }
 
 impl Drop for ClogPlugin {
     fn drop(&mut self) {
-        let guard = self.dry_run_guard.borrow();
-        if let Some(guard) = guard.as_ref() {
+        if let Some(guard) = self.dry_run_guard.as_ref() {
             log::info!("clog(dry-run): restoring original state of changelog file");
             if let Err(err) = std::fs::write(&guard.changelog_path, &guard.original_changelog) {
                 log::error!("failed to restore original changelog, sorry x_x");
@@ -77,7 +75,7 @@ impl PluginInterface for ClogPlugin {
         PluginResponse::from_ok(methods)
     }
 
-    fn pre_flight(&self, params: request::PreFlight) -> response::PreFlight {
+    fn pre_flight(&mut self, params: request::PreFlight) -> response::PreFlight {
         // Try to deserialize configuration
         let _: ClogPluginConfig =
             toml::Value::Table(params.cfg_map.get_sub_table("clog")?).try_into()?;
@@ -85,7 +83,7 @@ impl PluginInterface for ClogPlugin {
     }
 
     fn derive_next_version(
-        &self,
+        &mut self,
         params: request::DeriveNextVersion,
     ) -> response::DeriveNextVersion {
         let (cfg, current_version) = (params.cfg_map, params.data);
@@ -125,19 +123,19 @@ impl PluginInterface for ClogPlugin {
         PluginResponse::from_ok(next_version)
     }
 
-    fn generate_notes(&self, params: request::GenerateNotes) -> response::GenerateNotes {
+    fn generate_notes(&mut self, params: request::GenerateNotes) -> response::GenerateNotes {
         let (cfg, data) = (params.cfg_map, params.data);
 
         let changelog =
             generate_changelog(&cfg.project_root()?, &data.start_rev, &data.new_version)?;
 
         // Store this request as state
-        self.state.replace(Some(data));
+        self.state.replace(data);
 
         PluginResponse::from_ok(changelog)
     }
 
-    fn prepare(&self, params: request::Prepare) -> response::Prepare {
+    fn prepare(&mut self, params: request::Prepare) -> response::Prepare {
         let cfg: ClogPluginConfig =
             toml::Value::Table(params.cfg_map.get_sub_table("clog")?).try_into()?;
         let changelog_path = &cfg.changelog;
@@ -147,21 +145,21 @@ impl PluginInterface for ClogPlugin {
         if params.cfg_map.is_dry_run()? {
             log::info!("clog(dry-run): saving original state of changelog file");
             let original_changelog = std::fs::read(&changelog_path)?;
-            self.dry_run_guard.replace(Some(DryRunGuard {
+            self.dry_run_guard.replace(DryRunGuard {
                 changelog_path: Path::new(changelog_path).to_owned(),
                 original_changelog,
-            }));
+            });
         }
 
-        let data_bind = self.state.borrow();
-        let data = data_bind
+        let state = self
+            .state
             .as_ref()
             .expect("state is None: this is a bug, aborting.");
 
         let mut clog = Clog::with_dir(repo_path)?;
         clog.changelog(changelog_path)
-            .from(&data.start_rev)
-            .version(format!("v{}", data.new_version));
+            .from(&state.start_rev)
+            .version(format!("v{}", state.new_version));
 
         log::info!("clog: writing updated changelog");
         clog.write_changelog()?;

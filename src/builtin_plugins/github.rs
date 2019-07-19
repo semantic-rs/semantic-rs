@@ -87,7 +87,7 @@ impl PluginInterface for GithubPlugin {
         PluginResponse::from_ok(methods)
     }
 
-    fn pre_flight(&self, params: request::PreFlight) -> response::PreFlight {
+    fn pre_flight(&mut self, params: request::PreFlight) -> response::PreFlight {
         let mut response = PluginResponse::builder();
 
         if !params.env.contains_key("GH_TOKEN") {
@@ -110,7 +110,7 @@ impl PluginInterface for GithubPlugin {
         response.body(()).build()
     }
 
-    fn publish(&self, params: request::Publish) -> response::Publish {
+    fn publish(&mut self, params: request::Publish) -> response::Publish {
         let cfg: GithubPluginConfig =
             toml::Value::Table(params.cfg_map.get_sub_table("github")?).try_into()?;
         let project_root = Path::new(params.cfg_map.project_root()?);

@@ -1,4 +1,3 @@
-use std::cell::RefCell;
 use std::env;
 use std::ops::Try;
 
@@ -16,30 +15,13 @@ use crate::plugin::{PluginInterface, PluginStep};
 use std::path::Path;
 
 pub struct GitPlugin {
-    state: RefCell<GitPluginState>,
+    state: Option<GitPluginData>,
 }
 
-enum GitPluginState {
-    Uninit,
-    Init(GitPluginStateData),
-}
-
-impl GitPluginState {
-    pub fn is_initialized(&self) -> bool {
-        match self {
-            GitPluginState::Init(_) => true,
-            GitPluginState::Uninit => false,
-        }
-    }
-
-    pub fn as_initialized(&self) -> &GitPluginStateData {
-        match self {
-            GitPluginState::Init(data) => data,
-            GitPluginState::Uninit => {
-                panic!("GitPluginState must be initialized before calling `as_initialized`")
-            }
-        }
-    }
+struct GitPluginData {
+    config: GitPluginConfig,
+    repo: Repository,
+    signature: Signature<'static>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -62,16 +44,10 @@ fn default_remote() -> String {
     "origin".into()
 }
 
-struct GitPluginStateData {
-    config: GitPluginConfig,
-    repo: Repository,
-    signature: Signature<'static>,
-}
-
-impl GitPluginStateData {
+impl GitPluginData {
     pub fn new(config: GitPluginConfig, repo: Repository) -> Result<Self, failure::Error> {
         let signature = Self::get_signature(&config, &repo)?;
-        Ok(GitPluginStateData {
+        Ok(GitPluginData {
             config,
             repo,
             signature,
@@ -306,9 +282,7 @@ impl GitPluginStateData {
 
 impl GitPlugin {
     pub fn new() -> Self {
-        GitPlugin {
-            state: RefCell::new(GitPluginState::Uninit),
-        }
+        GitPlugin { state: None }
     }
 }
 
@@ -326,7 +300,7 @@ impl PluginInterface for GitPlugin {
         PluginResponse::from_ok(methods)
     }
 
-    fn pre_flight(&self, params: request::PreFlight) -> response::PreFlight {
+    fn pre_flight(&mut self, params: request::PreFlight) -> response::PreFlight {
         let mut response = PluginResponse::builder();
 
         let config = {
@@ -339,7 +313,7 @@ impl PluginInterface for GitPlugin {
         let mut data = {
             let path = params.cfg_map.project_root()?;
             let repo = Repository::open(path)?;
-            GitPluginStateData::new(config, repo)?
+            GitPluginData::new(config, repo)?
         };
 
         data.perform_pre_flight_checks(&mut response);
@@ -347,14 +321,13 @@ impl PluginInterface for GitPlugin {
 
         log::debug!("git(pre_flight): finished");
 
-        self.state.replace(GitPluginState::Init(data));
+        self.state = Some(data);
 
         response.body(()).build()
     }
 
-    fn get_last_release(&self, _params: request::GetLastRelease) -> response::GetLastRelease {
-        let state_bind = self.state.borrow();
-        let state = state_bind.as_initialized();
+    fn get_last_release(&mut self, _params: request::GetLastRelease) -> response::GetLastRelease {
+        let state = self.state.as_ref().ok_or(GitPluginError::StateIsNone)?;
 
         let version = match state.latest_tag() {
             Some((rev, version)) => Version {
@@ -373,11 +346,10 @@ impl PluginInterface for GitPlugin {
         PluginResponse::from_ok(version)
     }
 
-    fn commit(&self, params: request::Commit) -> response::Commit {
+    fn commit(&mut self, params: request::Commit) -> response::Commit {
         let data = params.data;
 
-        let state_bind = self.state.borrow();
-        let state = state_bind.as_initialized();
+        let state = self.state.as_ref().ok_or(GitPluginError::StateIsNone)?;
 
         // TODO: make releaserc-configurable
         let commit_msg = format!("chore(release): Version {} [skip ci]", data.version);
@@ -396,6 +368,8 @@ impl PluginInterface for GitPlugin {
 
 #[derive(Fail, Debug)]
 pub enum GitPluginError {
+    #[fail(display = "state is not initialized (forgot to run pre_flight step?)")]
+    StateIsNone,
     #[fail(
         display = "committer name was not found in [env::GIT_COMMITTER_NAME, releaserc.cfg.git.user_name, git config user.name]"
     )]
