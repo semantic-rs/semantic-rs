@@ -379,7 +379,7 @@ trait KernelRoutine {
     fn execute(&self, kernel: &Kernel, data: &mut KernelData) -> KernelRoutineResult<()>;
 
     fn pre_flight(kernel: &Kernel, _data: &mut KernelData) -> KernelRoutineResult<()> {
-        execute_request(|| kernel.dispatcher.pre_flight(), all_responses_into_result)?;
+        execute_request(|| kernel.dispatcher.pre_flight())?;
         Ok(())
     }
 
@@ -391,34 +391,29 @@ trait KernelRoutine {
     }
 
     fn derive_next_version(kernel: &Kernel, data: &mut KernelData) -> KernelRoutineResult<()> {
-        let responses = execute_request(
-            || {
-                kernel
-                    .dispatcher
-                    .derive_next_version(data.require_last_version()?.clone())
-            },
-            all_responses_into_result,
-        )?;
+        let responses = execute_request(|| {
+            kernel
+                .dispatcher
+                .derive_next_version(data.require_last_version()?.clone())
+        })?;
+
         let next_version = responses
             .into_iter()
             .map(|(_, v)| v)
             .max()
             .expect("iterator from response map cannot be empty: this is a bug, aborting.");
+
         data.set_next_version(next_version);
         Ok(())
     }
 
     fn generate_notes(kernel: &Kernel, data: &mut KernelData) -> KernelRoutineResult<()> {
-        let responses = execute_request(
-            || {
-                let params = request::GenerateNotesData {
-                    start_rev: data.require_last_version()?.rev.clone(),
-                    new_version: data.require_next_version()?.clone(),
-                };
-                kernel.dispatcher.generate_notes(params)
-            },
-            all_responses_into_result,
-        )?;
+        let params = request::GenerateNotesData {
+            start_rev: data.require_last_version()?.rev.clone(),
+            new_version: data.require_next_version()?.clone(),
+        };
+
+        let responses = execute_request(|| kernel.dispatcher.generate_notes(params))?;
 
         let changelog = responses.values().fold(String::new(), |mut summary, part| {
             summary.push_str(part);
@@ -436,14 +431,11 @@ trait KernelRoutine {
     }
 
     fn prepare(kernel: &Kernel, data: &mut KernelData) -> KernelRoutineResult<()> {
-        let responses = execute_request(
-            || {
-                kernel
-                    .dispatcher
-                    .prepare(data.require_next_version()?.clone())
-            },
-            all_responses_into_result,
-        )?;
+        let responses = execute_request(|| {
+            kernel
+                .dispatcher
+                .prepare(data.require_next_version()?.clone())
+        })?;
 
         let changed_files = responses
             .into_iter()
@@ -456,10 +448,7 @@ trait KernelRoutine {
     }
 
     fn verify_release(kernel: &Kernel, _data: &mut KernelData) -> KernelRoutineResult<()> {
-        execute_request(
-            || kernel.dispatcher.verify_release(),
-            all_responses_into_result,
-        )?;
+        execute_request(|| kernel.dispatcher.verify_release())?;
         Ok(())
     }
 
@@ -480,21 +469,17 @@ trait KernelRoutine {
     }
 
     fn publish(kernel: &Kernel, data: &mut KernelData) -> KernelRoutineResult<()> {
-        execute_request(
-            || {
-                let params = request::PublishData {
-                    tag_name: data.requite_tag_name()?.to_owned(),
-                    changelog: data.require_changelog()?.to_owned(),
-                };
-                kernel.dispatcher.publish(params)
-            },
-            all_responses_into_result,
-        )?;
+        let params = request::PublishData {
+            tag_name: data.requite_tag_name()?.to_owned(),
+            changelog: data.require_changelog()?.to_owned(),
+        };
+
+        execute_request(|| kernel.dispatcher.publish(params))?;
         Ok(())
     }
 
     fn notify(kernel: &Kernel, _data: &mut KernelData) -> KernelRoutineResult<()> {
-        execute_request(|| kernel.dispatcher.notify(()), all_responses_into_result)?;
+        execute_request(|| kernel.dispatcher.notify(()))?;
         Ok(())
     }
 }
@@ -515,20 +500,11 @@ impl KernelRoutine for PluginStep {
     }
 }
 
-fn execute_request<RF, RFR, MF, MFR>(request_fn: RF, merge_fn: MF) -> Result<MFR, failure::Error>
+fn execute_request<F, T>(request_fn: F) -> Result<Map<String, T>, failure::Error>
 where
-    RF: Fn() -> Result<RFR, failure::Error>,
-    MF: Fn(RFR) -> Result<MFR, failure::Error>,
+    F: FnOnce() -> Result<Map<String, PluginResponse<T>>, failure::Error>,
 {
-    let response = request_fn()?;
-    let merged = merge_fn(response)?;
-    Ok(merged)
-}
-
-fn all_responses_into_result<T>(
-    responses: Map<String, PluginResponse<T>>,
-) -> Result<Map<String, T>, failure::Error> {
-    responses
+    request_fn()?
         .into_iter()
         .map(|(name, r)| {
             r.into_result()
