@@ -1,3 +1,14 @@
+<a name="v2.1.0"></a>
+## v2.1.0 (2019-07-19)
+
+
+#### Features
+
+* **ci:**  upload artifacts from /workspace/bin/* ([4ba5eeae](4ba5eeae))
+* **github:**  log artifacts that are gonna be published in pre_flight ([a1aedb4a](a1aedb4a))
+
+
+
 <a name="v2.0.0"></a>
 ## v2.0.0 (2019-07-19)
 
