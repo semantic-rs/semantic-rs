@@ -38,6 +38,10 @@ impl Drop for ClogPlugin {
             if let Err(err) = std::fs::write(&guard.changelog_path, &guard.original_changelog) {
                 log::error!("failed to restore original changelog, sorry x_x");
                 log::error!("{}", err);
+                log::info!(
+                    "\nOriginal changelog: \n{}",
+                    String::from_utf8_lossy(&guard.original_changelog)
+                );
             }
         }
     }

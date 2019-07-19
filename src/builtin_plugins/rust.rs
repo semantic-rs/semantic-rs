@@ -34,6 +34,10 @@ impl Drop for RustPlugin {
             if let Err(err) = guard.cargo.write_manifest_raw(&guard.original_manifest) {
                 log::error!("rust: failed to restore original manifest, sorry x_x");
                 log::error!("{}", err);
+                log::info!(
+                    "\nOriginal Cargo.toml: \n{}",
+                    String::from_utf8_lossy(&guard.original_manifest)
+                );
             }
         }
     }
