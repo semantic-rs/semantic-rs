@@ -102,6 +102,16 @@ impl PluginInterface for GithubPlugin {
         // Try to parse assets
         globs_to_assets(cfg.assets.iter().map(String::as_str))
             .into_iter()
+            .inspect(|asset| {
+                asset.as_ref().map(|a| {
+                    log::info!(
+                        "github: will upload {} ({})",
+                        a.path().display(),
+                        a.content_type()
+                    );
+                    a
+                });
+            })
             .filter(Result::is_err)
             .map(Result::unwrap_err)
             .for_each(|e| {
