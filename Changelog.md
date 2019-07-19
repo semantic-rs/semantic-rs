@@ -1,3 +1,15 @@
+<a name="v2.2.0"></a>
+## v2.2.0 (2019-07-19)
+
+
+#### Features
+
+* **deps:**
+  *  update hubcaps (0.3 -> 0.5)   removes hyper   removes hyper-native-tls   adds futures   adds tokio ([207d5e55](207d5e55), closes [#27](27), [#22](22), [#21](21))
+  *  update git2 (0.7.5 -> 0.9) ([d7c6ea8d](d7c6ea8d), closes [#25](25))
+
+
+
 <a name="v2.1.0"></a>
 ## v2.1.0 (2019-07-19)
 
