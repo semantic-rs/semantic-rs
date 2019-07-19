@@ -346,38 +346,31 @@ impl KernelData {
     }
 
     fn require_last_version(&self) -> Result<&Version, failure::Error> {
-        Ok(Self::_require("last_version", || {
-            self.last_version.as_ref()
-        })?)
+        Ok(require("last_version", || self.last_version.as_ref())?)
     }
 
     fn require_next_version(&self) -> Result<&semver::Version, failure::Error> {
-        Ok(Self::_require("next_version", || {
-            self.next_version.as_ref()
-        })?)
+        Ok(require("next_version", || self.next_version.as_ref())?)
     }
 
     fn require_changelog(&self) -> Result<&str, failure::Error> {
-        Ok(Self::_require("changelog", || self.changelog.as_ref())?)
+        Ok(require("changelog", || self.changelog.as_ref())?)
     }
 
     fn require_files_to_commit(&self) -> Result<&[String], failure::Error> {
-        Ok(Self::_require("files_to_commit", || {
+        Ok(require("files_to_commit", || {
             self.files_to_commit.as_ref()
         })?)
     }
 
     fn requite_tag_name(&self) -> Result<&str, failure::Error> {
-        Ok(Self::_require("tag_name", || self.tag_name.as_ref())?)
+        Ok(require("tag_name", || self.tag_name.as_ref())?)
     }
+}
 
-    fn _require<T>(
-        desc: &'static str,
-        query_fn: impl Fn() -> Option<T>,
-    ) -> Result<T, failure::Error> {
-        let data = query_fn().ok_or_else(|| KernelError::MissingRequiredData(desc))?;
-        Ok(data)
-    }
+fn require<T>(desc: &'static str, query_fn: impl Fn() -> Option<T>) -> Result<T, failure::Error> {
+    let data = query_fn().ok_or(KernelError::MissingRequiredData(desc))?;
+    Ok(data)
 }
 
 type KernelRoutineResult<T> = Result<T, failure::Error>;
