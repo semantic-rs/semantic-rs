@@ -324,7 +324,7 @@ Clone this project:
 $ git clone git@github.com:etclabscore/semantic-rs.git
 ```
 
-As a test project you can use this one: [https://github.com/mersinvald/semantic-rs-test-project](https://github.com/badboy/test-project).
+As a test project you can use this one: [https://github.com/mersinvald/semantic-rs-test-project](https://github.com/mersinvald/semantic-rs-test-project).
 
 Clone it as well:
 
