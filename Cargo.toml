@@ -9,11 +9,8 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-term = "0.2"
 toml = { version = "0.5.1", features = ["preserve_order"] }
-regex = "0.1"
 semver = "0.9.0"
-rustc-serialize = "0.3.16"
 git2 = "0.7.5"
 clog = "0.9.1"
 hubcaps = "0.3"
@@ -30,14 +27,10 @@ reqwest = "0.9.18"
 failure = "0.1.5"
 serde = { version = "1.0.94", features = ["derive"] }
 linked-hash-map = { version = "0.5.2", features = ["serde_impl"] }
-serde-value = "0.6.0"
 dotenv = "0.14.1"
 strum = "0.15.0"
 strum_macros = "0.15.0"
 glob = "0.3.0"
-
-[features]
-default = []
 
 [profile.release]
 debug = true
