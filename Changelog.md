@@ -1,3 +1,29 @@
+<a name="v2.0.0"></a>
+## v2.0.0 (2019-07-19)
+
+
+#### Features
+
+*   remove extra dependencies ([e08bed0a](e08bed0a))
+*   dry-run flag ([0c9b02aa](0c9b02aa))
+*   dotenv support ([33642c17](33642c17))
+*   plugin system & releaserc.toml configuration ([06c93d73](06c93d73))
+* **ci:**
+  *  copy artifacts into bin/ directory ([a4c34384](a4c34384))
+  *  switch to nightly rust container ([bc1fc4eb](bc1fc4eb))
+* **docs:**
+  *  add crate-level documentation and some descriptive comments in proto ([f74384ed](f74384ed))
+  *  README.md description of releaserc.toml and plugin system ([11b56271](11b56271))
+* **git:**  last release search support for new repos (with no tags) ([765b7d2d](765b7d2d))
+* **log:**  print the original file if dry-run guard fails to write it ([706d0c52](706d0c52))
+* **logs:**  print error messages in main.rs instead of panicking ([356cbc54](356cbc54))
+
+#### Breaking Changes
+
+*   plugin system & releaserc.toml configuration ([06c93d73](06c93d73))
+
+
+
 <a name="v1.2.0"></a>
 ## v1.2.0 (2019-07-07)
 

@@ -1,37 +1,47 @@
 [package]
-name = "semantic-rs"
-version = "1.2.0"
-authors = ["Jan Schulte <hello@unexpected-co.de>", "Jan-Erik Rediger <janerik@fnordig.de>", "Mike Lubinets <me@mkl.dev>"]
-description = "Automatic crate publishing"
-license = "MIT"
-edition = "2018"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+name = 'semantic-rs'
+authors = [
+    'Jan Schulte <hello@unexpected-co.de>',
+    'Jan-Erik Rediger <janerik@fnordig.de>',
+    'Mike Lubinets <me@mkl.dev>',
+]
+description = 'Automatic crate publishing'
+license = 'MIT'
+edition = '2018'
+version = '2.0.0'
 
 [dependencies]
-toml = { version = "0.5.1", features = ["preserve_order"] }
-semver = "0.9.0"
-git2 = "0.7.5"
-clog = "0.9.1"
-hubcaps = "0.3"
-hyper = "0.10"
-url = "1.2"
-env_logger = "0.6.2"
-hyper-native-tls = "0.2.2"
-clap = "2.32.0"
-log = "0.4.6"
-serde_json = "1.0.40"
-tree_magic = "0.2.1"
-http = "0.1.17"
-reqwest = "0.9.18"
-failure = "0.1.5"
-serde = { version = "1.0.94", features = ["derive"] }
-linked-hash-map = { version = "0.5.2", features = ["serde_impl"] }
-dotenv = "0.14.1"
-strum = "0.15.0"
-strum_macros = "0.15.0"
-glob = "0.3.0"
+semver = '0.9.0'
+git2 = '0.7.5'
+clog = '0.9.1'
+hubcaps = '0.3'
+hyper = '0.10'
+url = '1.2'
+env_logger = '0.6.2'
+hyper-native-tls = '0.2.2'
+clap = '2.32.0'
+log = '0.4.6'
+serde_json = '1.0.40'
+tree_magic = '0.2.1'
+http = '0.1.17'
+reqwest = '0.9.18'
+failure = '0.1.5'
+dotenv = '0.14.1'
+strum = '0.15.0'
+strum_macros = '0.15.0'
+glob = '0.3.0'
 
+[dependencies.toml]
+version = '0.5.1'
+features = ['preserve_order']
+
+[dependencies.serde]
+version = '1.0.94'
+features = ['derive']
+
+[dependencies.linked-hash-map]
+version = '0.5.2'
+features = ['serde_impl']
 [profile.release]
 debug = true
 overflow-checks = true
