@@ -14,30 +14,12 @@ This project follows the Pristine convention: to know more check out the [README
 
 ## Workflow
 
-### Manual
+There are 2 prerequisites `semantic-rs` requires from the project:
 
-- Install semantic-rs on your machine.
-- Place a [releaserc.toml](releaserc.toml) with "git", "rust" and "github" plugins enabled in the root of your repo
+- Place a [releaserc.toml](releaserc.toml) with plugins you need (e.g "git", "rust" and "github") in the root of your repo
 - Follow the [Angular.js commit message conventions](CONVENTIONAL_COMMITS.md) when you commit changes to your repository
-- When you're done with development, run semantic-rs
-- Based on your changes it determines the next version number, generates a changelog, commits it and creates a new tag
-- It also increases the version number in `Cargo.toml` (also committed)
-- Runs `cargo package` for you
-- Creates a release on GitHub
-- Publishes the new version to [crates.io](https://crates.io)
-- Done 🚀
 
-### Automated
-
-- Install semantic-rs in your CI environment
-- Place a [releaserc.toml](releaserc.toml) in the root of your repo
-- Follow the [Angular.js commit message conventions](CONVENTIONAL_COMMITS.md) when you commit changes to your repository
-- Set Environment Variables:
-  * GH_TOKEN for pushing changes and uploading release artifacts
-  * CARGO_TOKEN for releasing to [crates.io](https://crates.io)
-- Configure release triggers in your CI configuration 
-  * [CircleCI Configuration Example](.circleci/config.yml) can be found in this repo
-- Enjoy your automated release pipeline 🚀 
+Then you can go ahead and [configure your CI](#run-semantic-rs-in-ci-environment) or use the [locally installed](#usage) `semantic-rs` manually!
 
 ## Usage
 
@@ -183,6 +165,9 @@ Basically, in toml plugin configurations are just sub-tables in the global `cfg`
 
 ### Git
 
+Git plugin takes care of working with, well, `git`: it extracts the last previous version from git tags 
+and commits and pushes changes to the repository when the new version is ready to be released.  
+
 ##### Plugins Table Example
 
 ```toml
@@ -211,6 +196,9 @@ force_https = true              # Optional: default = false
 ```
 
 ### GitHub
+
+GitHub plugin creates a release from a git tag and uploads the configured list of artifacts 
+as the attachments to the published release.
 
 ##### Plugins Table Example
 
@@ -247,6 +235,11 @@ assets = [
 
 ### Rust
 
+Rust plugin implements a full `cargo` release flow: 
+ - update the version in Cargo.toml
+ - package release with `cargo package`
+ - publish release with `cargo publish` 
+
 ##### Plugins Table Example
 
 ```toml
@@ -272,6 +265,8 @@ None
 `CARGO_TOKEN` env var MUST be set if this plugin is used.
 
 ### Clog
+
+Clog Plugin uses the `clog` crate to generate and write changelog files based on analysis of the [Conventional Commits](CONVENTIONAL_COMMITS.md).
 
 ##### Plugins Table Example
 
