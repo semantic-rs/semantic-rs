@@ -14,12 +14,17 @@ use crate::plugin::{Plugin, PluginInterface};
 
 pub struct PluginDispatcher {
     config: CfgMap,
-    map: Map<PluginStep, Vec<Plugin>>,
+    plugins: Vec<Plugin>,
+    map: Map<PluginStep, Vec<usize>>,
 }
 
 impl PluginDispatcher {
-    pub fn new(config: CfgMap, map: Map<PluginStep, Vec<Plugin>>) -> Self {
-        PluginDispatcher { config, map }
+    pub fn new(config: CfgMap, plugins: Vec<Plugin>, map: Map<PluginStep, Vec<usize>>) -> Self {
+        PluginDispatcher {
+            config,
+            plugins,
+            map,
+        }
     }
 
     fn dispatch<RFR: Debug>(
@@ -29,13 +34,11 @@ impl PluginDispatcher {
     ) -> DispatchedMultiResult<PluginResponse<RFR>> {
         let mut response_map = Map::new();
 
-        if let Some(plugins) = self.mapped_plugins(step) {
-            for mut plugin in plugins {
-                log::info!("Invoking plugin '{}'", plugin.name);
-                let response = call_fn(&mut **plugin.as_interface_mut());
-                log::debug!("{}: {:?}", plugin.name, response);
-                response_map.insert(plugin.name.clone(), response);
-            }
+        for plugin in self.mapped_plugins(step) {
+            log::info!("Invoking plugin '{}'", plugin.name);
+            let response = call_fn(&mut **plugin.as_interface());
+            log::debug!("{}: {:?}", plugin.name, response);
+            response_map.insert(plugin.name.clone(), response);
         }
 
         Ok(response_map)
@@ -46,18 +49,23 @@ impl PluginDispatcher {
         step: PluginStep,
         call_fn: impl FnOnce(&mut dyn PluginInterface) -> PluginResponse<RFR>,
     ) -> DispatchedSingletonResult<PluginResponse<RFR>> {
-        let mut plugin = self.mapped_singleton(step);
+        let plugin = self.mapped_singleton(step);
         log::info!("Invoking singleton '{}'", plugin.name);
-        let response = call_fn(&mut **plugin.as_interface_mut());
+        let response = call_fn(&mut **plugin.as_interface());
         log::debug!("{}: {:?}", plugin.name, response);
         Ok((plugin.name.clone(), response))
     }
 
-    fn mapped_plugins(&self, step: PluginStep) -> Option<impl Iterator<Item = Plugin> + '_> {
-        self.map.get(&step).map(|plugins| plugins.iter().cloned())
+    fn mapped_plugins(&self, step: PluginStep) -> impl Iterator<Item = &Plugin> {
+        self.map
+            .get(&step)
+            .map(Vec::clone)
+            .into_iter()
+            .flat_map(|ids| ids.into_iter())
+            .map(move |id| &self.plugins[id])
     }
 
-    fn mapped_singleton(&self, step: PluginStep) -> Plugin {
+    fn mapped_singleton(&self, step: PluginStep) -> &Plugin {
         let no_plugins_found_panic = || {
             panic!(
                 "no plugins matching the singleton step {:?}: this is a bug, aborting.",
@@ -71,17 +79,17 @@ impl PluginDispatcher {
             )
         };
 
-        let plugins = self.map.get(&step).unwrap_or_else(no_plugins_found_panic);
+        let ids = self.map.get(&step).unwrap_or_else(no_plugins_found_panic);
 
-        if plugins.is_empty() {
+        if ids.is_empty() {
             no_plugins_found_panic();
         }
 
-        if plugins.len() != 1 {
+        if ids.len() != 1 {
             too_many_plugins_panic();
         }
 
-        plugins[0].clone()
+        &self.plugins[ids[0]]
     }
 }
 

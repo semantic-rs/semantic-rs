@@ -101,15 +101,15 @@ impl KernelBuilder {
         let capabilities = Self::discover_capabilities(&self.config.cfg, &plugins)?;
 
         // Building a steps to plugins map
-        let steps_to_plugins =
-            Self::build_steps_to_plugins_map(&self.config, plugins, capabilities)?;
+        let steps_to_plugin_ids =
+            Self::build_steps_to_plugin_ids_map(&self.config, &plugins, capabilities)?;
 
         // Extract some configuration values from CfgMap
         let cfg_map = mem::replace(&mut self.config.cfg, CfgMap::new());
         let is_dry_run = cfg_map.is_dry_run()?;
 
         // Create Dispatcher
-        let dispatcher = PluginDispatcher::new(cfg_map, steps_to_plugins);
+        let dispatcher = PluginDispatcher::new(cfg_map, plugins, steps_to_plugin_ids);
 
         Ok(Kernel {
             dispatcher,
@@ -164,18 +164,27 @@ impl KernelBuilder {
         Ok(capabilities)
     }
 
-    fn build_steps_to_plugins_map(
+    fn build_steps_to_plugin_ids_map(
         config: &Config,
-        plugins: Vec<Plugin>,
+        plugins: &[Plugin],
         capabilities: Map<PluginStep, Vec<String>>,
-    ) -> Result<Map<PluginStep, Vec<Plugin>>, failure::Error> {
+    ) -> Result<Map<PluginStep, Vec<usize>>, failure::Error> {
         let mut map = Map::new();
 
-        fn copy_plugins_matching(plugins: &[Plugin], names: &[impl AsRef<str>]) -> Vec<Plugin> {
+        fn collect_ids_of_plugins_matching(
+            plugins: &[Plugin],
+            names: &[impl AsRef<str>],
+        ) -> Vec<usize> {
             plugins
                 .iter()
-                .filter(|p| names.iter().map(AsRef::as_ref).any(|n| n == p.name))
-                .cloned()
+                .enumerate()
+                .filter_map(|(id, p)| {
+                    names
+                        .iter()
+                        .map(AsRef::as_ref)
+                        .find(|&n| n == p.name)
+                        .map(|_| id)
+                })
                 .collect::<Vec<_>>()
         }
 
@@ -185,17 +194,17 @@ impl KernelBuilder {
                 StepDefinition::Discover => {
                     let names = capabilities.get(&step);
 
-                    let plugins = if let Some(names) = names {
-                        copy_plugins_matching(&plugins[..], &names[..])
+                    let ids = if let Some(names) = names {
+                        collect_ids_of_plugins_matching(&plugins[..], &names[..])
                     } else {
                         Vec::new()
                     };
 
-                    if plugins.is_empty() {
+                    if ids.is_empty() {
                         log::warn!("Step '{}' is marked for auto-discovery, but no plugin implements this method", step.as_str());
                     }
 
-                    map.insert(*step, plugins);
+                    map.insert(*step, ids);
                 }
                 StepDefinition::Singleton(plugin) => {
                     let names = capabilities
@@ -209,10 +218,10 @@ impl KernelBuilder {
                         ))?
                     }
 
-                    let plugins = copy_plugins_matching(&plugins, &[plugin]);
-                    assert_eq!(plugins.len(), 1);
+                    let ids = collect_ids_of_plugins_matching(&plugins, &[plugin]);
+                    assert_eq!(ids.len(), 1);
 
-                    map.insert(*step, plugins);
+                    map.insert(*step, ids);
                 }
                 StepDefinition::Shared(list) => {
                     if list.is_empty() {
@@ -232,10 +241,10 @@ impl KernelBuilder {
                         }
                     }
 
-                    let plugins = copy_plugins_matching(&plugins, &list[..]);
-                    assert_eq!(plugins.len(), list.len());
+                    let ids = collect_ids_of_plugins_matching(&plugins, &list[..]);
+                    assert_eq!(ids.len(), list.len());
 
-                    map.insert(*step, plugins);
+                    map.insert(*step, ids);
                 }
             }
         }
@@ -252,26 +261,10 @@ impl KernelBuilder {
         }
     }
 
-    fn check_all_started(plugins: &[RawPlugin]) -> Result<(), failure::Error> {
-        let not_started = Self::list_not_started_plugins(plugins);
-        if not_started.is_empty() {
-            Ok(())
-        } else {
-            Err(KernelError::FailedToStartPlugins(not_started).into())
-        }
-    }
-
     fn list_not_resolved_plugins(plugins: &[RawPlugin]) -> Vec<String> {
         Self::list_all_plugins_that(plugins, |plugin| match plugin.state() {
             RawPluginState::Unresolved(_) => true,
             RawPluginState::Resolved(_) | RawPluginState::Started(_) => false,
-        })
-    }
-
-    fn list_not_started_plugins(plugins: &[RawPlugin]) -> Vec<String> {
-        Self::list_all_plugins_that(plugins, |plugin| match plugin.state() {
-            RawPluginState::Unresolved(_) | RawPluginState::Resolved(_) => true,
-            RawPluginState::Started(_) => false,
         })
     }
 
