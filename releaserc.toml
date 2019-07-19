@@ -1,0 +1,48 @@
+[plugins]
+# Fully qualified definition
+git = { location = "builtin" }
+# Short definition
+clog = "builtin"
+github = "builtin"
+rust = "builtin"
+
+[steps]
+# Shared step
+pre_flight = "discover"
+# Singleton step
+get_last_release = "git"
+# Analyze the changes and derive the appropriate version bump
+# In case of different results, the most major would be taken
+derive_next_version = [ "clog" ]
+# Notes from each step would be appended to the notes of previous one
+# `discover` is a reserved keyword for deriving the step runners through OpenRPC Service Discovery
+# the succession of runs in this case will be determined by the succession in the `plugins` list
+generate_notes = "clog"
+# Prepare the release (pre-release step for intermediate artifacts generation)
+prepare = ["clog", "rust"]
+# Check the release before publishing
+verify_release = ["rust"]
+# Commit & push changes to the VCS
+commit = "git"
+# Publish to various platforms
+publish = [ "github" ]
+# Post-release step to notify users about release (e.g leave comments in issues resolved in this release)
+notify = "discover"
+
+[cfg]
+# Global configuration
+
+[cfg.git]
+# Per-plugin configuration
+user_name = "Mike Lubinets"
+user_email = "me@mkl.dev"
+branch = "master"
+force_https = true
+
+[cfg.github]
+assets = [
+    "bin/*",
+    "Changelog.md"
+]
+
+

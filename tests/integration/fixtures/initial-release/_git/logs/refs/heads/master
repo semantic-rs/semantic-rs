@@ -1,7 +1,0 @@
-0000000000000000000000000000000000000000 10fd867fb5cfc98335bbc17d45a562695ca3d456 Jan-Erik Rediger <janerik@fnordig.de> 1451325481 +0100	commit (initial): Initial commit
-10fd867fb5cfc98335bbc17d45a562695ca3d456 9be25420c4b6efd46024fe781111ab0bfdafa703 Jan-Erik Rediger <janerik@fnordig.de> 1456269321 +0100	commit (amend): Initial commit
-9be25420c4b6efd46024fe781111ab0bfdafa703 d10b6057b5f6aa60e5a5f96d62b573a4b5f62b93 Jan-Erik Rediger <janerik@fnordig.de> 1456269588 +0100	commit (amend): Initial commit
-d10b6057b5f6aa60e5a5f96d62b573a4b5f62b93 020521852d041fe00e67529a548ce153b4d637c7 Jan-Erik Rediger <janerik@fnordig.de> 1456269607 +0100	commit (amend): Initial commit
-020521852d041fe00e67529a548ce153b4d637c7 99b6a63cde37b4aa4fc2c8b0f6929bec1bdea8e9 Sebastian Mandrean <sebastian.mandrean@gmail.com> 1557411812 +0200	commit: Bump version to 1.0.0
-99b6a63cde37b4aa4fc2c8b0f6929bec1bdea8e9 020521852d041fe00e67529a548ce153b4d637c7 Sebastian Mandrean <sebastian.mandrean@gmail.com> 1557411869 +0200	reset: moving to HEAD~1
-020521852d041fe00e67529a548ce153b4d637c7 202003ba4446fb6b5d46698eada64c54b99161f0 Sebastian Mandrean <sebastian.mandrean@gmail.com> 1557412174 +0200	commit: chore: Start at version 0.0.0 so initial release becomes 0.1.0
