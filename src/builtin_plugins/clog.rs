@@ -59,6 +59,10 @@ fn default_changelog() -> String {
 }
 
 impl PluginInterface for ClogPlugin {
+    fn name(&self) -> response::Name {
+        PluginResponse::from_ok("clog".into())
+    }
+
     fn methods(&self, _req: request::Methods) -> response::Methods {
         let methods = vec![
             PluginStep::PreFlight,

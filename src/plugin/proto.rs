@@ -216,6 +216,8 @@ pub mod response {
         }
     }
 
+    pub type Name = PluginResponse<String>;
+
     pub type Methods = PluginResponse<MethodsData>;
     pub type MethodsData = Vec<PluginStep>;
 

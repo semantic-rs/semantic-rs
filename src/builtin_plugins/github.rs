@@ -78,6 +78,10 @@ fn globs_to_assets<'a>(globs: impl Iterator<Item = &'a str>) -> Vec<Result<Asset
 }
 
 impl PluginInterface for GithubPlugin {
+    fn name(&self) -> response::Name {
+        PluginResponse::from_ok("github".into())
+    }
+
     fn methods(&self, _req: request::Methods) -> response::Methods {
         let methods = vec![PluginStep::PreFlight, PluginStep::Publish];
         PluginResponse::from_ok(methods)

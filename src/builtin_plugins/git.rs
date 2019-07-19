@@ -313,6 +313,10 @@ impl GitPlugin {
 }
 
 impl PluginInterface for GitPlugin {
+    fn name(&self) -> response::Name {
+        PluginResponse::from_ok("git".into())
+    }
+
     fn methods(&self, _req: request::Methods) -> response::Methods {
         let methods = vec![
             PluginStep::PreFlight,

@@ -1,16 +1,15 @@
 use std::mem;
 use std::ops::Try;
-use std::rc::Rc;
 
 use failure::Fail;
 
 use crate::config::{CfgMap, CfgMapExt, Config, Map, PluginDefinitionMap, StepDefinition};
-use crate::plugin::discovery::{CapabilitiesDiscovery, Discovery as _};
+use crate::plugin::discovery::CapabilitiesDiscovery;
 use crate::plugin::proto::Version;
 use crate::plugin::proto::{request, response::PluginResponse};
 use crate::plugin::resolver::PluginResolver;
 use crate::plugin::starter::PluginStarter;
-use crate::plugin::{Plugin, PluginDispatcher, PluginName, PluginState, PluginStep};
+use crate::plugin::{Plugin, PluginDispatcher, PluginName, PluginState, PluginStep, StartedPlugin};
 
 const STEPS_DRY: &[PluginStep] = &[
     PluginStep::PreFlight,
@@ -96,7 +95,6 @@ impl KernelBuilder {
 
         // Starting stage
         let plugins = Self::start_plugins(plugins)?;
-        Self::check_all_started(&plugins)?;
         log::info!("All plugins started");
 
         // Discovering plugins capabilities
@@ -136,7 +134,7 @@ impl KernelBuilder {
         Ok(plugins)
     }
 
-    fn start_plugins(plugins: Vec<Plugin>) -> Result<Vec<Plugin>, failure::Error> {
+    fn start_plugins(plugins: Vec<Plugin>) -> Result<Vec<StartedPlugin>, failure::Error> {
         log::info!("Starting plugins");
         let starter = PluginStarter::new();
         let plugins = plugins
@@ -148,7 +146,7 @@ impl KernelBuilder {
 
     fn discover_capabilities(
         cfg_map: &CfgMap,
-        plugins: &[Plugin],
+        plugins: &[StartedPlugin],
     ) -> Result<Map<PluginStep, Vec<PluginName>>, failure::Error> {
         let discovery = CapabilitiesDiscovery::new();
         let mut capabilities = Map::new();
@@ -159,7 +157,7 @@ impl KernelBuilder {
                 capabilities
                     .entry(step)
                     .or_insert_with(Vec::new)
-                    .push(plugin.name().clone());
+                    .push(plugin.name.clone());
             }
         }
 
@@ -168,21 +166,19 @@ impl KernelBuilder {
 
     fn build_steps_to_plugins_map(
         config: &Config,
-        plugins: Vec<Plugin>,
+        plugins: Vec<StartedPlugin>,
         capabilities: Map<PluginStep, Vec<PluginName>>,
-    ) -> Result<Map<PluginStep, Vec<Rc<Plugin>>>, failure::Error> {
+    ) -> Result<Map<PluginStep, Vec<StartedPlugin>>, failure::Error> {
         let mut map = Map::new();
 
-        let plugins: Vec<Rc<Plugin>> = plugins.into_iter().map(Rc::new).collect();
-
         fn copy_plugins_matching(
-            plugins: &[Rc<Plugin>],
+            plugins: &[StartedPlugin],
             names: &[impl AsRef<str>],
-        ) -> Vec<Rc<Plugin>> {
+        ) -> Vec<StartedPlugin> {
             plugins
                 .iter()
-                .filter(|p| names.iter().map(AsRef::as_ref).any(|n| n == p.name()))
-                .map(Rc::clone)
+                .filter(|p| names.iter().map(AsRef::as_ref).any(|n| n == p.name))
+                .cloned()
                 .collect::<Vec<_>>()
         }
 
@@ -193,7 +189,7 @@ impl KernelBuilder {
                     let names = capabilities.get(&step);
 
                     let plugins = if let Some(names) = names {
-                        copy_plugins_matching(&plugins, &names[..])
+                        copy_plugins_matching(&plugins[..], &names[..])
                     } else {
                         Vec::new()
                     };

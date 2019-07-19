@@ -1,4 +1,4 @@
-use crate::plugin::{Plugin, PluginInterface, PluginName, PluginState, ResolvedPlugin};
+use crate::plugin::{Plugin, PluginName, PluginState, ResolvedPlugin, StartedPlugin};
 
 pub struct PluginStarter {}
 
@@ -9,7 +9,7 @@ impl PluginStarter {
 }
 
 impl PluginStarter {
-    pub fn start(&self, plugin: Plugin) -> Result<Plugin, failure::Error> {
+    pub fn start(&self, plugin: Plugin) -> Result<StartedPlugin, failure::Error> {
         let (name, state) = plugin.decompose();
         let started = match state {
             PluginState::Unresolved(_) => {
@@ -17,10 +17,10 @@ impl PluginStarter {
             }
             PluginState::Started(started) => started,
             PluginState::Resolved(resolved) => match resolved {
-                ResolvedPlugin::Builtin(builtin) => builtin,
+                ResolvedPlugin::Builtin(builtin) => StartedPlugin::new(builtin)?,
             },
         };
-        Ok(Plugin::new(name, PluginState::Started(started)))
+        Ok(started)
     }
 }
 
@@ -29,5 +29,5 @@ trait Starter {
         &self,
         name: &PluginName,
         meta: &ResolvedPlugin,
-    ) -> Result<Box<dyn PluginInterface>, failure::Error>;
+    ) -> Result<StartedPlugin, failure::Error>;
 }

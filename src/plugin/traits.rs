@@ -6,6 +6,8 @@ use super::proto::{
 };
 
 pub trait PluginInterface {
+    fn name(&self) -> response::Name;
+
     fn methods(&self, _req: request::Methods) -> response::Methods {
         PluginResponse::builder()
             .warning("default methods() implementation called: returning an empty map")

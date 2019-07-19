@@ -1,5 +1,4 @@
 use std::fmt::Debug;
-use std::rc::Rc;
 
 use super::{
     proto::{
@@ -7,34 +6,35 @@ use super::{
         response::{self, PluginResponse},
         Version,
     },
-    Plugin, PluginName, PluginState, PluginStep,
+    PluginName, PluginStep,
 };
 
 use crate::config::{CfgMap, Map};
+use crate::plugin::{PluginInterface, StartedPlugin};
 
 pub struct PluginDispatcher {
     config: CfgMap,
-    map: Map<PluginStep, Vec<Rc<Plugin>>>,
+    map: Map<PluginStep, Vec<StartedPlugin>>,
 }
 
 impl PluginDispatcher {
-    pub fn new(config: CfgMap, map: Map<PluginStep, Vec<Rc<Plugin>>>) -> Self {
+    pub fn new(config: CfgMap, map: Map<PluginStep, Vec<StartedPlugin>>) -> Self {
         PluginDispatcher { config, map }
     }
 
     fn dispatch<RFR: Debug>(
         &self,
         step: PluginStep,
-        call_fn: impl Fn(&Plugin) -> PluginResponse<RFR>,
+        call_fn: impl Fn(&dyn PluginInterface) -> PluginResponse<RFR>,
     ) -> DispatchedMultiResult<PluginResponse<RFR>> {
         let mut response_map = Map::new();
 
         if let Some(plugins) = self.mapped_plugins(step) {
             for plugin in plugins {
-                log::info!("Invoking plugin '{}'", plugin.name());
-                let response = call_fn(&plugin);
-                log::debug!("{}: {:?}", plugin.name(), response);
-                response_map.insert(plugin.name().clone(), response);
+                log::info!("Invoking plugin '{}'", plugin.name);
+                let response = call_fn(&**plugin.as_interface());
+                log::debug!("{}: {:?}", plugin.name, response);
+                response_map.insert(plugin.name.clone(), response);
             }
         }
 
@@ -44,27 +44,20 @@ impl PluginDispatcher {
     fn dispatch_singleton<RFR: Debug>(
         &self,
         step: PluginStep,
-        call_fn: impl FnOnce(&Plugin) -> PluginResponse<RFR>,
+        call_fn: impl FnOnce(&dyn PluginInterface) -> PluginResponse<RFR>,
     ) -> DispatchedSingletonResult<PluginResponse<RFR>> {
         let plugin = self.mapped_singleton(step);
-        log::info!("Invoking singleton '{}'", plugin.name());
-        let response = call_fn(&plugin);
-        log::debug!("{}: {:?}", plugin.name(), response);
-        Ok((plugin.name().to_owned(), response))
+        log::info!("Invoking singleton '{}'", plugin.name);
+        let response = call_fn(&**plugin.as_interface());
+        log::debug!("{}: {:?}", plugin.name, response);
+        Ok((plugin.name.clone(), response))
     }
 
-    fn mapped_plugins(&self, step: PluginStep) -> Option<impl Iterator<Item = Rc<Plugin>> + '_> {
-        self.map.get(&step).map(|plugins| {
-            plugins.iter().map(|plugin| match plugin.state() {
-                PluginState::Started(_) => Rc::clone(plugin),
-                _other_state => panic!(
-                    "all plugins must be started before calling PluginDispatcher::mapped_plugins"
-                ),
-            })
-        })
+    fn mapped_plugins(&self, step: PluginStep) -> Option<impl Iterator<Item = StartedPlugin> + '_> {
+        self.map.get(&step).map(|plugins| plugins.iter().cloned())
     }
 
-    fn mapped_singleton(&self, step: PluginStep) -> Rc<Plugin> {
+    fn mapped_singleton(&self, step: PluginStep) -> StartedPlugin {
         let no_plugins_found_panic = || {
             panic!(
                 "no plugins matching the singleton step {:?}: this is a bug, aborting.",
@@ -98,15 +91,13 @@ pub type DispatchedSingletonResult<T> = Result<(PluginName, T), failure::Error>;
 impl PluginDispatcher {
     pub fn pre_flight(&self) -> DispatchedMultiResult<response::PreFlight> {
         self.dispatch(PluginStep::PreFlight, |p| {
-            p.as_interface()
-                .pre_flight(PluginRequest::with_default_data(self.config.clone()))
+            p.pre_flight(PluginRequest::with_default_data(self.config.clone()))
         })
     }
 
     pub fn get_last_release(&self) -> DispatchedSingletonResult<response::GetLastRelease> {
         self.dispatch_singleton(PluginStep::GetLastRelease, move |p| {
-            p.as_interface()
-                .get_last_release(PluginRequest::with_default_data(self.config.clone()))
+            p.get_last_release(PluginRequest::with_default_data(self.config.clone()))
         })
     }
 
@@ -115,7 +106,7 @@ impl PluginDispatcher {
         current_version: Version,
     ) -> DispatchedMultiResult<response::DeriveNextVersion> {
         self.dispatch(PluginStep::DeriveNextVersion, |p| {
-            p.as_interface().derive_next_version(PluginRequest::new(
+            p.derive_next_version(PluginRequest::new(
                 self.config.clone(),
                 current_version.clone(),
             ))
@@ -127,8 +118,7 @@ impl PluginDispatcher {
         params: request::GenerateNotesData,
     ) -> DispatchedMultiResult<response::GenerateNotes> {
         self.dispatch(PluginStep::GenerateNotes, |p| {
-            p.as_interface()
-                .generate_notes(PluginRequest::new(self.config.clone(), params.clone()))
+            p.generate_notes(PluginRequest::new(self.config.clone(), params.clone()))
         })
     }
 
@@ -137,15 +127,13 @@ impl PluginDispatcher {
         params: request::PrepareData,
     ) -> DispatchedMultiResult<response::Prepare> {
         self.dispatch(PluginStep::Prepare, |p| {
-            p.as_interface()
-                .prepare(PluginRequest::new(self.config.clone(), params.clone()))
+            p.prepare(PluginRequest::new(self.config.clone(), params.clone()))
         })
     }
 
     pub fn verify_release(&self) -> DispatchedMultiResult<response::VerifyRelease> {
         self.dispatch(PluginStep::VerifyRelease, |p| {
-            p.as_interface()
-                .verify_release(PluginRequest::with_default_data(self.config.clone()))
+            p.verify_release(PluginRequest::with_default_data(self.config.clone()))
         })
     }
 
@@ -154,8 +142,7 @@ impl PluginDispatcher {
         params: request::CommitData,
     ) -> DispatchedSingletonResult<response::Commit> {
         self.dispatch_singleton(PluginStep::Commit, move |p| {
-            p.as_interface()
-                .commit(PluginRequest::new(self.config.clone(), params))
+            p.commit(PluginRequest::new(self.config.clone(), params))
         })
     }
 
@@ -164,15 +151,13 @@ impl PluginDispatcher {
         params: request::PublishData,
     ) -> DispatchedMultiResult<response::Publish> {
         self.dispatch(PluginStep::Publish, |p| {
-            p.as_interface()
-                .publish(PluginRequest::new(self.config.clone(), params.clone()))
+            p.publish(PluginRequest::new(self.config.clone(), params.clone()))
         })
     }
 
     pub fn notify(&self, params: request::NotifyData) -> DispatchedMultiResult<response::Notify> {
         self.dispatch(PluginStep::Notify, |p| {
-            p.as_interface()
-                .notify(PluginRequest::new(self.config.clone(), params))
+            p.notify(PluginRequest::new(self.config.clone(), params))
         })
     }
 }

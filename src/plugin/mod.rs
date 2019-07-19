@@ -9,6 +9,8 @@ pub use self::dispatcher::PluginDispatcher;
 pub use self::traits::PluginInterface;
 
 use serde::{Deserialize, Serialize};
+use std::cell::{Ref, RefCell, RefMut};
+use std::rc::Rc;
 
 pub type PluginName = String;
 
@@ -30,13 +32,6 @@ impl Plugin {
         &self.state
     }
 
-    pub fn as_interface(&self) -> &dyn PluginInterface {
-        match self.state() {
-            PluginState::Started(executor) => &**executor,
-            _other => panic!("plugin must be started before calling `Plugin::as_interface`"),
-        }
-    }
-
     pub fn decompose(self) -> (PluginName, PluginState) {
         (self.name, self.state)
     }
@@ -45,7 +40,32 @@ impl Plugin {
 pub enum PluginState {
     Unresolved(UnresolvedPlugin),
     Resolved(ResolvedPlugin),
-    Started(Box<dyn PluginInterface>),
+    Started(StartedPlugin),
+}
+
+#[derive(Clone)]
+pub struct StartedPlugin {
+    pub name: String,
+    call: Rc<RefCell<Box<dyn PluginInterface>>>,
+}
+
+impl StartedPlugin {
+    pub fn new(plugin: Box<dyn PluginInterface>) -> Result<Self, failure::Error> {
+        let name = plugin.name()?;
+        let plugin = StartedPlugin {
+            name,
+            call: Rc::new(RefCell::new(plugin)),
+        };
+        Ok(plugin)
+    }
+
+    pub fn as_interface(&self) -> Ref<Box<dyn PluginInterface>> {
+        RefCell::borrow(&self.call)
+    }
+
+    pub fn as_interface_mut(&mut self) -> RefMut<Box<dyn PluginInterface>> {
+        RefCell::borrow_mut(&self.call)
+    }
 }
 
 impl PluginState {

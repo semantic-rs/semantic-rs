@@ -45,6 +45,10 @@ struct DryRunGuard {
 }
 
 impl PluginInterface for RustPlugin {
+    fn name(&self) -> response::Name {
+        PluginResponse::from_ok("rust".into())
+    }
+
     fn methods(&self, _req: request::Methods) -> response::Methods {
         let methods = vec![
             PluginStep::PreFlight,
