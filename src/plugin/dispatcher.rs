@@ -66,30 +66,25 @@ impl PluginDispatcher {
     }
 
     fn mapped_singleton(&self, step: PluginStep) -> &Plugin {
-        let no_plugins_found_panic = || {
+        let no_plugins_found_panic = || -> ! {
             panic!(
                 "no plugins matching the singleton step {:?}: this is a bug, aborting.",
                 step
             )
         };
-        let too_many_plugins_panic = || {
+
+        let too_many_plugins_panic = || -> ! {
             panic!(
                 "more then one plugin matches the singleton step {:?}: this is a bug, aborting.",
                 step
             )
         };
 
-        let ids = self.map.get(&step).unwrap_or_else(no_plugins_found_panic);
-
-        if ids.is_empty() {
-            no_plugins_found_panic();
+        match self.map.get(&step).map(Vec::as_slice) {
+            None | Some([]) => no_plugins_found_panic(),
+            Some([single]) => &self.plugins[*single],
+            _ => too_many_plugins_panic(),
         }
-
-        if ids.len() != 1 {
-            too_many_plugins_panic();
-        }
-
-        &self.plugins[ids[0]]
     }
 }
 
