@@ -13,6 +13,7 @@ mod utils;
 
 use crate::config::Config;
 use crate::kernel::Kernel;
+use kernel::KernelError;
 use std::env;
 
 fn main() {
@@ -45,8 +46,22 @@ fn run() -> Result<(), failure::Error> {
     let kernel = Kernel::builder(config).build()?;
 
     if let Err(err) = kernel.run() {
-        log::error!("{}", err);
-        std::process::exit(1);
+        macro_rules! log_error_and_die {
+            ($err:expr) => {{
+                log::error!("{}", $err);
+                std::process::exit(1);
+            }};
+        }
+
+        match err.downcast::<KernelError>() {
+            Ok(kernel_error) => match kernel_error {
+                KernelError::EarlyExit => (),
+                _ => log_error_and_die!(kernel_error),
+            },
+            Err(other_error) => {
+                log_error_and_die!(other_error);
+            }
+        }
     }
 
     Ok(())

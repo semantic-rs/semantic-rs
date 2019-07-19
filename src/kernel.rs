@@ -46,7 +46,11 @@ impl Kernel {
                 err
             })?;
 
-            Ok(())
+            if data.should_finish_early {
+                Err(KernelError::EarlyExit)?
+            } else {
+                Ok(())
+            }
         };
 
         // Run through the "dry" steps
@@ -286,7 +290,7 @@ impl KernelBuilder {
 }
 
 #[derive(Fail, Debug)]
-enum KernelError {
+pub enum KernelError {
     #[fail(display = "failed to resolve some modules: \n{:#?}", _0)]
     FailedToResolvePlugins(Vec<String>),
     #[fail(display = "failed to start some modules: \n{:#?}", _0)]
@@ -306,6 +310,8 @@ enum KernelError {
         _0
     )]
     MissingRequiredData(&'static str),
+    #[fail(display = "Kernel finished early")]
+    EarlyExit,
 }
 
 #[derive(Default)]
@@ -315,6 +321,7 @@ struct KernelData {
     changelog: Option<String>,
     files_to_commit: Option<Vec<String>>,
     tag_name: Option<String>,
+    should_finish_early: bool,
 }
 
 impl KernelData {
@@ -396,7 +403,23 @@ trait KernelRoutine {
             .max()
             .expect("iterator from response map cannot be empty: this is a bug, aborting.");
 
+        let is_same_versions = {
+            let last_version = data.require_last_version()?;
+            last_version
+                .semver
+                .as_ref()
+                .map(|v| v == &next_version)
+                .unwrap_or(false)
+        };
+
         data.set_next_version(next_version);
+
+        if is_same_versions {
+            log::info!("Next version would be the same as previous");
+            log::info!("You're all set, no release is required!");
+            data.should_finish_early = true;
+        }
+
         Ok(())
     }
 

@@ -3,7 +3,6 @@ use std::path::{Path, PathBuf};
 
 use failure::Error;
 use failure::Fail;
-use futures::Future;
 use http::header::HeaderValue;
 use hubcaps::releases::ReleaseOptions;
 use hubcaps::{Credentials, Github};
