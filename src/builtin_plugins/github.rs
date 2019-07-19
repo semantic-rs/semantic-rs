@@ -3,13 +3,12 @@ use std::path::{Path, PathBuf};
 
 use failure::Error;
 use failure::Fail;
+use futures::Future;
 use http::header::HeaderValue;
 use hubcaps::releases::ReleaseOptions;
 use hubcaps::{Credentials, Github};
-use hyper::net::HttpsConnector;
-use hyper::Client;
-use hyper_native_tls::NativeTlsClient;
 use serde::Deserialize;
+use tokio::runtime::current_thread::block_on_all;
 use url::{ParseError, Url};
 
 use crate::config::CfgMapExt;
@@ -103,7 +102,7 @@ impl PluginInterface for GithubPlugin {
         globs_to_assets(cfg.assets.iter().map(String::as_str))
             .into_iter()
             .inspect(|asset| {
-                asset.as_ref().map(|a| {
+                asset.as_ref().ok().map(|a| {
                     log::info!(
                         "github: will upload {} ({})",
                         a.path().display(),
@@ -140,11 +139,9 @@ impl PluginInterface for GithubPlugin {
         let token = std::env::var("GH_TOKEN").map_err(|_| GithubPluginError::TokenUndefined)?;
 
         // Create release
-        let client = Client::with_connector(HttpsConnector::new(NativeTlsClient::new().unwrap()));
         let credentials = Credentials::Token(token.to_owned());
-        let github = Github::new(USERAGENT, client, credentials);
 
-        let opts = ReleaseOptions::builder(tag_name)
+        let release_opts = ReleaseOptions::builder(tag_name)
             .name(tag_name)
             .body(changelog)
             .commitish(branch)
@@ -152,10 +149,13 @@ impl PluginInterface for GithubPlugin {
             .prerelease(false)
             .build();
 
-        let repo = github.repo(user, repo_name);
-        let releases = repo.releases();
-
-        let release = releases.create(&opts).sync()?;
+        let release = block_on_all(futures::lazy(move || {
+            let github = Github::new(USERAGENT, credentials);
+            let repo = github.repo(user, repo_name);
+            let releases = repo.releases();
+            releases.create(&release_opts)
+        }))
+        .sync()?;
 
         // Upload assets
         let token_header_value = HeaderValue::from_str(&format!("token {}", token)).unwrap();
