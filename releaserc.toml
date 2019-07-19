@@ -41,7 +41,7 @@ force_https = true
 
 [cfg.github]
 assets = [
-    "bin/*",
+    "/workspace/bin/*",
     "Changelog.md"
 ]
 
