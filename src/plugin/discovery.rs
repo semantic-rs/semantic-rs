@@ -14,9 +14,10 @@ impl CapabilitiesDiscovery {
         cfg_map: &CfgMap,
         plugin: &Plugin,
     ) -> Result<Vec<PluginStep>, failure::Error> {
-        let response = plugin
-            .as_interface()
-            .methods(PluginRequest::with_default_data(Clone::clone(cfg_map)))?;
+        let response = plugin.as_interface().methods(PluginRequest::new_null(
+            cfg_map,
+            &std::env::vars().collect(),
+        ))?;
 
         Ok(response)
     }

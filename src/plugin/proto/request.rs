@@ -3,41 +3,41 @@ use std::collections::HashMap;
 use super::{Null, Version};
 use crate::config::CfgMap;
 
-pub struct PluginRequest<T> {
-    pub cfg_map: CfgMap,
-    pub env: HashMap<String, String>,
-    pub data: T,
+pub struct PluginRequest<'a, T> {
+    pub cfg_map: &'a CfgMap,
+    pub env: &'a HashMap<String, String>,
+    pub data: &'a T,
 }
 
-impl<T> PluginRequest<T> {
-    pub fn new(cfg_map: CfgMap, data: T) -> Self {
-        Self::with_env(cfg_map, std::env::vars().collect(), data)
+impl<'a, T: 'a> PluginRequest<'a, T> {
+    pub fn new(cfg_map: &'a CfgMap, env: &'a HashMap<String, String>, data: &'a T) -> Self {
+        Self::with_env(cfg_map, env, data)
     }
 
-    pub fn with_env(cfg_map: CfgMap, env: HashMap<String, String>, data: T) -> Self {
+    pub fn with_env(cfg_map: &'a CfgMap, env: &'a HashMap<String, String>, data: &'a T) -> Self {
         PluginRequest { cfg_map, env, data }
     }
 }
 
-impl<T: Default> PluginRequest<T> {
-    pub fn with_default_data(cfg_map: CfgMap) -> Self {
-        PluginRequest::new(cfg_map, Default::default())
+impl<'a> PluginRequest<'a, ()> {
+    pub fn new_null(cfg_map: &'a CfgMap, env: &'a HashMap<String, String>) -> Self {
+        PluginRequest::new(cfg_map, env, &())
     }
 }
 
-pub type Methods = PluginRequest<MethodsData>;
+pub type Methods<'a> = PluginRequest<'a, MethodsData>;
 pub type MethodsData = Null;
 
-pub type PreFlight = PluginRequest<PreFlightData>;
+pub type PreFlight<'a> = PluginRequest<'a, PreFlightData>;
 pub type PreFlightData = Null;
 
-pub type GetLastRelease = PluginRequest<GetLastReleaseData>;
+pub type GetLastRelease<'a> = PluginRequest<'a, GetLastReleaseData>;
 pub type GetLastReleaseData = Null;
 
-pub type DeriveNextVersion = PluginRequest<DeriveNextVersionData>;
+pub type DeriveNextVersion<'a> = PluginRequest<'a, DeriveNextVersionData>;
 pub type DeriveNextVersionData = Version;
 
-pub type GenerateNotes = PluginRequest<GenerateNotesData>;
+pub type GenerateNotes<'a> = PluginRequest<'a, GenerateNotesData>;
 
 #[derive(Clone, Debug)]
 pub struct GenerateNotesData {
@@ -45,13 +45,13 @@ pub struct GenerateNotesData {
     pub new_version: semver::Version,
 }
 
-pub type Prepare = PluginRequest<PrepareData>;
+pub type Prepare<'a> = PluginRequest<'a, PrepareData>;
 pub type PrepareData = semver::Version;
 
-pub type VerifyRelease = PluginRequest<VerifyReleaseData>;
+pub type VerifyRelease<'a> = PluginRequest<'a, VerifyReleaseData>;
 pub type VerifyReleaseData = Null;
 
-pub type Commit = PluginRequest<CommitData>;
+pub type Commit<'a> = PluginRequest<'a, CommitData>;
 
 #[derive(Clone, Debug)]
 pub struct CommitData {
@@ -60,7 +60,7 @@ pub struct CommitData {
     pub changelog: String,
 }
 
-pub type Publish = PluginRequest<PublishData>;
+pub type Publish<'a> = PluginRequest<'a, PublishData>;
 
 #[derive(Clone, Debug)]
 pub struct PublishData {
@@ -68,5 +68,5 @@ pub struct PublishData {
     pub changelog: String,
 }
 
-pub type Notify = PluginRequest<NotifyData>;
+pub type Notify<'a> = PluginRequest<'a, NotifyData>;
 pub type NotifyData = Null;

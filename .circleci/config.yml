@@ -31,6 +31,16 @@ aliases:
   - &filter-only-semantic-pr
     branches:
       only:  /^(pull|fix|feat)\/.*$/
+  # -------------------------
+  # ALIASES: Get latest usable nightly from rustup-components-history
+  - &get-latest-toolchain
+    name: Get latest Nightly version that has Clippy component
+    command: |
+      export TOOLCHAIN="nightly-$(curl https://rust-lang.github.io/rustup-components-history/x86_64-unknown-linux-gnu/clippy)"
+      echo "export TOOLCHAIN=$TOOLCHAIN" >> $BASH_ENV
+      source $BASH_ENV
+      echo Would use toolchain $TOOLCHAIN
+
 
 defaults: &defaults
   working_directory: ~/project
@@ -57,12 +67,15 @@ jobs:
       - checkout
       - restore_cache: *restore-deps-cache-rust
       - run: apt update && apt install -y cmake
-      - run: rustup component add clippy
-      - run: rustup component add rustfmt
-      - run: cargo test --all
+      - run: *get-latest-toolchain
+      - run: rustup toolchain install $TOOLCHAIN
+      - run: rustup toolchain install stable
+      - run: rustup component add clippy --toolchain $TOOLCHAIN
+      - run: rustup component add rustfmt --toolchain stable
+      - run: cargo +$TOOLCHAIN test --all
       - save_cache: *save-deps-cache-rust
-      - run: cargo clippy
-      - run: cargo fmt -- --check
+      - run: cargo +$TOOLCHAIN clippy
+      - run: cargo +stable fmt -- --check
 
   build-linux-release:
     <<: *defaults

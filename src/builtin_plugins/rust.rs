@@ -90,7 +90,7 @@ impl PluginInterface for RustPlugin {
             self.dry_run_guard.replace(guard);
         }
 
-        cargo.set_version(params.data)?;
+        cargo.set_version(params.data.clone())?;
 
         PluginResponse::from_ok(vec!["Cargo.toml".into(), "Cargo.lock".into()])
     }

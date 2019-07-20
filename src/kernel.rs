@@ -394,7 +394,7 @@ trait KernelRoutine {
         let responses = execute_request(|| {
             kernel
                 .dispatcher
-                .derive_next_version(data.require_last_version()?.clone())
+                .derive_next_version(data.require_last_version()?)
         })?;
 
         let next_version = responses
@@ -429,7 +429,7 @@ trait KernelRoutine {
             new_version: data.require_next_version()?.clone(),
         };
 
-        let responses = execute_request(|| kernel.dispatcher.generate_notes(params))?;
+        let responses = execute_request(|| kernel.dispatcher.generate_notes(&params))?;
 
         let changelog = responses.values().fold(String::new(), |mut summary, part| {
             summary.push_str(part);
@@ -447,11 +447,8 @@ trait KernelRoutine {
     }
 
     fn prepare(kernel: &Kernel, data: &mut KernelData) -> KernelRoutineResult<()> {
-        let responses = execute_request(|| {
-            kernel
-                .dispatcher
-                .prepare(data.require_next_version()?.clone())
-        })?;
+        let responses =
+            execute_request(|| kernel.dispatcher.prepare(data.require_next_version()?))?;
 
         let changed_files = responses
             .into_iter()
@@ -475,7 +472,7 @@ trait KernelRoutine {
             changelog: data.require_changelog()?.to_owned(),
         };
 
-        let (_, response) = kernel.dispatcher.commit(params)?;
+        let (_, response) = kernel.dispatcher.commit(&params)?;
 
         let tag_name = response.into_result()?;
 
@@ -490,12 +487,12 @@ trait KernelRoutine {
             changelog: data.require_changelog()?.to_owned(),
         };
 
-        execute_request(|| kernel.dispatcher.publish(params))?;
+        execute_request(|| kernel.dispatcher.publish(&params))?;
         Ok(())
     }
 
     fn notify(kernel: &Kernel, _data: &mut KernelData) -> KernelRoutineResult<()> {
-        execute_request(|| kernel.dispatcher.notify(()))?;
+        execute_request(|| kernel.dispatcher.notify(&()))?;
         Ok(())
     }
 }

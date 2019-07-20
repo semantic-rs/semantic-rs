@@ -93,7 +93,7 @@ impl PluginInterface for ClogPlugin {
             Some(_) => version_bump_since_rev(&cfg.project_root()?, &current_version.rev)?,
         };
 
-        let next_version = match current_version.semver {
+        let next_version = match current_version.semver.clone() {
             None => semver::Version::new(0, 1, 0),
             Some(mut version) => {
                 // NB: According to the Semver spec, major version zero is for
@@ -130,7 +130,7 @@ impl PluginInterface for ClogPlugin {
             generate_changelog(&cfg.project_root()?, &data.start_rev, &data.new_version)?;
 
         // Store this request as state
-        self.state.replace(data);
+        self.state.replace(data.clone());
 
         PluginResponse::from_ok(changelog)
     }
