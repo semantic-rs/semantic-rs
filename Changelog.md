@@ -1,3 +1,13 @@
+<a name="v2.3.0"></a>
+## v2.3.0 (2019-07-20)
+
+
+#### Features
+
+*   exit early if derived version is the same is last one ([51d9f4ec](51d9f4ec))
+
+
+
 <a name="v2.2.0"></a>
 ## v2.2.0 (2019-07-19)
 
