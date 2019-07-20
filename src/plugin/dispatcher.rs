@@ -4,16 +4,17 @@ use super::{
     proto::{
         request::{self, PluginRequest},
         response::{self, PluginResponse},
-        Version,
     },
     PluginStep,
 };
 
 use crate::config::{CfgMap, Map};
 use crate::plugin::{Plugin, PluginInterface};
+use std::collections::HashMap;
 
 pub struct PluginDispatcher {
     config: CfgMap,
+    env: HashMap<String, String>,
     plugins: Vec<Plugin>,
     map: Map<PluginStep, Vec<usize>>,
 }
@@ -22,6 +23,7 @@ impl PluginDispatcher {
     pub fn new(config: CfgMap, plugins: Vec<Plugin>, map: Map<PluginStep, Vec<usize>>) -> Self {
         PluginDispatcher {
             config,
+            env: std::env::vars().collect(),
             plugins,
             map,
         }
@@ -94,73 +96,70 @@ pub type DispatchedSingletonResult<T> = Result<(String, T), failure::Error>;
 impl PluginDispatcher {
     pub fn pre_flight(&self) -> DispatchedMultiResult<response::PreFlight> {
         self.dispatch(PluginStep::PreFlight, |p| {
-            p.pre_flight(PluginRequest::with_default_data(self.config.clone()))
+            p.pre_flight(PluginRequest::new_null(&self.config, &self.env))
         })
     }
 
     pub fn get_last_release(&self) -> DispatchedSingletonResult<response::GetLastRelease> {
         self.dispatch_singleton(PluginStep::GetLastRelease, move |p| {
-            p.get_last_release(PluginRequest::with_default_data(self.config.clone()))
+            p.get_last_release(PluginRequest::new_null(&self.config, &self.env))
         })
     }
 
     pub fn derive_next_version(
         &self,
-        current_version: Version,
+        current_version: &request::DeriveNextVersionData,
     ) -> DispatchedMultiResult<response::DeriveNextVersion> {
         self.dispatch(PluginStep::DeriveNextVersion, |p| {
-            p.derive_next_version(PluginRequest::new(
-                self.config.clone(),
-                current_version.clone(),
-            ))
+            p.derive_next_version(PluginRequest::new(&self.config, &self.env, current_version))
         })
     }
 
     pub fn generate_notes(
         &self,
-        params: request::GenerateNotesData,
+        params: &request::GenerateNotesData,
     ) -> DispatchedMultiResult<response::GenerateNotes> {
         self.dispatch(PluginStep::GenerateNotes, |p| {
-            p.generate_notes(PluginRequest::new(self.config.clone(), params.clone()))
+            p.generate_notes(PluginRequest::new(&self.config, &self.env, params))
         })
     }
 
     pub fn prepare(
         &self,
-        params: request::PrepareData,
+        params: &request::PrepareData,
     ) -> DispatchedMultiResult<response::Prepare> {
         self.dispatch(PluginStep::Prepare, |p| {
-            p.prepare(PluginRequest::new(self.config.clone(), params.clone()))
+            p.prepare(PluginRequest::new(&self.config, &self.env, params))
         })
     }
 
     pub fn verify_release(&self) -> DispatchedMultiResult<response::VerifyRelease> {
         self.dispatch(PluginStep::VerifyRelease, |p| {
-            p.verify_release(PluginRequest::with_default_data(self.config.clone()))
+            p.verify_release(PluginRequest::new_null(&self.config, &self.env))
         })
     }
 
     pub fn commit(
         &self,
-        params: request::CommitData,
+        params: &request::CommitData,
     ) -> DispatchedSingletonResult<response::Commit> {
         self.dispatch_singleton(PluginStep::Commit, move |p| {
-            p.commit(PluginRequest::new(self.config.clone(), params))
+            p.commit(PluginRequest::new(&self.config, &self.env, params))
         })
     }
 
     pub fn publish(
         &self,
-        params: request::PublishData,
+        params: &request::PublishData,
     ) -> DispatchedMultiResult<response::Publish> {
         self.dispatch(PluginStep::Publish, |p| {
-            p.publish(PluginRequest::new(self.config.clone(), params.clone()))
+            p.publish(PluginRequest::new(&self.config, &self.env, params))
         })
     }
 
-    pub fn notify(&self, params: request::NotifyData) -> DispatchedMultiResult<response::Notify> {
+    pub fn notify(&self, params: &request::NotifyData) -> DispatchedMultiResult<response::Notify> {
         self.dispatch(PluginStep::Notify, |p| {
-            p.notify(PluginRequest::new(self.config.clone(), params))
+            p.notify(PluginRequest::new(&self.config, &self.env, params))
         })
     }
 }
