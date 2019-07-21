@@ -4,14 +4,24 @@ aliases:
   # -------------------------
   #      ALIASES: Caches
   # -------------------------
-  - &restore-deps-cache-rust
+  - &restore-deps-cache-ububtu
     key: rust-cache-{{ arch }}-{{ checksum "Cargo.lock" }}-{{ .Environment.CIRCLE_JOB }}
 
-  - &save-deps-cache-rust
+  - &save-deps-cache-ubuntu
     key: rust-cache-{{ arch }}-{{ checksum "Cargo.lock" }}-{{ .Environment.CIRCLE_JOB }}
     paths:
       - /usr/local/cargo/registry
-      - /usr/local/rustup/
+      - /usr/local/rustup
+      - ~/project/target/
+
+  - &restore-deps-cache-windows
+    key: rust-cache-{{ arch }}-windows-{{ checksum "Cargo.lock" }}-{{ .Environment.CIRCLE_JOB }}
+
+  - &save-deps-cache-windows
+    key: rust-cache-{{ arch }}-windows-{{ checksum "Cargo.lock" }}-{{ .Environment.CIRCLE_JOB }}
+    paths:
+      - ~/.rustup/
+      - ~/.cargo/
       - ~/project/target/
 
   - &restore-deps-cache-rustup
@@ -55,7 +65,7 @@ jobs:
       - image: rust:latest
     steps:
       - checkout
-      - restore_cache: *restore-deps-cache-rust
+      - restore_cache: *restore-deps-cache-ububtu
       - run: apt update && apt install -y cmake
       - run: *get-latest-toolchain
       - run:
@@ -66,7 +76,7 @@ jobs:
             rustup component add clippy --toolchain $TOOLCHAIN
             rustup component add rustfmt --toolchain stable
       - run: cargo +$TOOLCHAIN test --all
-      - save_cache: *save-deps-cache-rust
+      - save_cache: *save-deps-cache-ubuntu
       - run: cargo +$TOOLCHAIN clippy
       - run: cargo +stable fmt -- --check
 
@@ -124,6 +134,62 @@ jobs:
           paths:
             - bin/*
 
+  test-windows:
+    <<: *defaults
+    docker:
+      - image: ubuntu:18.04
+    steps:
+      - checkout
+      - run:
+          name: Install Wine and MinGW-64
+          command: .ci/boot_wine_env.sh
+      - restore_cache: *restore-deps-cache-windows
+      - run:
+          name: Install Rust cross-toolchain for x86_64-pc-windows-gnu
+          command: |
+            curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain nightly -y
+            source $HOME/.cargo/env
+            rustup install nightly-x86_64-pc-windows-gnu
+            rustup target add x86_64-pc-windows-gnu
+      - run:
+          name: Run Windows tests
+          command: |
+            source $HOME/.cargo/env && cargo build --tests --target x86_64-pc-windows-gnu
+            wine target/x86_64-pc-windows-gnu/debug/semantic_rs-*.exe --test-threads=1
+      - save_cache: *save-deps-cache-windows
+
+  build-windows:
+    <<: *defaults
+    docker:
+      - image: ubuntu:18.04
+    steps:
+      - checkout
+      - run:
+          name: Install Wine and MinGW-64
+          command: .ci/boot_wine_env.sh
+      - restore_cache: *restore-deps-cache-windows
+      - run:
+          name: Install Rust cross-toolchain for x86_64-pc-windows-gnu
+          command: |
+            curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain nightly -y
+            source $HOME/.cargo/env
+            rustup install nightly-x86_64-pc-windows-gnu
+            rustup target add x86_64-pc-windows-gnu
+      - run: source $HOME/.cargo/env && cargo build --release --target x86_64-pc-windows-gnu
+      - save_cache: *save-deps-cache-windows
+      - run:
+          name: Move binary to ./bin/ directory
+          command: |
+            mkdir bin/
+            mv target/x86_64-pc-windows-gnu/release/semantic-rs.exe ./bin/semantic-rs-windows.exe
+      - run:
+          name: Check that Windows executable launches
+          command: wine ./bin/semantic-rs-windows.exe --help
+      - persist_to_workspace:
+         root: .
+         paths:
+           - bin/*
+
   release-dry:
     <<: *defaults
     docker:
@@ -142,12 +208,12 @@ jobs:
       - checkout
       - attach_workspace:
           at: /workspace
-      - restore_cache: *restore-deps-cache-rust
+      - restore_cache: *restore-deps-cache-ububtu
       # This unset is VERY important: without it --force-https cannot work
       # For some reason CircleCI has a global override substituting git@ links instead of all https links
       - run: git config --global --unset url.ssh://git@github.com.insteadof
       - run: /workspace/bin/semantic-rs-linux
-      - save_cache: *save-deps-cache-rust
+      - save_cache: *save-deps-cache-ubuntu
 
 workflows:
   version: 2
@@ -157,15 +223,20 @@ workflows:
           filters: *filter-only-semantic-pr
       - test-macos:
           filters: *filter-only-semantic-pr
+      - test-windows:
+          filters: *filter-only-semantic-pr
       - build-linux:
           filters: *filter-only-semantic-pr
       - build-macos:
+          filters: *filter-only-semantic-pr
+      - build-windows:
           filters: *filter-only-semantic-pr
       - release-dry:
           filters: *filter-only-semantic-pr
           requires:
             - build-linux
             - build-macos
+            - build-windows
 
   release:
     jobs:
@@ -173,21 +244,27 @@ workflows:
           filters: *filter-only-master
       - test-macos:
           filters: *filter-only-master
+      - test-windows:
+          filters: *filter-only-master
       - build-linux:
           filters: *filter-only-master
       - build-macos:
+          filters: *filter-only-master
+      - build-windows:
           filters: *filter-only-master
       - release-dry:
           filters: *filter-only-master
           requires:
             - build-linux
             - build-macos
+            - build-windows
       - hold:
           filters: *filter-only-master
           type: approval
           requires:
             - test-linux
             - test-macos
+            - test-windows
             - release-dry
       - release:
           filters: *filter-only-master
