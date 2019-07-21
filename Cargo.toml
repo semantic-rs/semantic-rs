@@ -8,7 +8,7 @@ authors = [
 description = 'Automatic crate publishing'
 license = 'MIT'
 edition = '2018'
-version = '2.5.0'
+version = '2.6.0'
 
 [dependencies]
 semver = '0.9'
@@ -42,7 +42,6 @@ features = ['derive']
 [dependencies.linked-hash-map]
 version = '0.5'
 features = ['serde_impl']
-
 [profile.release]
 debug = true
 overflow-checks = true

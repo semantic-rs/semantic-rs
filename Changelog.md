@@ -1,3 +1,23 @@
+<a name="v2.6.0"></a>
+## v2.6.0 (2019-07-21)
+
+
+#### Features
+
+* **ci:**
+  *  setup docker environment ([42f73a39](42f73a39))
+  *  Windows builds & tests ([89b4227b](89b4227b))
+  *  cache rustup path for rust:latest container ([041abd31](041abd31))
+  *  use Cargo.lock as a cache key ([9ffffaa8](9ffffaa8))
+  *  treat `chore: ...` as semantic-pr ([725aabec](725aabec))
+  *  run tests on MacOS ([a065669f](a065669f))
+  *  more efficient job queue ([223ee033](223ee033))
+  *  build MacOS binaries ([de77294e](de77294e))
+* **docker:**  publishing to DockerHub ([37f49b41](37f49b41), closes [#11](11))
+* **docs:**  docker plugin description ([1721dfb8](1721dfb8))
+
+
+
 <a name="v2.5.0"></a>
 ## v2.5.0 (2019-07-21)
 
