@@ -13,10 +13,10 @@ aliases:
       - /usr/local/cargo/registry
       - ~/project/target/
 
-  - &restore-deps-cache-musl
+  - &restore-deps-cache-rustup
     key: deps-cache-musl-{{ arch }}-{{ checksum "Cargo.toml" }}
 
-  - &save-deps-cache-musl
+  - &save-deps-cache-rustup
     key: deps-cache-musl-{{ arch }}-{{ checksum "Cargo.toml" }}
     paths:
       - ~/.rustup/
@@ -77,23 +77,40 @@ jobs:
       - run: cargo +$TOOLCHAIN clippy
       - run: cargo +stable fmt -- --check
 
-  build-linux-release:
+  build-linux:
     <<: *defaults
     docker:
       - image: clux/muslrust
     steps:
       - checkout
-      - restore_cache: *restore-deps-cache-musl
+      - restore_cache: *restore-deps-cache-rustup
       - run: cargo build --release
-      - save_cache: *save-deps-cache-musl
+      - save_cache: *save-deps-cache-rustup
       - run: mkdir bin/
       - run: mv target/x86_64-unknown-linux-musl/release/semantic-rs ./bin/semantic-rs-linux
       - persist_to_workspace:
           root: .
           paths:
-            - bin
+            - bin/*
 
-  release-dry-run:
+  build-macos:
+    <<: *defaults
+    macos:
+      xcode: "10.2.1"
+    steps:
+      - checkout
+      - restore_cache: *restore-deps-cache-rustup
+      - run: curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain nightly -y
+      - run: source $HOME/.cargo/env && cargo build --release
+      - save_cache: *save-deps-cache-rustup
+      - run: mkdir bin/
+      - run: mv target/release/semantic-rs ./bin/semantic-rs-macos
+      - persist_to_workspace:
+          root: .
+          paths:
+            - bin/*
+
+  release-dry:
     <<: *defaults
     docker:
       - image: rust:latest
@@ -124,30 +141,36 @@ workflows:
     jobs:
       - test:
           filters: *filter-only-semantic-pr
-      - build-linux-release:
+      - build-linux:
           filters: *filter-only-semantic-pr
-      - release-dry-run:
+      - build-macos:
+          filters: *filter-only-semantic-pr
+      - release-dry:
           filters: *filter-only-semantic-pr
           requires:
             - test
-            - build-linux-release
+            - build-linux
+            - build-macos
 
   release:
     jobs:
       - test:
           filters: *filter-only-master
-      - build-linux-release:
+      - build-linux:
           filters: *filter-only-master
-      - release-dry-run:
+      - build-macos:
+          filters: *filter-only-master
+      - release-dry:
           filters: *filter-only-master
           requires:
             - test
-            - build-linux-release
+            - build-linux
+            - build-macos
       - hold:
           filters: *filter-only-master
           type: approval
           requires:
-            - release-dry-run
+            - release-dry
       - release:
           filters: *filter-only-master
           requires:
