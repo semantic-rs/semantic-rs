@@ -59,7 +59,7 @@ jobs:
       - run: cargo build
       - save_cache: *save-deps-cache-rust
 
-  test:
+  test-linux:
     <<: *defaults
     docker:
       - image: rust:latest
@@ -92,6 +92,17 @@ jobs:
           root: .
           paths:
             - bin/*
+
+  test-macos:
+    <<: *defaults
+    macos:
+      xcode: "10.2.1"
+    steps:
+      - checkout
+      - restore_cache: *restore-deps-cache-rustup
+      - run: curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain nightly -y
+      - run: source $HOME/.cargo/env && cargo test --all
+      - save_cache: *save-deps-cache-rustup
 
   build-macos:
     <<: *defaults
@@ -139,7 +150,9 @@ workflows:
   version: 2
   analysis:
     jobs:
-      - test:
+      - test-linux:
+          filters: *filter-only-semantic-pr
+      - test-macos:
           filters: *filter-only-semantic-pr
       - build-linux:
           filters: *filter-only-semantic-pr
@@ -153,7 +166,9 @@ workflows:
 
   release:
     jobs:
-      - test:
+      - test-linux:
+          filters: *filter-only-master
+      - test-macos:
           filters: *filter-only-master
       - build-linux:
           filters: *filter-only-master
@@ -168,7 +183,8 @@ workflows:
           filters: *filter-only-master
           type: approval
           requires:
-            - test
+            - test-linux
+            - test-macos
             - release-dry
       - release:
           filters: *filter-only-master
