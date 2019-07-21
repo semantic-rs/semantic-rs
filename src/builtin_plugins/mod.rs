@@ -1,4 +1,5 @@
 pub mod clog;
+pub mod docker;
 pub mod git;
 pub mod github;
 pub mod rust;

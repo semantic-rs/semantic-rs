@@ -295,6 +295,69 @@ ignore = [
 ]
 ```
 
+
+### Docker
+
+Docker Plugin calls the docker client in order to 
+ - Build
+ - Tag
+ - And publish images to Docker Repository
+
+Currently only publishing to DockerHub is supported (#41)
+
+##### Plugins Table Example
+
+```toml
+[plugins]
+docker = "builtin"
+```
+
+##### Methods
+
+| Step                | Description                                                                                                                     |
+|---------------------|---------------------------------------------------------------------------------------------------------------------------------|
+| Pre Flight          | Check configuration and DOCKER_USER / DOCKER_PASSWORD env vars                                                                  |
+| Prepare             | Store the next version in internal state (temporary, will be changed)                                                           |
+| Publish             | Build, tag and publish image to the repository                                                                                  |
+
+
+##### Configuration
+
+Main configuration
+
+```toml
+[cfg.docker]
+# Clonable repository url
+repo_url = "https://github.com/etclabscore/semantic-rs.git"
+# Branch to build for image generation
+repo_branch = "master"
+```
+
+Setup images
+ 
+```toml
+[[cfg.docker.images]]
+# Registry to be used: dockerhub or URL
+registry = "dockerhub"
+# Namespace of the image (the part before the name)
+# e.g etclabscore is a namespace in etclabscore/semantic-rs:latest
+namespace = "etclabscore"
+# Name of the image
+name = "semantic-rs"
+# Default image tag to use in addition to the version
+tag = "latest"
+# Source Dockerfile
+dockerfile = ".docker/Dockerfile"
+# Path of a binary to run, will be copied into /bin/
+binary_path = "target/release/semantic-rs"
+# Whether to remove intermediate build artifacts
+cleanup = true
+# Command to build the project
+build_cmd = "cargo build --release"
+# Binary to run as a container CMD
+exec_cmd = "/bin/semantic-rs"
+```
+
 ## Development
 
 Requirements:

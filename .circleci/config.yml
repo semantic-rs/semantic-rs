@@ -43,7 +43,7 @@ aliases:
     branches:
       only:  /^(pull|fix|feat|chore)\/.*$/
   # -------------------------
-  # ALIASES: Get latest usable nightly from rustup-components-history
+  # ALIASES: Utility commands DRY
   - &get-latest-toolchain
     name: Get latest Nightly version that has Clippy component
     command: |
@@ -51,6 +51,14 @@ aliases:
       echo "export TOOLCHAIN=$TOOLCHAIN" >> $BASH_ENV
       source $BASH_ENV
       echo Would use toolchain $TOOLCHAIN
+  - &setup-docker
+    name: Setup docker environment
+    command: |
+      export DOCKERVERSION="18.09.6"
+      curl -fsSLO https://download.docker.com/linux/static/stable/x86_64/docker-${DOCKERVERSION}.tgz
+      tar xzvf docker-${DOCKERVERSION}.tgz --strip 1 -C /usr/local/bin docker/docker
+      rm docker-${DOCKERVERSION}.tgz
+      docker --version
 
 
 defaults: &defaults
@@ -76,8 +84,8 @@ jobs:
             rustup component add clippy --toolchain $TOOLCHAIN
             rustup component add rustfmt --toolchain stable
       - run: cargo +$TOOLCHAIN test --all
-      - save_cache: *save-deps-cache-ubuntu
       - run: cargo +$TOOLCHAIN clippy
+      - save_cache: *save-deps-cache-ubuntu
       - run: cargo +stable fmt -- --check
 
   build-linux:
@@ -195,6 +203,8 @@ jobs:
     docker:
       - image: rust:latest
     steps:
+      - setup_remote_docker
+      - run: *setup-docker
       - checkout
       - attach_workspace:
           at: /workspace
@@ -205,6 +215,8 @@ jobs:
     docker:
       - image: rust:latest
     steps:
+      - setup_remote_docker
+      - run: *setup-docker
       - checkout
       - attach_workspace:
           at: /workspace
