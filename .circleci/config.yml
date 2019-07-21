@@ -49,17 +49,6 @@ defaults: &defaults
     RUST_BACKTRACE: 1
 
 jobs:
-  build:
-    <<: *defaults
-    docker:
-      - image: rust:latest
-    steps:
-      - checkout
-      - run: apt update && apt install -y cmake
-      - restore_cache: *restore-deps-cache-rust
-      - run: cargo build
-      - save_cache: *save-deps-cache-rust
-
   test-linux:
     <<: *defaults
     docker:
