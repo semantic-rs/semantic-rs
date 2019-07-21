@@ -84,9 +84,8 @@ jobs:
             rustup component add clippy --toolchain $TOOLCHAIN
             rustup component add rustfmt --toolchain stable
       - run: cargo +$TOOLCHAIN test --all
-      - save_cache: *save-deps-cache-ubuntu
       - run: cargo +$TOOLCHAIN clippy
-      - save_cache: *save-deps-cache-rust
+      - save_cache: *save-deps-cache-ubuntu
       - run: cargo +stable fmt -- --check
 
   build-linux:
