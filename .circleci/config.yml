@@ -11,6 +11,7 @@ aliases:
     key: rust-cache-{{ arch }}-{{ checksum "Cargo.lock" }}
     paths:
       - /usr/local/cargo/registry
+      - /usr/local/rustup/
       - ~/project/target/
 
   - &restore-deps-cache-rustup
