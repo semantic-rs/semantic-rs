@@ -30,7 +30,7 @@ aliases:
       only: master
   - &filter-only-semantic-pr
     branches:
-      only:  /^(pull|fix|feat)\/.*$/
+      only:  /^(pull|fix|feat|chore)\/.*$/
   # -------------------------
   # ALIASES: Get latest usable nightly from rustup-components-history
   - &get-latest-toolchain
