@@ -114,14 +114,6 @@ impl PluginInterface for DockerPlugin {
             state.version.replace(req.data.clone());
         }
 
-        for image in &cfg.images {
-            build_image(&cfg, image)?;
-
-            let from = format!("{}:{}", image.name, image.tag);
-            tag_image(&from, &get_image_path(image, &image.tag))?;
-            tag_image(&from, &get_image_path(image, &req.data.to_string()))?;
-        }
-
         PluginResponse::from_ok(vec![])
     }
 
@@ -149,6 +141,14 @@ impl PluginInterface for DockerPlugin {
         login(registry_url, &credentials)?;
 
         for image in &cfg.images {
+            build_image(&cfg, image)?;
+
+            // Tag as namespace/name/tag and namespace/name/version
+            let from = format!("{}:{}", image.name, image.tag);
+            tag_image(&from, &get_image_path(image, &image.tag))?;
+            tag_image(&from, &get_image_path(image, &version))?;
+
+            // Publish namespace/name/tag and namespace/name/version
             push_image(image, &image.tag)?;
             push_image(image, &version)?;
         }
