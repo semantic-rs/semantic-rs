@@ -1,3 +1,18 @@
+<a name="v2.4.0"></a>
+## v2.4.0 (2019-07-21)
+
+
+#### Features
+
+* **ci:**  use rustup-components-history to get the latest usable nightly ([de9c4a3e](de9c4a3e))
+* **plugin:**  pass params by reference to avoid a lot of cloning ([4a98a0a0](4a98a0a0))
+
+#### Bug Fixes
+
+* **ci:**  fixate nightly version for `test` stage (one that has clippy) ([f2b3d190](f2b3d190))
+
+
+
 <a name="v2.3.0"></a>
 ## v2.3.0 (2019-07-20)
 

@@ -8,7 +8,7 @@ authors = [
 description = 'Automatic crate publishing'
 license = 'MIT'
 edition = '2018'
-version = '2.3.0'
+version = '2.4.0'
 
 [dependencies]
 semver = '0.9'
