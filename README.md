@@ -1,6 +1,6 @@
 # semantic-rs
 
-[![Build Status](https://travis-ci.org/semantic-rs/semantic-rs.svg?branch=master)](https://travis-ci.org/semantic-rs/semantic-rs)
+[![CircleCI](https://circleci.com/gh/etclabscore/semantic-rs/tree/master.svg?style=svg)](https://circleci.com/gh/etclabscore/semantic-rs/tree/master)
 
 This tool helps people to publish crates following the [semver](http://semver.org/) specification.
 
