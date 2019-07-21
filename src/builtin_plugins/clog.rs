@@ -4,6 +4,7 @@ use std::path::{Path, PathBuf};
 
 use clog::fmt::MarkdownWriter;
 use clog::Clog;
+use failure::Fail;
 use git2::{Commit, Repository};
 use serde::Deserialize;
 
@@ -54,6 +55,7 @@ struct DryRunGuard {
 struct ClogPluginConfig {
     #[serde(default = "default_changelog")]
     changelog: String,
+    ignore: Vec<String>,
 }
 
 fn default_changelog() -> String {
@@ -86,11 +88,16 @@ impl PluginInterface for ClogPlugin {
         &mut self,
         params: request::DeriveNextVersion,
     ) -> response::DeriveNextVersion {
-        let (cfg, current_version) = (params.cfg_map, params.data);
+        let (cfg_map, current_version) = (params.cfg_map, params.data);
+
+        let cfg: ClogPluginConfig =
+            toml::Value::Table(cfg_map.get_sub_table("clog")?).try_into()?;
 
         let bump = match &current_version.semver {
             None => CommitType::Major,
-            Some(_) => version_bump_since_rev(&cfg.project_root()?, &current_version.rev)?,
+            Some(_) => {
+                version_bump_since_rev(&cfg_map.project_root()?, &current_version.rev, &cfg.ignore)?
+            }
         };
 
         let next_version = match current_version.semver.clone() {
@@ -151,10 +158,7 @@ impl PluginInterface for ClogPlugin {
             });
         }
 
-        let state = self
-            .state
-            .as_ref()
-            .expect("state is None: this is a bug, aborting.");
+        let state = self.state.as_ref().ok_or(ClogPluginError::MissingState)?;
 
         let mut clog = Clog::with_dir(repo_path)?;
         clog.changelog(changelog_path)
@@ -168,7 +172,11 @@ impl PluginInterface for ClogPlugin {
     }
 }
 
-fn version_bump_since_rev(path: &str, rev: &GitRevision) -> Result<CommitType, failure::Error> {
+fn version_bump_since_rev(
+    path: &str,
+    rev: &GitRevision,
+    ignore: &[String],
+) -> Result<CommitType, failure::Error> {
     let repo = Repository::open(path)?;
     let range = format!("{}..HEAD", rev);
     log::debug!("analyzing commits {} to determine version bump", range);
@@ -182,7 +190,7 @@ fn version_bump_since_rev(path: &str, rev: &GitRevision) -> Result<CommitType, f
                 .expect("no commit found")
         })
         .map(format_commit)
-        .map(|c| analyze_single(&c).expect("commit analysis failed"))
+        .map(|c| analyze_single(&c, ignore).expect("commit analysis failed"))
         .max()
         .unwrap_or(CommitType::Unknown);
 
@@ -201,7 +209,7 @@ pub enum CommitType {
     Major,
 }
 
-pub fn analyze_single(commit_str: &str) -> Result<CommitType, failure::Error> {
+pub fn analyze_single(commit_str: &str, ignore: &[String]) -> Result<CommitType, failure::Error> {
     use CommitType::*;
 
     let message = commit_str.trim().split_terminator('\n').nth(1);
@@ -211,6 +219,10 @@ pub fn analyze_single(commit_str: &str) -> Result<CommitType, failure::Error> {
 
     if !commit.breaks.is_empty() {
         return Ok(Major);
+    }
+
+    if ignore.contains(&commit.component.to_ascii_lowercase()) {
+        return Ok(Unknown);
     }
 
     let commit_type = match &commit.commit_type[..] {
@@ -253,6 +265,12 @@ pub fn generate_changelog(
     }
 }
 
+#[derive(Fail, Debug)]
+enum ClogPluginError {
+    #[fail(display = "state is missing, forgor to run pre_flight step?")]
+    MissingState,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -260,24 +278,33 @@ mod tests {
     #[test]
     fn unknown_type() {
         let commit = "0\nThis commit message has no type";
-        assert_eq!(CommitType::Unknown, analyze_single(commit).unwrap());
+        assert_eq!(CommitType::Unknown, analyze_single(commit, &[]).unwrap());
     }
 
     #[test]
     fn patch_commit() {
         let commit = "0\nfix: This commit fixes a bug";
-        assert_eq!(CommitType::Patch, analyze_single(commit).unwrap());
+        assert_eq!(CommitType::Patch, analyze_single(commit, &[]).unwrap());
     }
 
     #[test]
     fn minor_commit() {
         let commit = "0\nfeat: This commit introduces a new feature";
-        assert_eq!(CommitType::Minor, analyze_single(commit).unwrap());
+        assert_eq!(CommitType::Minor, analyze_single(commit, &[]).unwrap());
     }
 
     #[test]
     fn major_commit() {
         let commit = "0\nfeat: This commits breaks something\nBREAKING CHANGE: breaks things";
-        assert_eq!(CommitType::Major, analyze_single(commit).unwrap());
+        assert_eq!(CommitType::Major, analyze_single(commit, &[]).unwrap());
+    }
+
+    #[test]
+    fn ignored_component() {
+        let commit = "0\nfeat(ci): This commits should be ignored";
+        assert_eq!(
+            CommitType::Unknown,
+            analyze_single(commit, &["ci".into()]).unwrap()
+        );
     }
 }
