@@ -1,3 +1,13 @@
+<a name="v2.5.0"></a>
+## v2.5.0 (2019-07-21)
+
+
+#### Features
+
+* **clog:**  ignore list for commit segments ([c8eb580a](c8eb580a))
+
+
+
 <a name="v2.4.0"></a>
 ## v2.4.0 (2019-07-21)
 
