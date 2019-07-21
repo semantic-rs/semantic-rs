@@ -1,8 +1,8 @@
 pub mod clog;
+pub mod docker;
 pub mod git;
 pub mod github;
 pub mod rust;
-pub mod docker;
 
 pub use self::clog::ClogPlugin;
 pub use self::git::GitPlugin;

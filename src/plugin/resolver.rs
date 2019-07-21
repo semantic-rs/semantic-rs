@@ -1,7 +1,7 @@
 use failure::Fail;
 
-use crate::plugin::{PluginInterface, RawPlugin, RawPluginState, ResolvedPlugin, UnresolvedPlugin};
 use crate::builtin_plugins::docker::DockerPlugin;
+use crate::plugin::{PluginInterface, RawPlugin, RawPluginState, ResolvedPlugin, UnresolvedPlugin};
 
 pub struct PluginResolver {
     builtin: BuiltinResolver,

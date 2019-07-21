@@ -50,4 +50,19 @@ assets = [
     "Changelog.md"
 ]
 
+[cfg.docker]
+repo_url = "https://github.com/etclabscore/semantic-rs.git"
+repo_branch = "master"
+registry = "dockerhub"
+organization = "etclabscore"
+dockerfile = ".docker/Dockerfile"
+
+[[cfg.docker.images]]
+name = "semantic-rs"
+tag = "latest"
+binary_path = "target/release/semantic-rs"
+cleanup = true
+build_cmd = "cargo build --release"
+exec_cmd = "/bin/semantic-rs"
+
 
