@@ -289,6 +289,11 @@ clog = "builtin"
 [cfg.clog]
 # Relative path from the repo root to changelog file
 changelog = "Changelog.md" # Optional: default = "Changelog.md"
+# Ignore list for commit segmants, e.g `feat(ci): more caching` wouldn't issue a release
+# Optional: default = empty list
+ignore = [
+    "ci"
+]
 ```
 
 ## Development

@@ -32,6 +32,10 @@ notify = "discover"
 [cfg]
 # Global configuration
 
+[cfg.clog]
+# Ignore commits like feat(ci) cause it makes no sense to issue a release for improvements in CI config
+ignore = ["ci"]
+
 [cfg.git]
 # Per-plugin configuration
 user_name = "Mike Lubinets"
