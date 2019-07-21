@@ -22,7 +22,13 @@ Then you can go ahead and [configure your CI](#run-semantic-rs-in-ci-environment
 
 ## Usage
 
-Static binaries are available for download on the [releases](https://github.com/etclabscore/semantic-rs/releases) page.
+Static binaries for all 3 major platforms (Linux, MacOS, Windows) are available for download on the [releases](https://github.com/etclabscore/semantic-rs/releases) page.
+
+Also there's a [docker image](https://hub.docker.com/r/etclabscore/semantic-rs/tags) available. To run `semantic-rs` with docker, make sure you have `docker` installed:
+
+```bash
+docker run -v $(pwd):/home/semantic/workdir etclabscore/semantic-rs:latest
+```
 
 ### Installation from git
 
