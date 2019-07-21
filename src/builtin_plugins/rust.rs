@@ -30,7 +30,7 @@ impl Drop for RustPlugin {
         if let Some(guard) = self.dry_run_guard.as_ref() {
             log::info!("rust(dry-run): restoring original state of Cargo.toml");
             if let Err(err) = guard.cargo.write_manifest_raw(&guard.original_manifest) {
-                log::error!("rust: failed to restore original manifest, sorry x_x");
+                log::error!("rust(dry-run): failed to restore original manifest, sorry x_x");
                 log::error!("{}", err);
                 log::info!(
                     "\nOriginal Cargo.toml: \n{}",
@@ -104,9 +104,9 @@ impl PluginInterface for RustPlugin {
 
         let cargo = Cargo::new(project_root, token)?;
 
-        log::info!("rust: packaging new version, please wait...");
+        log::info!("Packaging new version, please wait...");
         cargo.package()?;
-        log::info!("rust: package created successfully");
+        log::info!("Package created successfully");
 
         PluginResponse::from_ok(())
     }
@@ -122,10 +122,7 @@ impl Cargo {
     pub fn new(project_root: &str, token: &str) -> Result<Self, failure::Error> {
         let manifest_path = Path::new(project_root).join("Cargo.toml");
 
-        log::debug!(
-            "rust: searching for manifest in {}",
-            manifest_path.display()
-        );
+        log::debug!("searching for manifest in {}", manifest_path.display());
 
         if !manifest_path.exists() || !manifest_path.is_file() {
             Err(RustPluginError::CargoTomlNotFound(project_root.to_owned()))?;
@@ -211,11 +208,11 @@ impl Cargo {
     }
 
     pub fn set_version(&self, version: semver::Version) -> Result<(), failure::Error> {
-        log::info!("rust: setting new version '{}' in Cargo.toml", version);
+        log::info!("Setting new version '{}' in Cargo.toml", version);
 
         let mut manifest = self.load_manifest()?;
 
-        log::debug!("rust: loaded Cargo.toml");
+        log::debug!("loaded Cargo.toml");
 
         {
             let root = manifest
@@ -239,7 +236,7 @@ impl Cargo {
             );
         }
 
-        log::debug!("rust: writing update to Cargo.toml");
+        log::debug!("writing update to Cargo.toml");
 
         self.write_manifest(manifest)?;
 

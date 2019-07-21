@@ -161,7 +161,7 @@ impl PluginInterface for ClogPlugin {
             .from(&state.start_rev)
             .version(format!("v{}", state.new_version));
 
-        log::info!("clog: writing updated changelog");
+        log::info!("Writing updated changelog");
         clog.write_changelog()?;
 
         PluginResponse::from_ok(vec![changelog_path.to_owned()])
