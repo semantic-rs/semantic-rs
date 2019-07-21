@@ -5,19 +5,20 @@ aliases:
   #      ALIASES: Caches
   # -------------------------
   - &restore-deps-cache-rust
-    key: deps-cache-{{ arch }}-{{ checksum "Cargo.toml" }}
+    key: rust-cache-{{ arch }}-{{ checksum "Cargo.lock" }}-{{ .Environment.CIRCLE_JOB }}
 
   - &save-deps-cache-rust
-    key: deps-cache-{{ arch }}-{{ checksum "Cargo.toml" }}
+    key: rust-cache-{{ arch }}-{{ checksum "Cargo.lock" }}-{{ .Environment.CIRCLE_JOB }}
     paths:
       - /usr/local/cargo/registry
+      - /usr/local/rustup/
       - ~/project/target/
 
   - &restore-deps-cache-rustup
-    key: deps-cache-musl-{{ arch }}-{{ checksum "Cargo.toml" }}
+    key: rust-cache-musl-{{ arch }}-{{ checksum "Cargo.lock" }}-{{ .Environment.CIRCLE_JOB }}
 
   - &save-deps-cache-rustup
-    key: deps-cache-musl-{{ arch }}-{{ checksum "Cargo.toml" }}
+    key: rust-cache-musl-{{ arch }}-{{ checksum "Cargo.lock" }}-{{ .Environment.CIRCLE_JOB }}
     paths:
       - ~/.rustup/
       - ~/.cargo/
@@ -48,17 +49,6 @@ defaults: &defaults
     RUST_BACKTRACE: 1
 
 jobs:
-  build:
-    <<: *defaults
-    docker:
-      - image: rust:latest
-    steps:
-      - checkout
-      - run: apt update && apt install -y cmake
-      - restore_cache: *restore-deps-cache-rust
-      - run: cargo build
-      - save_cache: *save-deps-cache-rust
-
   test-linux:
     <<: *defaults
     docker:
@@ -68,10 +58,13 @@ jobs:
       - restore_cache: *restore-deps-cache-rust
       - run: apt update && apt install -y cmake
       - run: *get-latest-toolchain
-      - run: rustup toolchain install $TOOLCHAIN
-      - run: rustup toolchain install stable
-      - run: rustup component add clippy --toolchain $TOOLCHAIN
-      - run: rustup component add rustfmt --toolchain stable
+      - run:
+          name: Install Rust tools
+          command: |
+            rustup toolchain install $TOOLCHAIN
+            rustup toolchain install stable
+            rustup component add clippy --toolchain $TOOLCHAIN
+            rustup component add rustfmt --toolchain stable
       - run: cargo +$TOOLCHAIN test --all
       - save_cache: *save-deps-cache-rust
       - run: cargo +$TOOLCHAIN clippy
@@ -86,8 +79,11 @@ jobs:
       - restore_cache: *restore-deps-cache-rustup
       - run: cargo build --release
       - save_cache: *save-deps-cache-rustup
-      - run: mkdir bin/
-      - run: mv target/x86_64-unknown-linux-musl/release/semantic-rs ./bin/semantic-rs-linux
+      - run:
+          name: Move binaries into bin/ directory
+          command: |
+            mkdir bin/
+            mv target/x86_64-unknown-linux-musl/release/semantic-rs ./bin/semantic-rs-linux
       - persist_to_workspace:
           root: .
           paths:
@@ -100,7 +96,9 @@ jobs:
     steps:
       - checkout
       - restore_cache: *restore-deps-cache-rustup
-      - run: curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain nightly -y
+      - run:
+          name: Install Rust
+          command: curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain nightly -y
       - run: source $HOME/.cargo/env && cargo test --all
       - save_cache: *save-deps-cache-rustup
 
@@ -111,11 +109,16 @@ jobs:
     steps:
       - checkout
       - restore_cache: *restore-deps-cache-rustup
-      - run: curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain nightly -y
+      - run:
+          name: Install Rust
+          command: curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain nightly -y
       - run: source $HOME/.cargo/env && cargo build --release
       - save_cache: *save-deps-cache-rustup
-      - run: mkdir bin/
-      - run: mv target/release/semantic-rs ./bin/semantic-rs-macos
+      - run:
+          name: Move binaries into bin/ directory
+          command: |
+             mkdir bin/
+             mv target/release/semantic-rs ./bin/semantic-rs-macos
       - persist_to_workspace:
           root: .
           paths:
