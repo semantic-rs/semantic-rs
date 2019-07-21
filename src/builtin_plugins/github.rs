@@ -102,11 +102,7 @@ impl PluginInterface for GithubPlugin {
             .into_iter()
             .inspect(|asset| {
                 asset.as_ref().ok().map(|a| {
-                    log::info!(
-                        "github: will upload {} ({})",
-                        a.path().display(),
-                        a.content_type()
-                    );
+                    log::info!("Would upload {} ({})", a.path().display(), a.content_type());
                     a
                 });
             })

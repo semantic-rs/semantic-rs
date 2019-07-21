@@ -355,11 +355,11 @@ impl PluginInterface for GitPlugin {
         let commit_msg = format!("chore(release): Version {} [skip ci]", data.version);
         let tag_name = format!("v{}", data.version);
 
-        log::info!("git: committing files {:?}", data.files_to_commit);
+        log::info!("Committing files {:?}", data.files_to_commit);
         state.commit_files(&data.files_to_commit, &commit_msg)?;
-        log::info!("git: creating tag {:?}", tag_name);
+        log::info!("Creating tag {:?}", tag_name);
         state.create_tag(&tag_name, &data.changelog)?;
-        log::info!("git: pushing changes");
+        log::info!("Pushing changes, please wait...");
         state.push(&tag_name)?;
 
         PluginResponse::from_ok(tag_name)
