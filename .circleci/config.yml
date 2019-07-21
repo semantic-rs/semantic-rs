@@ -5,19 +5,19 @@ aliases:
   #      ALIASES: Caches
   # -------------------------
   - &restore-deps-cache-rust
-    key: deps-cache-{{ arch }}-{{ checksum "Cargo.toml" }}
+    key: rust-cache-{{ arch }}-{{ checksum "Cargo.lock" }}
 
   - &save-deps-cache-rust
-    key: deps-cache-{{ arch }}-{{ checksum "Cargo.toml" }}
+    key: rust-cache-{{ arch }}-{{ checksum "Cargo.lock" }}
     paths:
       - /usr/local/cargo/registry
       - ~/project/target/
 
   - &restore-deps-cache-rustup
-    key: deps-cache-musl-{{ arch }}-{{ checksum "Cargo.toml" }}
+    key: rust-cache-musl-{{ arch }}-{{ checksum "Cargo.lock" }}
 
   - &save-deps-cache-rustup
-    key: deps-cache-musl-{{ arch }}-{{ checksum "Cargo.toml" }}
+    key: rust-cache-musl-{{ arch }}-{{ checksum "Cargo.lock" }}
     paths:
       - ~/.rustup/
       - ~/.cargo/
