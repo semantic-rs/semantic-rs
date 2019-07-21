@@ -148,7 +148,6 @@ workflows:
       - release-dry:
           filters: *filter-only-semantic-pr
           requires:
-            - test
             - build-linux
             - build-macos
 
@@ -163,13 +162,13 @@ workflows:
       - release-dry:
           filters: *filter-only-master
           requires:
-            - test
             - build-linux
             - build-macos
       - hold:
           filters: *filter-only-master
           type: approval
           requires:
+            - test
             - release-dry
       - release:
           filters: *filter-only-master
