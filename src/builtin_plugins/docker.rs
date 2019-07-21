@@ -32,15 +32,14 @@ impl DockerPlugin {
 struct Config {
     repo_url: String,
     repo_branch: String,
-    host: Option<String>,
-    registry: Registry,
-    dockerfile: PathBuf,
     images: Vec<Image>,
 }
 
 #[derive(Deserialize, Debug, Clone)]
 #[serde(rename_all = "snake_case")]
 struct Image {
+    registry: Registry,
+    dockerfile: PathBuf,
     namespace: Option<String>,
     name: String,
     tag: String,
@@ -134,13 +133,13 @@ impl PluginInterface for DockerPlugin {
 
         let version = version.to_string();
 
-        let registry_url = match cfg.registry {
-            Registry::Dockerhub => None,
-        };
-
-        login(registry_url, &credentials)?;
-
         for image in &cfg.images {
+            let registry_url = match image.registry {
+                Registry::Dockerhub => None,
+            };
+
+            login(registry_url, &credentials)?;
+
             build_image(&cfg, image)?;
 
             // Tag as namespace/name/tag and namespace/name/version
@@ -171,7 +170,7 @@ fn build_image(cfg: &Config, image: &Image) -> Result<(), failure::Error> {
     cmd.arg("build").arg(".docker").arg("--no-cache");
 
     // Set filename of Dockerfile
-    cmd.arg("-f").arg(&cfg.dockerfile.display().to_string());
+    cmd.arg("-f").arg(&image.dockerfile.display().to_string());
 
     // Set name and tag
     cmd.arg("-t").arg(&format!("{}:{}", image.name, image.tag));
