@@ -37,6 +37,8 @@ pub struct GithubPluginConfig {
     remote: String,
     #[serde(default = "default_branch")]
     branch: String,
+    #[serde(default)]
+    pre_release: bool,
 }
 
 fn default_remote() -> String {
@@ -141,7 +143,7 @@ impl PluginInterface for GithubPlugin {
             .body(changelog)
             .commitish(branch)
             .draft(false)
-            .prerelease(false)
+            .prerelease(cfg.pre_release)
             .build();
 
         let release = block_on_all(futures::lazy(move || {
