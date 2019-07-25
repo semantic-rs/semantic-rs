@@ -1,3 +1,15 @@
+<a name="v2.7.0"></a>
+## v2.7.0 (2019-07-25)
+
+
+#### Features
+
+* **github:**
+  *  draft release flag support ([36fff0e5](36fff0e5))
+  *  pre_release flag support ([8b5b669c](8b5b669c))
+
+
+
 <a name="v2.6.0"></a>
 ## v2.6.0 (2019-07-21)
 
