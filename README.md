@@ -228,6 +228,7 @@ repository = "semantic-rs"  # Optional: default is derived from git remote url
 remote = "origin"           # Optional: default = "origin"
 branch = "master"           # Optionl: default = "master"
 pre_release = false         # Optional: default = false
+draft = false               # Optional: default = false
 # Optional: default = empty list
 assets = [
     "Changelog.md",

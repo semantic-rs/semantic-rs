@@ -38,6 +38,8 @@ pub struct GithubPluginConfig {
     #[serde(default = "default_branch")]
     branch: String,
     #[serde(default)]
+    draft: bool,
+    #[serde(default)]
     pre_release: bool,
 }
 
@@ -142,7 +144,7 @@ impl PluginInterface for GithubPlugin {
             .name(tag_name)
             .body(changelog)
             .commitish(branch)
-            .draft(false)
+            .draft(cfg.draft)
             .prerelease(cfg.pre_release)
             .build();
 
