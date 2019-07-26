@@ -97,6 +97,11 @@ impl PluginInterface for DockerPlugin {
             response.warning("Please set DOCKER_USER and DOCKER_PASSWORD env vars");
         }
 
+        log::info!("Checking that docker daemon is running...");
+        if let Err(err) = docker_info() {
+            response.error(err);
+        }
+
         self.state.replace(State {
             credentials,
             version: None,
@@ -162,6 +167,19 @@ fn get_image_path(image: &Image, tag: &str) -> String {
     } else {
         format!("{}:{}", image.name, tag)
     }
+}
+
+fn docker_info() -> Result<(), failure::Error> {
+    let status = Command::new("docker")
+        .arg("info")
+        .status()
+        .map_err(|_| DockerPluginError::DockerNotFound)?;
+
+    if !status.success() {
+        Err(DockerPluginError::DockerReturnedError(status.code()))?
+    }
+
+    Ok(())
 }
 
 fn build_image(cfg: &Config, image: &Image) -> Result<(), failure::Error> {
@@ -273,4 +291,6 @@ enum DockerPluginError {
     DockerReturnedError(Option<i32>),
     #[fail(display = "stdio error: failed to pass password to docker process via stdin")]
     StdioError,
+    #[fail(display = "'docker' not found in PATH: make sure you have the docker client installed")]
+    DockerNotFound,
 }
