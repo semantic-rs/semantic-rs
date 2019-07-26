@@ -88,6 +88,30 @@ jobs:
       - save_cache: *save-deps-cache-ubuntu
       - run: cargo +stable fmt -- --check
 
+  codecov:
+    <<: *defaults
+    machine: true
+    steps:
+      - checkout
+      - restore_cache: *restore-deps-cache-rustup
+      - run:
+          name: Install Rust
+          command: |
+            curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain nightly -y
+            echo 'export PATH=$HOME/.cargo/bin:$PATH' >> $BASH_ENV
+      - run:
+          name: Install Tarpaulin
+          command: cargo tarpaulin --version || cargo install cargo-tarpaulin
+          environment:
+            RUSTFLAGS: --cfg procmacro2_semver_exempt
+      - run:
+          name: Generate coverage report
+          command: cargo tarpaulin --out Xml --all-features
+      - save_cache: *save-deps-cache-rustup
+      - run:
+          name: Upload to codecov.io
+          command: bash <(curl -s https://codecov.io/bash) -Z -f cobertura.xml
+
   build-linux:
     <<: *defaults
     docker:
@@ -231,6 +255,8 @@ workflows:
   version: 2
   analysis:
     jobs:
+      - codecov:
+          filters: *filter-only-semantic-pr
       - test-linux:
           filters: *filter-only-semantic-pr
       - test-macos:
@@ -252,6 +278,8 @@ workflows:
 
   release:
     jobs:
+      - codecov:
+          filters: *filter-only-master
       - test-linux:
           filters: *filter-only-master
       - test-macos:
@@ -274,6 +302,7 @@ workflows:
           filters: *filter-only-master
           type: approval
           requires:
+            - codecov
             - test-linux
             - test-macos
             - test-windows

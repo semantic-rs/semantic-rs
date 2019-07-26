@@ -18,6 +18,3 @@ apt-add-repository -y 'deb https://dl.winehq.org/wine-builds/ubuntu/ bionic main
 # Install wine and cross-toolchain
 apt-get install -y --install-recommends winehq-stable
 apt-get install -y mingw-w64
-
-wine --version
-
