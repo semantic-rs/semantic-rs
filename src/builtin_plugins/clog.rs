@@ -55,6 +55,7 @@ struct DryRunGuard {
 struct ClogPluginConfig {
     #[serde(default = "default_changelog")]
     changelog: String,
+    #[serde(default)]
     ignore: Vec<String>,
 }
 
