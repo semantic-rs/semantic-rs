@@ -1,3 +1,20 @@
+<a name="v2.8.0"></a>
+## v2.8.0 (2019-07-27)
+
+
+#### Bug Fixes
+
+* **ci:**  more reliable windows jobs w/ custom container (wine + mingw64) ([3845f713](3845f713))
+* **clog:**  make ignore list optional in releaserc.toml ([60a42d1f](60a42d1f))
+* **docker:**  check that docker daemon is running in pre_flight ([79527709](79527709))
+
+#### Features
+
+* **ci:**  CodeCov integration ([923f2b2e](923f2b2e))
+* **docker:**  add docker client to the Dockerfile ([4e940c6d](4e940c6d))
+
+
+
 <a name="v2.7.0"></a>
 ## v2.7.0 (2019-07-25)
 

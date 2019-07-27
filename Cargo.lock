@@ -1314,7 +1314,7 @@ dependencies = [
 
 [[package]]
 name = "semantic-rs"
-version = "2.7.0"
+version = "2.8.0"
 dependencies = [
  "clap 2.33.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "clog 0.9.1 (registry+https://github.com/rust-lang/crates.io-index)",
