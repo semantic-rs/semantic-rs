@@ -15,10 +15,10 @@ aliases:
       - ~/project/target/
 
   - &restore-deps-cache-windows
-    key: rust-cache-{{ arch }}-windows-{{ checksum "Cargo.lock" }}-{{ .Environment.CIRCLE_JOB }}
+    key: rust-cache-{{ arch }}-windows-3-{{ checksum "Cargo.lock" }}-{{ .Environment.CIRCLE_JOB }}
 
   - &save-deps-cache-windows
-    key: rust-cache-{{ arch }}-windows-{{ checksum "Cargo.lock" }}-{{ .Environment.CIRCLE_JOB }}
+    key: rust-cache-{{ arch }}-windows-3-{{ checksum "Cargo.lock" }}-{{ .Environment.CIRCLE_JOB }}
     paths:
       - ~/.rustup/
       - ~/.cargo/
@@ -169,45 +169,23 @@ jobs:
   test-windows:
     <<: *defaults
     docker:
-      - image: ubuntu:18.04
+      - image: mersinvald/rust-mingw-docker
     steps:
       - checkout
-      - run:
-          name: Install Wine and MinGW-64
-          command: .ci/boot_wine_env.sh
       - restore_cache: *restore-deps-cache-windows
-      - run:
-          name: Install Rust cross-toolchain for x86_64-pc-windows-gnu
-          command: |
-            curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain nightly -y
-            source $HOME/.cargo/env
-            rustup install nightly-x86_64-pc-windows-gnu
-            rustup target add x86_64-pc-windows-gnu
-      - run:
-          name: Run Windows tests
-          command: |
-            source $HOME/.cargo/env && cargo build --tests --target x86_64-pc-windows-gnu
-            wine target/x86_64-pc-windows-gnu/debug/semantic_rs-*.exe --test-threads=1
+      - run: rustup install nightly-x86_64-pc-windows-gnu && rustup target add x86_64-pc-windows-gnu
+      - run: cargo test --target x86_64-pc-windows-gnu -- --test-threads=1
       - save_cache: *save-deps-cache-windows
 
   build-windows:
     <<: *defaults
     docker:
-      - image: ubuntu:18.04
+      - image: mersinvald/rust-mingw-docker
     steps:
       - checkout
-      - run:
-          name: Install Wine and MinGW-64
-          command: .ci/boot_wine_env.sh
       - restore_cache: *restore-deps-cache-windows
-      - run:
-          name: Install Rust cross-toolchain for x86_64-pc-windows-gnu
-          command: |
-            curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain nightly -y
-            source $HOME/.cargo/env
-            rustup install nightly-x86_64-pc-windows-gnu
-            rustup target add x86_64-pc-windows-gnu
-      - run: source $HOME/.cargo/env && cargo build --release --target x86_64-pc-windows-gnu
+      - run: rustup install nightly-x86_64-pc-windows-gnu && rustup target add x86_64-pc-windows-gnu
+      - run: cargo build --release --target x86_64-pc-windows-gnu
       - save_cache: *save-deps-cache-windows
       - run:
           name: Move binary to ./bin/ directory
