@@ -7,7 +7,8 @@ use failure::Fail;
 use linked_hash_map::LinkedHashMap;
 use serde::{de::Deserializer, de::Error as _, Deserialize, Serialize};
 
-use crate::plugin::{PluginStep, PluginStepKind, UnresolvedPlugin};
+use crate::plugin_support::flow::kv::{ValueDefinition, ValueDefinitionMap};
+use crate::plugin_support::{PluginStep, PluginStepKind, UnresolvedPlugin};
 
 /// Map type override used in configs
 ///
@@ -22,17 +23,31 @@ pub type PluginDefinitionMap = Map<String, PluginDefinition>;
 #[derive(Serialize, Debug, Clone, Eq, PartialEq)]
 pub struct StepsDefinitionMap(Map<PluginStep, StepDefinition>);
 
-/// CfgMap stores arbitrary configuration values as Key-Value pairs
-/// Primarily it's used to parse the per-config configuration sections,
-/// but may also be used for first-level configuration values (for semantic-rs itself)
-pub type CfgMap = Map<String, toml::Value>;
-
 /// Base structure to parse `releaserc.toml` into
 #[derive(Deserialize, Clone, Debug)]
 pub struct Config {
     pub plugins: PluginDefinitionMap,
     pub steps: StepsDefinitionMap,
-    pub cfg: CfgMap,
+    #[serde(default)]
+    pub cfg: ValueDefinitionMap,
+}
+
+fn default_project_root() -> ValueDefinition {
+    let root = PathBuf::from("./");
+    let root = root.canonicalize().ok();
+    let root = root.and_then(|p| p.to_str().map(String::from));
+
+    if let Some(path) = root {
+        ValueDefinition::Value(serde_json::Value::String(path))
+    } else {
+        panic!(
+            "failed to derive project_root from environment, please set cfg.project_root manually in releaserc.toml"
+        );
+    }
+}
+
+fn default_dry_run() -> ValueDefinition {
+    ValueDefinition::Value(serde_json::Value::Bool(false))
 }
 
 impl Config {
@@ -49,7 +64,18 @@ impl Config {
 
         config.check_step_arguments_correctness()?;
 
-        config.cfg.derive_missing_keys_from_env(is_dry_run)?;
+        config.cfg.entry("dry_run".to_owned()).or_insert_with(|| {
+            if is_dry_run {
+                ValueDefinition::Value(is_dry_run.into())
+            } else {
+                default_dry_run()
+            }
+        });
+
+        config
+            .cfg
+            .entry("project_root".into())
+            .or_insert_with(default_project_root);
 
         Ok(config)
     }
@@ -63,10 +89,13 @@ impl Config {
                 StepDefinition::Singleton(_) => (),
                 StepDefinition::Shared(_) | StepDefinition::Discover => match step.kind() {
                     PluginStepKind::Shared => (),
-                    PluginStepKind::Singleton => Err(ConfigError::WrongStepKind {
-                        expected: PluginStepKind::Singleton,
-                        got: PluginStepKind::Shared,
-                    })?,
+                    PluginStepKind::Singleton => {
+                        return Err(ConfigError::WrongStepKind {
+                            expected: PluginStepKind::Singleton,
+                            got: PluginStepKind::Shared,
+                        }
+                        .into())
+                    }
                 },
             }
         }
@@ -83,14 +112,6 @@ pub enum ConfigError {
         expected: PluginStepKind,
         got: PluginStepKind,
     },
-    #[fail(display = "project root path is not set")]
-    MissingProjectRootPath,
-    #[fail(display = "expected a table for key {}, found {}", _0, _1)]
-    PluginConfigIsNotTable(String, String),
-    #[fail(display = "dry run flag is not set")]
-    MissingDryRunFlag,
-    #[fail(display = "changelog path is undefined")]
-    MissingChangelogPath,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
@@ -188,74 +209,6 @@ impl PluginDefinition {
     }
 }
 
-pub trait CfgMapExt {
-    fn derive_missing_keys_from_env(&mut self, is_dry_run: bool) -> Result<(), failure::Error>;
-
-    fn is_dry_run(&self) -> Result<bool, failure::Error>;
-
-    fn project_root(&self) -> Result<&str, failure::Error>;
-
-    fn get_sub_table(
-        &self,
-        name: &str,
-    ) -> Result<toml::map::Map<String, toml::Value>, failure::Error>;
-
-    fn project_root_path_key() -> &'static str {
-        "project_root"
-    }
-}
-
-impl CfgMapExt for CfgMap {
-    fn derive_missing_keys_from_env(&mut self, is_dry_run: bool) -> Result<(), failure::Error> {
-        self.insert("dry".into(), toml::Value::Boolean(is_dry_run));
-
-        if !self.contains_key(CfgMap::project_root_path_key()) {
-            let root = PathBuf::from("./");
-            let root = root.canonicalize()?;
-            let root_value = root
-                .to_str()
-                .map(String::from)
-                .map(toml::Value::String)
-                .ok_or_else(|| failure::err_msg("failed to convert PathBuf into UTF-8 string"))?;
-            self.insert(CfgMap::project_root_path_key().into(), root_value);
-        }
-
-        Ok(())
-    }
-
-    fn is_dry_run(&self) -> Result<bool, failure::Error> {
-        let is_dry_run = self
-            .get("dry")
-            .and_then(|v| v.as_bool())
-            .ok_or(ConfigError::MissingDryRunFlag)?;
-        Ok(is_dry_run)
-    }
-
-    fn project_root(&self) -> Result<&str, failure::Error> {
-        let pr = self
-            .get(CfgMap::project_root_path_key())
-            .and_then(|v| v.as_str())
-            .ok_or(ConfigError::MissingProjectRootPath)?;
-        Ok(pr)
-    }
-
-    fn get_sub_table(
-        &self,
-        name: &str,
-    ) -> Result<toml::map::Map<String, toml::Value>, failure::Error> {
-        let table = match self.get(name) {
-            Some(value) => value.as_table().cloned().ok_or_else(|| {
-                let value = format!("{:?}", value);
-                let key = name.to_string();
-                ConfigError::PluginConfigIsNotTable(key, value)
-            })?,
-            None => toml::map::Map::new(),
-        };
-
-        Ok(table)
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -265,9 +218,7 @@ mod tests {
         let toml = "name = { location = \"builtin\" }";
         let parsed: PluginDefinitionMap = toml::from_str(toml).unwrap();
 
-        let plugin = parsed
-            .get("name")
-            .expect("plugin 'name' not found in parsed map");
+        let plugin = parsed.get("name").expect("plugin 'name' not found in parsed map");
 
         assert_eq!(&PluginDefinition::Full(UnresolvedPlugin::Builtin), plugin);
     }
@@ -277,9 +228,7 @@ mod tests {
         let toml = "name = \"builtin\"";
         let parsed: PluginDefinitionMap = toml::from_str(toml).unwrap();
 
-        let plugin = parsed
-            .get("name")
-            .expect("plugin 'name' not found in parsed map");
+        let plugin = parsed.get("name").expect("plugin 'name' not found in parsed map");
 
         assert_eq!(&PluginDefinition::Short("builtin".into()), plugin);
     }
@@ -295,7 +244,7 @@ mod tests {
     #[should_panic]
     fn plugin_definition_invalid_into_full() {
         let short = PluginDefinition::Short("invalid".into());
-        let full = short.into_full();
+        let _full = short.into_full();
     }
 
     #[test]
@@ -333,12 +282,7 @@ mod tests {
 
         let expected: PluginDefinitionMap = ["git", "clog", "github", "rust"]
             .into_iter()
-            .map(|name| {
-                (
-                    name.to_string(),
-                    PluginDefinition::Short("builtin".to_string()),
-                )
-            })
+            .map(|name| (name.to_string(), PluginDefinition::Short("builtin".to_string())))
             .collect();
 
         let parsed: PluginDefinitionMap = toml::from_str(toml).unwrap();
@@ -394,7 +338,7 @@ mod tests {
     #[should_panic]
     fn parse_step_invalid_key() {
         let toml = r#"invalid = "discover""#;
-        let parsed: StepsDefinitionMap = toml::from_str(toml).unwrap();
+        let _parsed: StepsDefinitionMap = toml::from_str(toml).unwrap();
     }
 
     #[test]
@@ -447,10 +391,10 @@ mod tests {
 
         #[derive(Deserialize, Debug)]
         struct Global {
-            cfg: CfgMap,
+            cfg: Map<String, toml::Value>,
         }
 
-        let mut expected = CfgMap::new();
+        let mut expected = Map::new();
         expected.insert("one".into(), toml::Value::Integer(1));
         expected.insert("two".into(), toml::Value::Integer(2));
 
@@ -471,7 +415,7 @@ mod tests {
 
         #[derive(Deserialize, Debug)]
         struct Global {
-            cfg: CfgMap,
+            cfg: Map<String, toml::Value>,
         }
 
         let mut expected = Map::new();
@@ -550,5 +494,81 @@ mod tests {
         let filepath = concat!(env!("CARGO_MANIFEST_DIR"), "/releaserc.toml");
         eprintln!("filepath: {}", filepath);
         Config::from_toml(filepath, true).unwrap();
+    }
+
+    #[test]
+    fn parse_full_config_with_data_flow_queries() {
+        let toml = r#"
+        [plugins]
+        # Fully qualified definition
+        git = { location = "builtin" }
+        # Short definition
+        clog = "builtin"
+        #github = "builtin"
+        #rust = "builtin"
+        #docker = "builtin"
+
+        [steps]
+        # Shared step
+        pre_flight = "discover"
+        # Singleton step
+        get_last_release = "git"
+        # Analyze the changes and derive the appropriate version bump
+        # In case of different results, the most major would be taken
+        derive_next_version = [ "clog" ]
+        # Notes from each step would be appended to the notes of previous one
+        # `discover` is a reserved keyword for deriving the step runners through OpenRPC Service Discovery
+        # the succession of runs in this case will be determined by the succession in the `plugins` list
+        generate_notes = "clog"
+        # Prepare the release (pre-release step for intermediate artifacts generation)
+        prepare = "discover"
+        # Check the release before publishing
+        verify_release = "discover"
+        # Commit & push changes to the VCS
+        commit = "git"
+        # Publish to various platforms
+        publish = []
+        # Post-release step to notify users about release (e.g leave comments in issues resolved in this release)
+        notify = "discover"
+
+        [cfg]
+        # Global configuration
+
+        [cfg.clog]
+        # Ignore commits like feat(ci) cause it makes no sense to issue a release for improvements in CI config
+        ignore = ["ci"]
+
+        [cfg.git]
+        # Per-plugin configuration
+        user_name = "Mike Lubinets"
+        user_email = "me@mkl.dev"
+        branch = "master"
+        force_https = true
+
+        [cfg.github]
+        assets = [
+            "/workspace/bin/*",
+            "Changelog.md"
+        ]
+
+        [cfg.docker]
+        repo_url = "from:vcs:git_clone_url"
+        repo_branch = "from:vcs:git_branch"
+
+        [[cfg.docker.images]]
+        registry = "dockerhub"
+        namespace = "etclabscore"
+        dockerfile = ".docker/Dockerfile"
+        name = "semantic-rs"
+        tag = "latest"
+        binary_path = "target/release/semantic-rs"
+        cleanup = true
+        build_cmd = "from:language:build_cmd"
+        exec_cmd = "/bin/semantic-rs"
+        "#;
+
+        let parsed: Config = toml::from_str(toml).unwrap();
+
+        drop(parsed)
     }
 }

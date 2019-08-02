@@ -1,11 +1,8 @@
-pub mod discovery;
-pub mod dispatcher;
+pub mod flow;
+pub mod keys;
 pub mod proto;
-pub mod resolver;
-pub mod starter;
 pub mod traits;
 
-pub use self::dispatcher::PluginDispatcher;
 pub use self::traits::PluginInterface;
 
 use serde::{Deserialize, Serialize};
@@ -37,7 +34,6 @@ impl RawPlugin {
 pub enum RawPluginState {
     Unresolved(UnresolvedPlugin),
     Resolved(ResolvedPlugin),
-    Started(Plugin),
 }
 
 pub struct Plugin {
@@ -68,20 +64,6 @@ impl RawPluginState {
         }
     }
 
-    pub fn is_unresolved(&self) -> bool {
-        match self {
-            RawPluginState::Unresolved(_) => true,
-            _ => false,
-        }
-    }
-
-    pub fn is_started(&self) -> bool {
-        match self {
-            RawPluginState::Started(_) => true,
-            _ => false,
-        }
-    }
-
     pub fn as_unresolved(&self) -> Option<&UnresolvedPlugin> {
         match self {
             RawPluginState::Unresolved(unresolved) => Some(unresolved),
@@ -103,7 +85,19 @@ pub enum ResolvedPlugin {
 }
 
 #[derive(
-    Serialize, Deserialize, Debug, Copy, Clone, Eq, PartialEq, Hash, EnumString, IntoStaticStr,
+    Serialize,
+    Deserialize,
+    Debug,
+    Copy,
+    Clone,
+    Ord,
+    PartialOrd,
+    Eq,
+    PartialEq,
+    Hash,
+    EnumString,
+    EnumIter,
+    IntoStaticStr,
 )]
 #[serde(rename_all = "snake_case")]
 #[strum(serialize_all = "snake_case")]
@@ -132,9 +126,19 @@ impl PluginStep {
             | PluginStep::VerifyRelease
             | PluginStep::Publish
             | PluginStep::Notify => PluginStepKind::Shared,
-            PluginStep::GetLastRelease | PluginStep::GenerateNotes | PluginStep::Commit => {
-                PluginStepKind::Singleton
-            }
+            PluginStep::GetLastRelease | PluginStep::GenerateNotes | PluginStep::Commit => PluginStepKind::Singleton,
+        }
+    }
+
+    pub fn is_dry(self) -> bool {
+        match self {
+            PluginStep::PreFlight
+            | PluginStep::GetLastRelease
+            | PluginStep::DeriveNextVersion
+            | PluginStep::GenerateNotes
+            | PluginStep::Prepare
+            | PluginStep::VerifyRelease => true,
+            PluginStep::Publish | PluginStep::Notify | PluginStep::Commit => false,
         }
     }
 }

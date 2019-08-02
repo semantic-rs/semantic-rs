@@ -4,30 +4,39 @@ use std::path::{Path, PathBuf};
 
 use clog::fmt::MarkdownWriter;
 use clog::Clog;
-use failure::Fail;
 use git2::{Commit, Repository};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
-use crate::config::CfgMapExt;
-use crate::plugin::proto::{
-    request,
-    response::{self, PluginResponse},
-    GitRevision,
+use crate::plugin_support::flow::{Availability, FlowError, ProvisionCapability, Value};
+use crate::plugin_support::keys::{
+    CURRENT_VERSION, DRY_RUN, FILES_TO_COMMIT, NEXT_VERSION, PROJECT_ROOT, RELEASE_NOTES,
 };
-use crate::plugin::{PluginInterface, PluginStep};
+use crate::plugin_support::proto::{
+    response::{self, PluginResponse},
+    Version,
+};
+use crate::plugin_support::{PluginInterface, PluginStep};
 
 pub struct ClogPlugin {
-    state: Option<request::GenerateNotesData>,
+    config: ClogPluginConfig,
+    state: State,
     dry_run_guard: Option<DryRunGuard>,
 }
 
 impl ClogPlugin {
     pub fn new() -> Self {
         ClogPlugin {
-            state: None,
+            config: ClogPluginConfig::default(),
+            state: State::default(),
             dry_run_guard: None,
         }
     }
+}
+
+#[derive(Default)]
+struct State {
+    release_notes: Option<String>,
+    next_version: Option<semver::Version>,
 }
 
 impl Drop for ClogPlugin {
@@ -59,16 +68,32 @@ struct DryRunGuard {
     original_changelog: Option<Vec<u8>>,
 }
 
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 struct ClogPluginConfig {
-    #[serde(default = "default_changelog")]
-    changelog: String,
-    #[serde(default)]
-    ignore: Vec<String>,
+    changelog: Value<String>,
+    ignore: Value<Vec<String>>,
+    project_root: Value<String>,
+    dry_run: Value<bool>,
+    current_version: Value<Version>,
+    next_version: Value<semver::Version>,
 }
 
-fn default_changelog() -> String {
-    "Changelog.md".into()
+impl Default for ClogPluginConfig {
+    fn default() -> Self {
+        ClogPluginConfig {
+            changelog: Value::builder("changelog").value("Changelog.md".into()).build(),
+            ignore: Value::builder("ignore").default_value().build(),
+            project_root: Value::builder(PROJECT_ROOT).protected().build(),
+            dry_run: Value::builder(DRY_RUN).protected().build(),
+            current_version: Value::builder(CURRENT_VERSION)
+                .required_at(PluginStep::DeriveNextVersion)
+                .build(),
+            next_version: Value::builder(NEXT_VERSION)
+                .required_at(PluginStep::GenerateNotes)
+                .protected()
+                .build(),
+        }
+    }
 }
 
 impl PluginInterface for ClogPlugin {
@@ -76,7 +101,58 @@ impl PluginInterface for ClogPlugin {
         PluginResponse::from_ok("clog".into())
     }
 
-    fn methods(&self, _req: request::Methods) -> response::Methods {
+    fn provision_capabilities(&self) -> response::ProvisionCapabilities {
+        PluginResponse::from_ok(vec![
+            ProvisionCapability::builder(RELEASE_NOTES)
+                .after_step(PluginStep::GenerateNotes)
+                .build(),
+            ProvisionCapability::builder(NEXT_VERSION)
+                .after_step(PluginStep::DeriveNextVersion)
+                .build(),
+            ProvisionCapability::builder(FILES_TO_COMMIT)
+                .after_step(PluginStep::Prepare)
+                .build(),
+        ])
+    }
+
+    fn get_value(&self, key: &str) -> response::GetValue {
+        match key {
+            "release_notes" => {
+                let notes = self.state.release_notes.as_ref().ok_or_else(|| {
+                    FlowError::DataNotAvailableYet(key.to_owned(), Availability::AfterStep(PluginStep::GenerateNotes))
+                })?;
+
+                PluginResponse::from_ok(serde_json::to_value(notes)?)
+            }
+            "next_version" => {
+                let next_version = self.state.next_version.as_ref().ok_or_else(|| {
+                    FlowError::DataNotAvailableYet(
+                        key.to_owned(),
+                        Availability::AfterStep(PluginStep::DeriveNextVersion),
+                    )
+                })?;
+
+                PluginResponse::from_ok(serde_json::to_value(next_version)?)
+            }
+            "files_to_commit" => {
+                let changelog_path = self.config.changelog.as_value();
+                PluginResponse::from_ok(serde_json::to_value(vec![changelog_path])?)
+            }
+            other => PluginResponse::from_error(FlowError::KeyNotSupported(other.to_owned()).into()),
+        }
+    }
+
+    fn get_config(&self) -> response::Config {
+        let json = serde_json::to_value(&self.config)?;
+        PluginResponse::from_ok(json)
+    }
+
+    fn set_config(&mut self, config: serde_json::Value) -> response::Null {
+        self.config = serde_json::from_value(config)?;
+        PluginResponse::from_ok(())
+    }
+
+    fn methods(&self) -> response::Methods {
         let methods = vec![
             PluginStep::PreFlight,
             PluginStep::DeriveNextVersion,
@@ -86,27 +162,19 @@ impl PluginInterface for ClogPlugin {
         PluginResponse::from_ok(methods)
     }
 
-    fn pre_flight(&mut self, params: request::PreFlight) -> response::PreFlight {
-        // Try to deserialize configuration
-        let _: ClogPluginConfig =
-            toml::Value::Table(params.cfg_map.get_sub_table("clog")?).try_into()?;
+    fn pre_flight(&mut self) -> response::Null {
         PluginResponse::from_ok(())
     }
 
-    fn derive_next_version(
-        &mut self,
-        params: request::DeriveNextVersion,
-    ) -> response::DeriveNextVersion {
-        let (cfg_map, current_version) = (params.cfg_map, params.data);
-
-        let cfg: ClogPluginConfig =
-            toml::Value::Table(cfg_map.get_sub_table("clog")?).try_into()?;
+    fn derive_next_version(&mut self) -> response::Null {
+        let cfg = &self.config;
+        let project_root = cfg.project_root.as_value();
+        let current_version = cfg.current_version.as_value();
+        let ignore = cfg.ignore.as_value();
 
         let bump = match &current_version.semver {
             None => CommitType::Major,
-            Some(_) => {
-                version_bump_since_rev(&cfg_map.project_root()?, &current_version.rev, &cfg.ignore)?
-            }
+            Some(_) => version_bump_since_rev(&project_root, &current_version.rev, &ignore)?,
         };
 
         let next_version = match current_version.semver.clone() {
@@ -136,29 +204,43 @@ impl PluginInterface for ClogPlugin {
             }
         };
 
-        PluginResponse::from_ok(next_version)
+        self.state.next_version.replace(next_version.clone());
+
+        PluginResponse::from_ok(())
     }
 
-    fn generate_notes(&mut self, params: request::GenerateNotes) -> response::GenerateNotes {
-        let (cfg, data) = (params.cfg_map, params.data);
+    fn generate_notes(&mut self) -> response::Null {
+        let changelog = {
+            let project_root = self.config.project_root.as_value();
+            let current_version = self.config.current_version.as_value();
+            let next_version = self.config.next_version.as_value();
 
-        let changelog =
-            generate_changelog(&cfg.project_root()?, &data.start_rev, &data.new_version)?;
+            let changelog = generate_changelog(project_root, &current_version.rev, next_version)?;
+
+            log::info!("Changelog for {}..{}", current_version.rev, next_version);
+            log::info!("---------------------------------------------------");
+            log::info!("{}", changelog);
+            log::info!("---------------------------------------------------");
+
+            changelog
+        };
 
         // Store this request as state
-        self.state.replace(data.clone());
+        self.state.release_notes.replace(changelog.clone());
 
-        PluginResponse::from_ok(changelog)
+        PluginResponse::from_ok(())
     }
 
-    fn prepare(&mut self, params: request::Prepare) -> response::Prepare {
-        let cfg: ClogPluginConfig =
-            toml::Value::Table(params.cfg_map.get_sub_table("clog")?).try_into()?;
-        let changelog_path = &cfg.changelog;
-        let repo_path = params.cfg_map.project_root()?;
+    fn prepare(&mut self) -> response::Null {
+        let cfg = &self.config;
+        let changelog_path = cfg.changelog.as_value();
+        let repo_path = cfg.project_root.as_value();
+        let is_dry_run = *cfg.dry_run.as_value();
+        let current_version = cfg.current_version.as_value();
+        let next_version = cfg.next_version.as_value();
 
         // Safely store the original changelog for restoration after dry-run is finished
-        if params.cfg_map.is_dry_run()? {
+        if is_dry_run {
             log::info!("clog(dry-run): saving original state of changelog file");
             let original_changelog = std::fs::read(&changelog_path).ok();
             self.dry_run_guard.replace(DryRunGuard {
@@ -167,25 +249,19 @@ impl PluginInterface for ClogPlugin {
             });
         }
 
-        let state = self.state.as_ref().ok_or(ClogPluginError::MissingState)?;
-
         let mut clog = Clog::with_dir(repo_path)?;
         clog.changelog(changelog_path)
-            .from(&state.start_rev)
-            .version(format!("v{}", state.new_version));
+            .from(&current_version.rev)
+            .version(format!("v{}", next_version));
 
         log::info!("Writing updated changelog");
         clog.write_changelog()?;
 
-        PluginResponse::from_ok(vec![changelog_path.to_owned()])
+        PluginResponse::from_ok(())
     }
 }
 
-fn version_bump_since_rev(
-    path: &str,
-    rev: &GitRevision,
-    ignore: &[String],
-) -> Result<CommitType, failure::Error> {
+fn version_bump_since_rev(path: &str, rev: &str, ignore: &[String]) -> Result<CommitType, failure::Error> {
     let repo = Repository::open(path)?;
     let range = format!("{}..HEAD", rev);
     log::debug!("analyzing commits {} to determine version bump", range);
@@ -241,7 +317,7 @@ pub fn analyze_single(commit_str: &str, ignore: &[String]) -> Result<CommitType,
     };
 
     if let Some(message) = message {
-        log::debug!("derived commit type {:?} for {}", commit_type, message);
+        log::trace!("derived commit type {:?} for {}", commit_type, message);
     }
 
     Ok(commit_type)
@@ -272,12 +348,6 @@ pub fn generate_changelog(
         Some(newline_offset) => Ok(changelog[newline_offset + 1..].into()),
         None => Ok(changelog),
     }
-}
-
-#[derive(Fail, Debug)]
-enum ClogPluginError {
-    #[fail(display = "state is missing, forgor to run pre_flight step?")]
-    MissingState,
 }
 
 #[cfg(test)]
@@ -311,9 +381,6 @@ mod tests {
     #[test]
     fn ignored_component() {
         let commit = "0\nfeat(ci): This commits should be ignored";
-        assert_eq!(
-            CommitType::Unknown,
-            analyze_single(commit, &["ci".into()]).unwrap()
-        );
+        assert_eq!(CommitType::Unknown, analyze_single(commit, &["ci".into()]).unwrap());
     }
 }

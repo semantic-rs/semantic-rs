@@ -4,3 +4,4 @@
 #
 # To learn more about Rustfmt configuration visit
 # https://github.com/rust-lang/rustfmt/blob/master/Configurations.md
+max_width = 120
