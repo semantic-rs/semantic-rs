@@ -1,5 +1,6 @@
 # semantic-rs
 
+[![codecov](https://codecov.io/gh/etclabscore/semantic-rs/branch/master/graph/badge.svg)](https://codecov.io/gh/etclabscore/semantic-rs)
 
 This tool helps people to publish crates following the [semver](http://semver.org/) specification.
 
