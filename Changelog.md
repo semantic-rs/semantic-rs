@@ -1,3 +1,13 @@
+<a name="v2.8.1"></a>
+## v2.8.1 (2019-08-15)
+
+
+#### Bug Fixes
+
+* **docker:**  run CMD as root to fix permission denied errors in CI ([df509953](df509953))
+
+
+
 <a name="v2.8.0"></a>
 ## v2.8.0 (2019-07-27)
 
