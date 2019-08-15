@@ -58,8 +58,7 @@ RUN if [ -f $BINARY_PATH ]; then cp $BINARY_PATH /bin/; fi
 # Optional cleanup
 RUN if $CLEANUP; then rm -rf /home/semantic/project; fi
 
-# Switch back to user semantic and set a workdir for a volume mountpoint
-USER semantic
+# Change workdir to one that would be used when container is executed
 RUN mkdir /home/semantic/workdir
 WORKDIR /home/semantic/workdir
 
