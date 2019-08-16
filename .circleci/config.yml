@@ -115,7 +115,7 @@ jobs:
   build-linux:
     <<: *defaults
     docker:
-      - image: clux/muslrust
+      - image: clux/muslrust:nightly
     steps:
       - checkout
       - restore_cache: *restore-deps-cache-rustup
