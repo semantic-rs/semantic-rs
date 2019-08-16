@@ -1,3 +1,14 @@
+<a name="v2.8.2"></a>
+## v2.8.2 (2019-08-16)
+
+
+#### Bug Fixes
+
+* **ci:**  use nightly clux/multirust container ([52ff36bf](52ff36bf))
+* **clog:**  prepare stage fails if Changelog.md is not found ([c6739108](c6739108))
+
+
+
 <a name="v2.8.1"></a>
 ## v2.8.1 (2019-08-15)
 
