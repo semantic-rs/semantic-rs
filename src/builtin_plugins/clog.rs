@@ -34,13 +34,21 @@ impl Drop for ClogPlugin {
     fn drop(&mut self) {
         if let Some(guard) = self.dry_run_guard.as_ref() {
             log::info!("clog(dry-run): restoring original state of changelog file");
-            if let Err(err) = std::fs::write(&guard.changelog_path, &guard.original_changelog) {
+
+            let result = if let Some(original_changelog) = &guard.original_changelog {
+                std::fs::write(&guard.changelog_path, original_changelog)
+            } else {
+                std::fs::remove_file(&guard.changelog_path)
+            };
+
+            if let Err(err) = result {
                 log::error!("failed to restore original changelog, sorry x_x");
                 log::error!("{}", err);
-                log::info!(
-                    "\nOriginal changelog: \n{}",
-                    String::from_utf8_lossy(&guard.original_changelog)
-                );
+                if let Some(oc) = &guard.original_changelog {
+                    log::info!("\nOriginal changelog: \n{}", String::from_utf8_lossy(oc));
+                } else {
+                    log::info!("There is no previous state changelog file (not found)");
+                }
             }
         }
     }
@@ -48,7 +56,7 @@ impl Drop for ClogPlugin {
 
 struct DryRunGuard {
     changelog_path: PathBuf,
-    original_changelog: Vec<u8>,
+    original_changelog: Option<Vec<u8>>,
 }
 
 #[derive(Deserialize)]
@@ -152,7 +160,7 @@ impl PluginInterface for ClogPlugin {
         // Safely store the original changelog for restoration after dry-run is finished
         if params.cfg_map.is_dry_run()? {
             log::info!("clog(dry-run): saving original state of changelog file");
-            let original_changelog = std::fs::read(&changelog_path)?;
+            let original_changelog = std::fs::read(&changelog_path).ok();
             self.dry_run_guard.replace(DryRunGuard {
                 changelog_path: Path::new(changelog_path).to_owned(),
                 original_changelog,
