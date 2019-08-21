@@ -523,10 +523,9 @@ fn build_steps_to_plugins_map(
     let mut map = Map::new();
 
     fn collect_ids_of_plugins_matching(plugins: &[Plugin], names: &[impl AsRef<str>]) -> Vec<usize> {
-        plugins
+        names
             .iter()
-            .enumerate()
-            .filter_map(|(id, p)| names.iter().map(AsRef::as_ref).find(|&n| n == p.name).map(|_| id))
+            .filter_map(|name| plugins.iter().position(|plugin| plugin.name == name.as_ref()))
             .collect::<Vec<_>>()
     }
 
@@ -668,6 +667,164 @@ mod tests {
             caps,
             vec![vec![], vec![ProvisionCapability::builder("source_key").build()]]
         );
+    }
+
+    #[test]
+    fn steps_to_plugins_map() {
+        env_logger::try_init().ok();
+
+        let toml = r#"
+            [plugins]
+            dependent = "builtin"
+            provider = "builtin"
+
+            [steps]
+            pre_flight = [ "dependent", "provider" ]
+        "#;
+
+        let config = toml::from_str(toml).unwrap();
+        let plugins = dependent_provider_plugins();
+        let caps = collect_plugins_methods_capabilities(&plugins).unwrap();
+
+        let map = build_steps_to_plugins_map(&config, &plugins, vec![], caps).unwrap();
+
+        let expected = vec![(PluginStep::PreFlight, vec![0, 1])].into_iter().collect();
+
+        assert_eq!(map, expected);
+    }
+
+    #[test]
+    fn steps_to_plugins_map_different_step_order() {
+        env_logger::try_init().ok();
+
+        let toml = r#"
+            [plugins]
+            dependent = "builtin"
+            provider = "builtin"
+
+            [steps]
+            pre_flight = [ "provider", "dependent" ]
+        "#;
+
+        let config = toml::from_str(toml).unwrap();
+        let plugins = dependent_provider_plugins();
+        let caps = collect_plugins_methods_capabilities(&plugins).unwrap();
+
+        let map = build_steps_to_plugins_map(&config, &plugins, vec![], caps).unwrap();
+
+        let expected = vec![(PluginStep::PreFlight, vec![1, 0])].into_iter().collect();
+
+        assert_eq!(map, expected);
+    }
+
+    #[test]
+    fn steps_to_plugins_map_discovery() {
+        env_logger::try_init().ok();
+
+        let toml = r#"
+            [plugins]
+            dependent = "builtin"
+            provider = "builtin"
+
+            [steps]
+            pre_flight = "discover"
+        "#;
+
+        let config = toml::from_str(toml).unwrap();
+        let plugins = dependent_provider_plugins();
+        let caps = collect_plugins_methods_capabilities(&plugins).unwrap();
+
+        let map = build_steps_to_plugins_map(&config, &plugins, vec![], caps).unwrap();
+
+        let expected = vec![(PluginStep::PreFlight, vec![0, 1])].into_iter().collect();
+
+        assert_eq!(map, expected);
+    }
+
+    #[test]
+    fn steps_to_plugins_map_with_injection() {
+        env_logger::try_init().ok();
+
+        let toml = r#"
+            [plugins]
+            dependent = "builtin"
+            provider = "builtin"
+
+            [steps]
+            pre_flight = [ "provider", "dependent" ]
+        "#;
+
+        let config = toml::from_str(toml).unwrap();
+        let mut plugins = dependent_provider_plugins();
+        plugins.push(Plugin::new(Box::new(test_plugins::Injected)).unwrap());
+
+        let caps = collect_plugins_methods_capabilities(&plugins).unwrap();
+        let injections = vec![(2, InjectionTarget::BeforeStep(PluginStep::PreFlight))];
+
+        let map = build_steps_to_plugins_map(&config, &plugins, injections, caps).unwrap();
+
+        let expected = vec![(PluginStep::PreFlight, vec![2, 1, 0])].into_iter().collect();
+
+        assert_eq!(map, expected);
+    }
+
+    #[test]
+    fn steps_to_plugins_map_discovery_with_injection() {
+        env_logger::try_init().ok();
+
+        let toml = r#"
+            [plugins]
+            dependent = "builtin"
+            provider = "builtin"
+
+            [steps]
+            pre_flight = "discover"
+        "#;
+
+        let config = toml::from_str(toml).unwrap();
+        let mut plugins = dependent_provider_plugins();
+        plugins.push(Plugin::new(Box::new(test_plugins::Injected)).unwrap());
+
+        let caps = collect_plugins_methods_capabilities(&plugins).unwrap();
+        let injections = vec![(2, InjectionTarget::BeforeStep(PluginStep::PreFlight))];
+
+        let map = build_steps_to_plugins_map(&config, &plugins, injections, caps).unwrap();
+
+        let expected = vec![(PluginStep::PreFlight, vec![2, 0, 1])].into_iter().collect();
+
+        assert_eq!(map, expected);
+    }
+
+    #[test]
+    fn steps_to_plugins_map_discovery_with_injection_to_other_step() {
+        env_logger::try_init().ok();
+
+        let toml = r#"
+            [plugins]
+            dependent = "builtin"
+            provider = "builtin"
+
+            [steps]
+            pre_flight = "discover"
+        "#;
+
+        let config = toml::from_str(toml).unwrap();
+        let mut plugins = dependent_provider_plugins();
+        plugins.push(Plugin::new(Box::new(test_plugins::Injected)).unwrap());
+
+        let caps = collect_plugins_methods_capabilities(&plugins).unwrap();
+        let injections = vec![(2, InjectionTarget::BeforeStep(PluginStep::DeriveNextVersion))];
+
+        let map = build_steps_to_plugins_map(&config, &plugins, injections, caps).unwrap();
+
+        let expected = vec![
+            (PluginStep::PreFlight, vec![0, 1]),
+            (PluginStep::DeriveNextVersion, vec![2]),
+        ]
+        .into_iter()
+        .collect();
+
+        assert_eq!(map, expected);
     }
 
     #[test]
@@ -1234,6 +1391,31 @@ mod tests {
                     "source_key" => PluginResponse::from_ok(serde_json::to_value("value").unwrap()),
                     other => PluginResponse::from_error(FlowError::KeyNotSupported(other.to_owned()).into()),
                 }
+            }
+
+            fn get_config(&self) -> response::Config {
+                PluginResponse::from_ok(serde_json::Value::Object(serde_json::Map::default()))
+            }
+
+            fn set_config(&mut self, _config: serde_json::Value) -> response::Null {
+                unimplemented!()
+            }
+        }
+
+        pub struct Injected;
+
+        impl PluginInterface for Injected {
+            fn name(&self) -> response::Name {
+                PluginResponse::from_ok("injected".into())
+            }
+
+            fn methods(&self) -> response::Methods {
+                let methods = PluginStep::iter().collect();
+                PluginResponse::from_ok(methods)
+            }
+
+            fn provision_capabilities(&self) -> response::ProvisionCapabilities {
+                PluginResponse::from_ok(vec![])
             }
 
             fn get_config(&self) -> response::Config {
