@@ -3,7 +3,7 @@ use strum::IntoEnumIterator;
 
 use crate::config::{Config, Map, PluginDefinitionMap};
 use crate::plugin_runtime::data_mgr::DataManager;
-use crate::plugin_runtime::graph::{Action, PluginSequence};
+use crate::plugin_runtime::graph::{ActionKind, PluginSequence};
 use crate::plugin_runtime::resolver::PluginResolver;
 use crate::plugin_runtime::starter::PluginStarter;
 use crate::plugin_support::flow::Value;
@@ -28,8 +28,9 @@ impl Kernel {
     pub fn run(mut self) -> Result<(), failure::Error> {
         for action in self.sequence.into_iter() {
             log::trace!("running action {:?}", action);
-            match action {
-                Action::Call(id, step) => {
+            let id = action.id();
+            match action.into_kind() {
+                ActionKind::Call(step) => {
                     let plugin = &self.plugins[id];
                     log::debug!("call {}::{}", plugin.name, step.as_str());
                     let mut callable = plugin.as_interface();
@@ -45,35 +46,35 @@ impl Kernel {
                         PluginStep::Notify => callable.notify()?,
                     }
                 }
-                Action::Get(src_id, src_key) => {
-                    let value = self.plugins[src_id].as_interface().get_value(&src_key)?;
-                    log::debug!("get {}::{} ==> {:?}", self.plugins[src_id].name, src_key, value);
+                ActionKind::Get(src_key) => {
+                    let value = self.plugins[id].as_interface().get_value(&src_key)?;
+                    log::debug!("get {}::{} ==> {:?}", self.plugins[id].name, src_key, value);
                     let value = Value::builder(&src_key).value(value).build();
                     self.data_mgr.insert_global(src_key, value);
                 }
-                Action::Set(dst_id, dst_key, src_key) => {
-                    let value = self.data_mgr.prepare_value(dst_id, &dst_key, &src_key)?;
-                    log::debug!("set {}::{} <== {:?}", self.plugins[dst_id].name, dst_key, value);
-                    self.plugins[dst_id].as_interface().set_value(&dst_key, value)?;
+                ActionKind::Set(dst_key, src_key) => {
+                    let value = self.data_mgr.prepare_value(id, &dst_key, &src_key)?;
+                    log::debug!("set {}::{} <== {:?}", self.plugins[id].name, dst_key, value);
+                    self.plugins[id].as_interface().set_value(&dst_key, value)?;
                 }
-                Action::SetValue(dst_id, dst_key, value) => {
+                ActionKind::SetValue(dst_key, value) => {
                     let value = Value::builder(&dst_key).value(value).build();
-                    log::debug!("set {}::{} <== {:?}", self.plugins[dst_id].name, dst_key, value);
-                    self.plugins[dst_id].as_interface().set_value(&dst_key, value)?;
+                    log::debug!("set {}::{} <== {:?}", self.plugins[id].name, dst_key, value);
+                    self.plugins[id].as_interface().set_value(&dst_key, value)?;
                 }
-                Action::RequireConfigEntry(dst_id, dst_key) => {
-                    let value = self.data_mgr.prepare_value_same_key(dst_id, &dst_key)?;
-                    log::debug!("set {}::{} <== {:?}", self.plugins[dst_id].name, dst_key, value);
-                    self.plugins[dst_id].as_interface().set_value(&dst_key, value)?;
+                ActionKind::RequireConfigEntry(dst_key) => {
+                    let value = self.data_mgr.prepare_value_same_key(id, &dst_key)?;
+                    log::debug!("set {}::{} <== {:?}", self.plugins[id].name, dst_key, value);
+                    self.plugins[id].as_interface().set_value(&dst_key, value)?;
                 }
-                Action::RequireEnvValue(dst_id, dst_key, src_key) => {
+                ActionKind::RequireEnvValue(dst_key, src_key) => {
                     let value = self
                         .env
                         .get(&src_key)
-                        .ok_or_else(|| KernelError::EnvValueUndefined(src_key.clone()))?;
+                        .ok_or_else(|| Error::EnvValueUndefined(src_key.clone()))?;
                     let value = Value::builder(&src_key).value(serde_json::to_value(value)?).build();
-                    log::debug!("set {}::{} <== {:?}", self.plugins[dst_id].name, dst_key, value);
-                    self.plugins[dst_id].as_interface().set_value(&dst_key, value)?;
+                    log::debug!("set {}::{} <== {:?}", self.plugins[id].name, dst_key, value);
+                    self.plugins[id].as_interface().set_value(&dst_key, value)?;
                 }
             }
         }
@@ -199,7 +200,7 @@ impl KernelBuilder {
         if unresolved.is_empty() {
             Ok(())
         } else {
-            Err(KernelError::FailedToResolvePlugins(unresolved).into())
+            Err(Error::FailedToResolvePlugins(unresolved).into())
         }
     }
 
@@ -225,7 +226,7 @@ impl KernelBuilder {
 }
 
 #[derive(Fail, Debug)]
-pub enum KernelError {
+pub enum Error {
     #[fail(display = "failed to resolve some modules: \n{:#?}", _0)]
     FailedToResolvePlugins(Vec<String>),
     #[fail(display = "environment value must be set: {}", _0)]

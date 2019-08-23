@@ -25,7 +25,6 @@ impl DockerPlugin {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-#[serde(rename_all = "snake_case")]
 struct Config {
     repo_url: Value<String>,
     repo_branch: Value<String>,
@@ -42,14 +41,13 @@ impl Default for Config {
             repo_branch: Value::builder(GIT_BRANCH).required_at(PluginStep::Publish).build(),
             next_version: Value::builder(NEXT_VERSION).required_at(PluginStep::Publish).build(),
             images: Value::builder("images").default_value().build(),
-            docker_user: Value::builder("DOCKER_USER").from_env().build(),
-            docker_password: Value::builder("DOCKER_PASSWORD").from_env().build(),
+            docker_user: Value::builder("DOCKER_USER").load_from_env().build(),
+            docker_password: Value::builder("DOCKER_PASSWORD").load_from_env().build(),
         }
     }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-#[serde(rename_all = "snake_case")]
 struct Image {
     registry: Registry,
     dockerfile: PathBuf,
@@ -124,12 +122,9 @@ impl PluginInterface for DockerPlugin {
 
     fn publish(&mut self) -> response::Null {
         let config = &self.config;
-        let state = self.state.as_ref().ok_or(DockerPluginError::MissingState)?;
+        let state = self.state.as_ref().ok_or(Error::MissingState)?;
 
-        let credentials = state
-            .credentials
-            .as_ref()
-            .ok_or(DockerPluginError::CredentialsUndefined)?;
+        let credentials = state.credentials.as_ref().ok_or(Error::CredentialsUndefined)?;
 
         let version = config.next_version.as_value();
         let version = format!("{}", version);
@@ -169,10 +164,10 @@ fn docker_info() -> Result<(), failure::Error> {
     let status = Command::new("docker")
         .arg("info")
         .status()
-        .map_err(|_| DockerPluginError::DockerNotFound)?;
+        .map_err(|_| Error::DockerNotFound)?;
 
     if !status.success() {
-        return Err(DockerPluginError::DockerReturnedError(status.code()).into());
+        return Err(Error::DockerCommandFailed(status.code()).into());
     }
 
     Ok(())
@@ -205,7 +200,7 @@ fn build_image(config: &Config, image: &Image) -> Result<(), failure::Error> {
 
     let status = cmd.status()?;
     if !status.success() {
-        return Err(DockerPluginError::DockerReturnedError(status.code()).into());
+        return Err(Error::DockerCommandFailed(status.code()).into());
     }
 
     log::info!("Built image {}:{}", image.name, image.tag);
@@ -221,7 +216,7 @@ fn tag_image(from: &str, to: &str) -> Result<(), failure::Error> {
     let status = cmd.arg("tag").arg(from).arg(to).status()?;
 
     if !status.success() {
-        return Err(DockerPluginError::DockerReturnedError(status.code()).into());
+        return Err(Error::DockerCommandFailed(status.code()).into());
     }
 
     Ok(())
@@ -244,14 +239,14 @@ fn login(registry_url: Option<&str>, credentials: &Credentials) -> Result<(), fa
     let mut child = cmd.stdin(Stdio::piped()).spawn()?;
 
     {
-        let stdin = child.stdin.as_mut().ok_or(DockerPluginError::StdioError)?;
+        let stdin = child.stdin.as_mut().ok_or(Error::StdioPasswordPassingFailed)?;
         stdin.write_all(credentials.password.as_bytes())?;
     }
 
     let status = child.wait()?;
 
     if !status.success() {
-        return Err(DockerPluginError::DockerReturnedError(status.code()).into());
+        return Err(Error::DockerCommandFailed(status.code()).into());
     }
 
     Ok(())
@@ -269,22 +264,22 @@ fn push_image(image: &Image, tag: &str) -> Result<(), failure::Error> {
     let status = cmd.status()?;
 
     if !status.success() {
-        return Err(DockerPluginError::DockerReturnedError(status.code()).into());
+        return Err(Error::DockerCommandFailed(status.code()).into());
     }
 
     Ok(())
 }
 
 #[derive(Fail, Debug)]
-enum DockerPluginError {
+enum Error {
     #[fail(display = "DOCKER_USER or DOCKER_PASSWORD are not set, cannot push the image.")]
     CredentialsUndefined,
     #[fail(display = "state is missing: forgot to call pre_flight?")]
     MissingState,
     #[fail(display = "docker command exited with error {:?}", _0)]
-    DockerReturnedError(Option<i32>),
+    DockerCommandFailed(Option<i32>),
     #[fail(display = "stdio error: failed to pass password to docker process via stdin")]
-    StdioError,
+    StdioPasswordPassingFailed,
     #[fail(display = "'docker' not found in PATH: make sure you have the docker client installed")]
     DockerNotFound,
 }

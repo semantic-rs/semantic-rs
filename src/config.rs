@@ -66,7 +66,7 @@ impl Config {
 
         config.cfg.entry("dry_run".to_owned()).or_insert_with(|| {
             if is_dry_run {
-                ValueDefinition::Value(is_dry_run.into())
+                ValueDefinition::Value(true.into())
             } else {
                 default_dry_run()
             }

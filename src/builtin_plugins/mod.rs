@@ -7,7 +7,7 @@ pub mod rust;
 
 pub use self::clog::ClogPlugin;
 pub use self::docker::DockerPlugin;
-pub use self::early_exit::{EarlyExitError, EarlyExitPlugin};
+pub use self::early_exit::EarlyExitPlugin;
 pub use self::git::GitPlugin;
 pub use self::github::GithubPlugin;
 pub use self::rust::RustPlugin;

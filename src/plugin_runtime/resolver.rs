@@ -53,7 +53,7 @@ impl Resolver for BuiltinResolver {
             "github" => Box::new(GithubPlugin::new()),
             "rust" => Box::new(RustPlugin::new()),
             "docker" => Box::new(DockerPlugin::new()),
-            other => return Err(ResolverError::BuiltinNotRegistered(other.to_string()).into()),
+            other => return Err(Error::BuiltinNotRegistered(other.to_string()).into()),
         };
         Ok(ResolvedPlugin::Builtin(plugin))
     }
@@ -74,7 +74,7 @@ impl Resolver for CargoResolver {
 }
 
 #[derive(Fail, Debug)]
-pub enum ResolverError {
+pub enum Error {
     #[fail(display = "{} is not registered as built-in plugin", _0)]
     BuiltinNotRegistered(String),
 }

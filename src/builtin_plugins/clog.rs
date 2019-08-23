@@ -18,7 +18,7 @@ use crate::plugin_support::proto::{
 use crate::plugin_support::{PluginInterface, PluginStep};
 
 pub struct ClogPlugin {
-    config: ClogPluginConfig,
+    config: Config,
     state: State,
     dry_run_guard: Option<DryRunGuard>,
 }
@@ -26,7 +26,7 @@ pub struct ClogPlugin {
 impl ClogPlugin {
     pub fn new() -> Self {
         ClogPlugin {
-            config: ClogPluginConfig::default(),
+            config: Config::default(),
             state: State::default(),
             dry_run_guard: None,
         }
@@ -69,7 +69,7 @@ struct DryRunGuard {
 }
 
 #[derive(Serialize, Deserialize)]
-struct ClogPluginConfig {
+struct Config {
     changelog: Value<String>,
     ignore: Value<Vec<String>>,
     project_root: Value<String>,
@@ -78,9 +78,9 @@ struct ClogPluginConfig {
     next_version: Value<semver::Version>,
 }
 
-impl Default for ClogPluginConfig {
+impl Default for Config {
     fn default() -> Self {
-        ClogPluginConfig {
+        Config {
             changelog: Value::builder("changelog").value("Changelog.md".into()).build(),
             ignore: Value::builder("ignore").default_value().build(),
             project_root: Value::builder(PROJECT_ROOT).protected().build(),

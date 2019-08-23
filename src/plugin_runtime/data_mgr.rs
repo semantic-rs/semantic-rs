@@ -40,7 +40,7 @@ impl DataManager {
         let values = self
             .global
             .get(src_key)
-            .ok_or_else(|| DataManagerError::DataNotAvailable(src_key.to_owned()))?;
+            .ok_or_else(|| Error::DataNotAvailable(src_key.to_owned()))?;
 
         let value = match &values[..] {
             [] => None,
@@ -65,7 +65,7 @@ impl DataManager {
         if let Some(value) = value {
             Ok(Value::builder(&src_key).value(value).build())
         } else {
-            Err(DataManagerError::DataNotAvailable(src_key.to_owned()).into())
+            Err(Error::DataNotAvailable(src_key.to_owned()).into())
         }
     }
 
@@ -79,7 +79,7 @@ impl DataManager {
 }
 
 #[derive(Fail, Debug)]
-pub enum DataManagerError {
+pub enum Error {
     #[fail(display = "no data available for key {}", _0)]
     DataNotAvailable(String),
 }

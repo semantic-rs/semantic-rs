@@ -26,7 +26,6 @@ struct State {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
 struct Config {
     user_name: Value<Option<String>>,
     user_email: Value<Option<String>>,
@@ -93,7 +92,7 @@ impl State {
                     let config = repo.config()?;
                     author = config
                         .get_string("user.name")
-                        .map_err(|_| GitPluginError::CommitterNameUndefined)
+                        .map_err(|_| Error::CommitterNameUndefined)
                         .map_err(failure::Error::from);
                 }
 
@@ -111,7 +110,7 @@ impl State {
                     let config = repo.config()?;
                     email = config
                         .get_string("user.email")
-                        .map_err(|_| GitPluginError::CommitterEmailUndefined)
+                        .map_err(|_| Error::CommitterEmailUndefined)
                         .map_err(failure::Error::from);
                 }
 
@@ -125,7 +124,7 @@ impl State {
     pub fn perform_pre_flight_checks<T>(&self, config: &Config, response: &mut PluginResponseBuilder<T>) {
         let result = || -> Result<(), failure::Error> {
             let remote = self.repo.find_remote(&config.remote.as_value())?;
-            let remote_url = remote.url().ok_or(GitPluginError::GitRemoteUndefined)?;
+            let remote_url = remote.url().ok_or(Error::GitRemoteUndefined)?;
 
             if !config.force_https.as_value() && is_https_remote(remote_url) {
                 response.warnings(&[
@@ -151,7 +150,7 @@ impl State {
                 .find_remote(&remote_name)?
                 .url()
                 .map(str::to_string)
-                .ok_or(GitPluginError::GitRemoteUndefined)?;
+                .ok_or(Error::GitRemoteUndefined)?;
 
             if !is_https_remote(&remote_url) {
                 // TODO: replace with generic regex
@@ -169,7 +168,7 @@ impl State {
                     }
                 }
 
-                let url = new_url.ok_or(GitPluginError::RemoteNotSupportedForHttpsForcing(remote_url))?;
+                let url = new_url.ok_or(Error::RemoteNotSupportedForHttpsForcing(remote_url))?;
 
                 self.set_remote_url(config, &url)?;
             }
@@ -255,12 +254,12 @@ impl State {
         let refs = [&branch_ref[..], &tag_ref[..]];
 
         let mut remote = repo.find_remote(remote)?;
-        let remote_url = remote.url().ok_or(GitPluginError::GitRemoteUndefined)?;
+        let remote_url = remote.url().ok_or(Error::GitRemoteUndefined)?;
         let mut cbs = RemoteCallbacks::new();
         let mut opts = PushOptions::new();
 
         if is_https_remote(remote_url) {
-            let token = token.ok_or(GitPluginError::GithubTokenUndefined)?;
+            let token = token.ok_or(Error::GithubTokenUndefined)?;
             cbs.credentials(move |_url, _username, _allowed| Cred::userpass_plaintext(&token, ""));
             opts.remote_callbacks(cbs);
         } else {
@@ -338,12 +337,12 @@ impl PluginInterface for GitPlugin {
             "git_branch" => serde_json::to_value(self.config.branch.as_value())?,
             "git_remote" => serde_json::to_value(self.config.remote.as_value())?,
             "git_remote_url" => {
-                let state = self.state.as_ref().ok_or(GitPluginError::StateIsNone)?;
+                let state = self.state.as_ref().ok_or(Error::StateIsNone)?;
                 let remote = state.repo.find_remote(self.config.remote.as_value())?;
                 if let Some(url) = remote.url() {
                     serde_json::to_value(url)?
                 } else {
-                    return PluginResponse::from_error(GitPluginError::GitRemoteUndefined.into());
+                    return PluginResponse::from_error(Error::GitRemoteUndefined.into());
                 }
             }
             "current_version" => serde_json::to_value(
@@ -402,7 +401,7 @@ impl PluginInterface for GitPlugin {
     }
 
     fn get_last_release(&mut self) -> response::Null {
-        let state = self.state.as_mut().ok_or(GitPluginError::StateIsNone)?;
+        let state = self.state.as_mut().ok_or(Error::StateIsNone)?;
 
         let version = match state.latest_tag() {
             Some((rev, version)) => Version {
@@ -427,7 +426,7 @@ impl PluginInterface for GitPlugin {
         let next_version = self.config.next_version.as_value();
         let files_to_commit = self.config.files_to_commit.as_value();
         let changelog = self.config.changelog.as_value();
-        let state = self.state.as_ref().ok_or(GitPluginError::StateIsNone)?;
+        let state = self.state.as_ref().ok_or(Error::StateIsNone)?;
         let config = &self.config;
 
         // TODO: make releaserc-configurable
@@ -446,7 +445,7 @@ impl PluginInterface for GitPlugin {
 }
 
 #[derive(Fail, Debug)]
-pub enum GitPluginError {
+pub enum Error {
     #[fail(display = "state is not initialized (forgot to run pre_flight step?)")]
     StateIsNone,
     #[fail(

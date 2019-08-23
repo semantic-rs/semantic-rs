@@ -13,7 +13,7 @@ mod plugin_runtime;
 mod plugin_support;
 mod utils;
 
-use crate::builtin_plugins::{EarlyExitError, EarlyExitPlugin};
+use crate::builtin_plugins::{early_exit, EarlyExitPlugin};
 use crate::config::Config;
 use crate::plugin_runtime::kernel::InjectionTarget;
 use crate::plugin_support::PluginStep;
@@ -65,9 +65,9 @@ fn run() -> Result<(), failure::Error> {
             }};
         }
 
-        match err.downcast::<EarlyExitError>() {
+        match err.downcast::<early_exit::Error>() {
             Ok(ee_error) => match ee_error {
-                EarlyExitError::EarlyExit(_) => (),
+                early_exit::Error::EarlyExit(_) => (),
             },
             Err(other_error) => {
                 log_error_and_die!(other_error);

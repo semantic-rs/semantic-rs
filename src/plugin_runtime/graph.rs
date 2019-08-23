@@ -1,5 +1,5 @@
 use crate::config::{Config, Map, StepDefinition};
-use crate::plugin_runtime::discovery::CapabilitiesDiscovery;
+use crate::plugin_runtime::discovery::discover;
 use crate::plugin_runtime::kernel::{InjectionTarget, PluginId};
 use crate::plugin_support::flow::kv::{Key, ValueDefinition, ValueDefinitionMap, ValueState};
 use crate::plugin_support::flow::{Availability, ProvisionCapability, Value};
@@ -12,13 +12,57 @@ pub type SourceKey = Key;
 pub type DestKey = Key;
 
 #[derive(Clone, Debug, PartialEq)]
-pub enum Action {
-    Call(PluginId, PluginStep),
-    Get(PluginId, SourceKey),
-    Set(PluginId, DestKey, SourceKey),
-    SetValue(PluginId, DestKey, serde_json::Value),
-    RequireConfigEntry(PluginId, DestKey),
-    RequireEnvValue(PluginId, DestKey, SourceKey),
+pub struct Action {
+    id: PluginId,
+    kind: ActionKind,
+}
+
+impl Action {
+    pub fn new(id: PluginId, kind: ActionKind) -> Self {
+        Action { id, kind }
+    }
+
+    pub fn call(id: PluginId, step: PluginStep) -> Self {
+        Action::new(id, ActionKind::Call(step))
+    }
+
+    pub fn get(id: PluginId, src_key: impl Into<String>) -> Self {
+        Action::new(id, ActionKind::Get(src_key.into()))
+    }
+
+    pub fn set(id: PluginId, dst_key: impl Into<String>, src_key: impl Into<String>) -> Self {
+        Action::new(id, ActionKind::Set(dst_key.into(), src_key.into()))
+    }
+
+    pub fn set_value(id: PluginId, dst_key: impl Into<String>, value: impl Into<serde_json::Value>) -> Self {
+        Action::new(id, ActionKind::SetValue(dst_key.into(), value.into()))
+    }
+
+    pub fn require_config_entry(id: PluginId, dst_key: impl Into<String>) -> Self {
+        Action::new(id, ActionKind::RequireConfigEntry(dst_key.into()))
+    }
+
+    pub fn require_env_value(id: PluginId, dst_key: impl Into<String>, src_key: impl Into<String>) -> Self {
+        Action::new(id, ActionKind::RequireEnvValue(dst_key.into(), src_key.into()))
+    }
+
+    pub fn id(&self) -> PluginId {
+        self.id
+    }
+
+    pub fn into_kind(self) -> ActionKind {
+        self.kind
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum ActionKind {
+    Call(PluginStep),
+    Get(SourceKey),
+    Set(DestKey, SourceKey),
+    SetValue(DestKey, serde_json::Value),
+    RequireConfigEntry(DestKey),
+    RequireEnvValue(DestKey, SourceKey),
 }
 
 #[derive(Debug)]
@@ -81,10 +125,19 @@ impl<'a> PluginSequenceBuilder<'a> {
 
         let mut seq = Vec::new();
 
-        for step in PluginStep::iter().filter(|s| s.is_dry() || !is_dry_run) {
+        // Generate action sequence for dry steps
+        for step in PluginStep::dry_steps() {
             let builder = StepSequenceBuilder::new(step, &self.names, &self.configs, &self.caps, &self.step_map);
             let step_seq = builder.build();
             seq.extend(step_seq.into_iter());
+        }
+
+        if !is_dry_run {
+            for step in PluginStep::wet_steps() {
+                let builder = StepSequenceBuilder::new(step, &self.names, &self.configs, &self.caps, &self.step_map);
+                let step_seq = builder.build();
+                seq.extend(step_seq.into_iter());
+            }
         }
 
         Ok(PluginSequence { seq })
@@ -93,9 +146,10 @@ impl<'a> PluginSequenceBuilder<'a> {
     fn apply_releaserc_overrides(&mut self) {
         for (name, value) in self.releaserc.iter() {
             // Skip cfg entries that are not plugin configurations
-            if !self.names.contains(name) {
-                continue;
-            }
+            let id = match self.names.iter().position(|n| n == name) {
+                Some(id) => id,
+                None => continue,
+            };
 
             let subtable: ValueDefinitionMap = match value {
                 ValueDefinition::Value(value) => match serde_json::from_value(value.clone()) {
@@ -113,38 +167,36 @@ impl<'a> PluginSequenceBuilder<'a> {
                 }
             };
 
-            if let Some(id) = self.names.iter().position(|n| n == name) {
-                let cfg = &mut self.configs[id];
-                for (dest_key, value_def) in subtable.iter() {
-                    if !cfg.contains_key(dest_key) {
-                        log::warn!(
-                            "Key cfg.{}.{} was defined in releaserc.toml but is not supported by plugin {:?}",
-                            name,
-                            dest_key,
-                            name
-                        );
-                        continue;
-                    }
+            let cfg = &mut self.configs[id];
+            for (dest_key, value_def) in subtable.iter() {
+                if !cfg.contains_key(dest_key) {
+                    log::warn!(
+                        "Key cfg.{}.{} was defined in releaserc.toml but is not supported by plugin {:?}",
+                        name,
+                        dest_key,
+                        name
+                    );
+                    continue;
+                }
 
-                    match value_def {
-                        ValueDefinition::Value(value) => {
-                            let new = Value::builder(&dest_key).value(value.clone()).build();
-                            cfg.insert(dest_key.clone(), new);
+                match value_def {
+                    ValueDefinition::Value(value) => {
+                        let new = Value::builder(&dest_key).value(value.clone()).build();
+                        cfg.insert(dest_key.clone(), new);
+                    }
+                    ValueDefinition::From {
+                        required_at,
+                        from_env,
+                        key,
+                    } => {
+                        let mut new = Value::builder(&key);
+                        if let Some(step) = required_at {
+                            new.required_at(*step);
                         }
-                        ValueDefinition::From {
-                            required_at,
-                            from_env,
-                            key,
-                        } => {
-                            let mut new = Value::builder(&key);
-                            if let Some(step) = required_at {
-                                new.required_at(*step);
-                            }
-                            if *from_env {
-                                new.from_env();
-                            }
-                            cfg.insert(key.clone(), new.build());
+                        if *from_env {
+                            new.load_from_env();
                         }
+                        cfg.insert(key.clone(), new.build());
                     }
                 }
             }
@@ -188,23 +240,18 @@ impl<'a> StepSequenceBuilder<'a> {
                     .iter()
                     .filter_map(|(dest_key, value)| match &value.state {
                         ValueState::Ready(value) => {
-                            seq.push_back(Action::SetValue(dest_id, dest_key.clone(), value.clone()));
+                            seq.push_back(Action::set_value(dest_id, dest_key, value.clone()));
                             None
                         }
                         ValueState::NeedsProvision(pr) => {
                             if pr.from_env {
-                                seq.push_back(Action::RequireEnvValue(dest_id, dest_key.clone(), pr.key.clone()));
+                                seq.push_back(Action::require_env_value(dest_id, dest_key, &pr.key));
                                 None
                             } else {
-                                match pr.required_at {
-                                    Some(required_at) => {
-                                        if required_at > step {
-                                            None
-                                        } else {
-                                            Some((dest_key.clone(), pr.key.clone()))
-                                        }
-                                    }
-                                    None => Some((dest_key.clone(), pr.key.clone())),
+                                if pr.required_at > Some(step) {
+                                    None
+                                } else {
+                                    Some((dest_key.clone(), pr.key.clone()))
                                 }
                             }
                         }
@@ -310,7 +357,7 @@ impl<'a> StepSequenceBuilder<'a> {
                                     .iter()
                                     .filter(|&&source_id| source_id != dest_id)
                                     .map(|source_id| {
-                                        Action::Get(*source_id, Clone::clone(source_key))
+                                        Action::get(*source_id, source_key)
                                     }),
                             );
                             resolved = true;
@@ -319,7 +366,7 @@ impl<'a> StepSequenceBuilder<'a> {
                         if let Some(plugins) = self.available_since.get(source_key) {
                             for (src_id, step) in plugins {
                                 if self.is_enabled_for_step(*src_id, *step) {
-                                    seq.push_back(Action::Get(*src_id, source_key.clone()));
+                                    seq.push_back(Action::get(*src_id, source_key));
                                     resolved = true;
                                 } else {
                                     let dst_name = &self.names[dest_id];
@@ -331,10 +378,10 @@ impl<'a> StepSequenceBuilder<'a> {
                         }
 
                         if resolved {
-                            seq.push_back(Action::Set(
+                            seq.push_back(Action::set(
                                 dest_id,
-                                dest_key.clone(),
-                                source_key.clone(),
+                                dest_key,
+                                source_key,
                             ));
                             None
                         } else {
@@ -366,11 +413,11 @@ impl<'a> StepSequenceBuilder<'a> {
                         log::warn!("Matching source plugin {:?} can supply this key only after step {:?}, and the current step is {:?}", source_plugin_name, when, self.step);
                     }
                     log::warn!("The releaserc.toml entry cfg.{}.{} must be defined to proceed", dest_plugin_name, dest_key);
-                    seq.push_front(Action::RequireConfigEntry(dest_id, source_key.clone()));
+                    seq.push_front(Action::require_config_entry(dest_id, source_key));
                     None
                 } else {
                     // Key cannot be supplied by plugins and must be defined in releaserc.toml
-                    seq.push_front(Action::RequireConfigEntry(dest_id, source_key.clone()));
+                    seq.push_front(Action::require_config_entry(dest_id, source_key));
                     None
                 }
             }).collect()
@@ -391,7 +438,7 @@ impl<'a> StepSequenceBuilder<'a> {
 
         // First option: every key is resolved. Then we just generate a number of Call actions.
         if unresolved.iter().all(Vec::is_empty) {
-            seq.extend(plugins_to_run.iter().map(|&id| Action::Call(id, self.step)));
+            seq.extend(plugins_to_run.iter().map(|&id| Action::call(id, self.step)));
             return;
         }
 
@@ -420,9 +467,9 @@ impl<'a> StepSequenceBuilder<'a> {
                         plugins
                             .iter()
                             .filter(|&&source_id| source_id != dest_id)
-                            .map(|source_id| Action::Get(*source_id, Clone::clone(source_key))),
+                            .map(|source_id| Action::get(*source_id, *source_key)),
                     );
-                    seq.push_back(Action::Set(dest_id, Clone::clone(dest_key), Clone::clone(source_key)));
+                    seq.push_back(Action::set(dest_id, *dest_key, *source_key));
                 } else {
                     let dest_plugin_name = &self.names[dest_id];
                     log::error!("Plugin {:?} requested key {:?}", dest_plugin_name, source_key);
@@ -440,11 +487,11 @@ impl<'a> StepSequenceBuilder<'a> {
                         dest_plugin_name,
                         dest_key
                     );
-                    seq.push_front(Action::RequireConfigEntry(dest_id, Clone::clone(dest_key)));
+                    seq.push_front(Action::require_config_entry(dest_id, *dest_key));
                 }
             }
 
-            seq.push_back(Action::Call(dest_id, self.step));
+            seq.push_back(Action::call(dest_id, self.step));
         }
     }
 
@@ -498,11 +545,10 @@ fn collect_plugins_provision_capabilities(plugins: &[Plugin]) -> Result<Vec<Vec<
 }
 
 fn collect_plugins_methods_capabilities(plugins: &[Plugin]) -> Result<Map<PluginStep, Vec<String>>, failure::Error> {
-    let discovery = CapabilitiesDiscovery::new();
     let mut capabilities = Map::new();
 
     for plugin in plugins {
-        let plugin_caps = discovery.discover(&plugin)?;
+        let plugin_caps = discover(&plugin)?;
         for step in plugin_caps {
             capabilities
                 .entry(step)
@@ -556,10 +602,10 @@ fn build_steps_to_plugins_map(
                 map.insert(*step, ids);
             }
             StepDefinition::Singleton(plugin) => {
-                let names = capabilities.get(&step).ok_or(GraphError::NoPluginsForStep(*step))?;
+                let names = capabilities.get(&step).ok_or(Error::NoPluginsForStep(*step))?;
 
                 if !names.contains(&plugin) {
-                    return Err(GraphError::PluginDoesNotImplementStep(*step, plugin.to_string()).into());
+                    return Err(Error::PluginDoesNotImplementStep(*step, plugin.to_string()).into());
                 }
 
                 let ids = collect_ids_of_plugins_matching(&plugins, &[plugin]);
@@ -572,11 +618,11 @@ fn build_steps_to_plugins_map(
                     continue;
                 };
 
-                let names = capabilities.get(&step).ok_or(GraphError::NoPluginsForStep(*step))?;
+                let names = capabilities.get(&step).ok_or(Error::NoPluginsForStep(*step))?;
 
                 for plugin in list {
                     if !names.contains(&plugin) {
-                        return Err(GraphError::PluginDoesNotImplementStep(*step, plugin.to_string()).into());
+                        return Err(Error::PluginDoesNotImplementStep(*step, plugin.to_string()).into());
                     }
                 }
 
@@ -601,7 +647,7 @@ fn build_steps_to_plugins_map(
 
 #[derive(Fail, Debug)]
 #[rustfmt::skip]
-enum GraphError {
+enum Error {
     #[fail(display = "no plugins is capable of satisfying a non-null step {:?}", _0)]
     NoPluginsForStep(PluginStep),
     #[fail(display = "step {:?} requested plugin {:?}, but it does not implement this step", _0, 1)]
@@ -849,10 +895,10 @@ mod tests {
         let correct_seq: Vec<Action> = PluginStep::iter()
             .flat_map(|step| {
                 vec![
-                    Action::Get(1, "source_key".into()),
-                    Action::Set(0, "dest_key".into(), "source_key".into()),
-                    Action::Call(0, step),
-                    Action::Call(1, step),
+                    Action::get(1, "source_key"),
+                    Action::set(0, "dest_key", "source_key"),
+                    Action::call(0, step),
+                    Action::call(1, step),
                 ]
                 .into_iter()
             })
@@ -887,9 +933,9 @@ mod tests {
         let correct_seq: Vec<Action> = PluginStep::iter()
             .flat_map(|step| {
                 vec![
-                    Action::SetValue(0, "dest_key".into(), "value".into()),
-                    Action::Call(0, step),
-                    Action::Call(1, step),
+                    Action::set_value(0, "dest_key", "value"),
+                    Action::call(0, step),
+                    Action::call(1, step),
                 ]
                 .into_iter()
             })
@@ -931,10 +977,10 @@ mod tests {
                 assert_eq!(
                     Vec::from(seq),
                     vec![
-                        Action::Get(1, "two_src".into()),
-                        Action::Set(0, "one_dst".into(), "two_src".into()),
-                        Action::Get(0, "one_src".into()),
-                        Action::Set(1, "two_dst".into(), "one_src".into()),
+                        Action::get(1, "two_src"),
+                        Action::set(0, "one_dst", "two_src"),
+                        Action::get(0, "one_src"),
+                        Action::set(1, "two_dst", "one_src"),
                     ]
                 );
             }
@@ -966,10 +1012,10 @@ mod tests {
                 assert_eq!(
                     Vec::from(seq),
                     vec![
-                        Action::Get(1, "src".into()),
-                        Action::Set(0, "dst".into(), "src".into()),
-                        Action::Get(0, "src".into()),
-                        Action::Set(1, "dst".into(), "src".into()),
+                        Action::get(1, "src"),
+                        Action::set(0, "dst", "src"),
+                        Action::get(0, "src"),
+                        Action::set(1, "dst", "src"),
                     ]
                 );
             }
@@ -1048,10 +1094,7 @@ mod tests {
                 assert_eq!(unresolved, vec![vec![(&"one_dst".into(), &"two_src".into())], vec![],]);
                 assert_eq!(
                     Vec::from(seq),
-                    vec![
-                        Action::Get(0, "one_src".into()),
-                        Action::Set(1, "two_dst".into(), "one_src".into()),
-                    ]
+                    vec![Action::get(0, "one_src"), Action::set(1, "two_dst", "one_src"),]
                 );
             }
 
@@ -1125,10 +1168,7 @@ mod tests {
                 assert_eq!(unresolved, vec![vec![], vec![]]);
                 assert_eq!(
                     Vec::from(seq),
-                    vec![
-                        Action::Get(0, "one_src".into()),
-                        Action::Set(1, "two_dst".into(), "one_src".into()),
-                    ]
+                    vec![Action::get(0, "one_src"), Action::set(1, "two_dst", "one_src"),]
                 );
             }
         }
@@ -1201,7 +1241,7 @@ mod tests {
 
                 let unresolved = ssb.resolve_should_be_in_config(&mut seq, unresolved);
                 assert_eq!(unresolved, vec![vec![], vec![]]);
-                assert_eq!(Vec::from(seq), vec![Action::RequireConfigEntry(0, "two_src".into())]);
+                assert_eq!(Vec::from(seq), vec![Action::require_config_entry(0, "two_src")]);
             }
 
             #[test]
@@ -1227,7 +1267,7 @@ mod tests {
 
                 let unresolved = ssb.resolve_should_be_in_config(&mut seq, unresolved);
                 assert_eq!(unresolved, vec![vec![], vec![]]);
-                assert_eq!(Vec::from(seq), vec![Action::RequireConfigEntry(0, "two_src".into())]);
+                assert_eq!(Vec::from(seq), vec![Action::require_config_entry(0, "two_src")]);
             }
         }
 
@@ -1272,10 +1312,10 @@ mod tests {
                 assert_eq!(
                     Vec::from(seq),
                     vec![
-                        Action::Call(0, PluginStep::PreFlight),
-                        Action::Get(0, "one_src".into()),
-                        Action::Set(1, "two_dst".into(), "one_src".into()),
-                        Action::Call(1, PluginStep::PreFlight),
+                        Action::call(0, PluginStep::PreFlight),
+                        Action::get(0, "one_src"),
+                        Action::set(1, "two_dst", "one_src"),
+                        Action::call(1, PluginStep::PreFlight),
                     ]
                 )
             }
@@ -1318,9 +1358,9 @@ mod tests {
                 assert_eq!(
                     Vec::from(seq),
                     vec![
-                        Action::RequireConfigEntry(0, "one_dst".into()),
-                        Action::Call(0, PluginStep::PreFlight),
-                        Action::Call(1, PluginStep::PreFlight),
+                        Action::require_config_entry(0, "one_dst"),
+                        Action::call(0, PluginStep::PreFlight),
+                        Action::call(1, PluginStep::PreFlight),
                     ]
                 )
             }

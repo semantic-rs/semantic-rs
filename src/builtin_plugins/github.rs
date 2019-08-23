@@ -1,3 +1,4 @@
+use std::fmt::Write as _;
 use std::ops::Try;
 use std::path::{Path, PathBuf};
 
@@ -59,7 +60,7 @@ impl Default for Config {
             draft: Value::builder("draft").default_value().build(),
             pre_release: Value::builder("draft").value(true).build(),
             project_root: Value::builder(PROJECT_ROOT).protected().build(),
-            token: Value::builder("GH_TOKEN").from_env().build(),
+            token: Value::builder("GH_TOKEN").load_from_env().build(),
         }
     }
 }
@@ -126,21 +127,27 @@ impl PluginInterface for GithubPlugin {
         let config = &self.config;
 
         // Try to parse assets
-        globs_to_assets(config.assets.as_value().iter().map(String::as_str))
+        let errors = globs_to_assets(config.assets.as_value().iter().map(String::as_str))
             .into_iter()
             .inspect(|asset| {
-                asset.as_ref().ok().map(|a| {
-                    log::info!("Would upload {} ({})", a.path().display(), a.content_type());
-                    a
-                });
+                if let Ok(asset) = asset {
+                    log::info!("Would upload {} ({})", asset.path().display(), asset.content_type());
+                }
             })
-            .filter(Result::is_err)
-            .map(Result::unwrap_err)
-            .for_each(|e| {
-                response.error(e);
-            });
+            .flat_map(Result::err)
+            .collect::<Vec<_>>();
 
-        response.body(())
+        if errors.is_empty() {
+            response.body(())
+        } else {
+            let mut buffer = String::new();
+            writeln!(&mut buffer, "Couldn't process the asset list:")?;
+            for error in errors {
+                writeln!(&mut buffer, "\t{}", error)?;
+            }
+            let error_msg = failure::err_msg(buffer);
+            response.error(error_msg)
+        }
     }
 
     fn publish(&mut self) -> response::Null {
@@ -185,14 +192,13 @@ impl PluginInterface for GithubPlugin {
             .into_iter()
             .collect::<Result<Vec<_>, _>>()?;
 
+        let endpoint_template = format!(
+            "https://uploads.github.com/repos/{}/{}/releases/{}/assets?name=",
+            user, repo_name, release.id,
+        );
+
         for asset in assets {
-            let endpoint = format!(
-                "https://uploads.github.com/repos/{}/{}/releases/{}/assets?name={}",
-                user,
-                repo_name,
-                release.id,
-                asset.name(),
-            );
+            let endpoint = endpoint_template.clone() + asset.name();
 
             log::info!("Uploading {}, mime-type {}", asset.name(), asset.content_type());
             log::debug!("Upload url: {}", endpoint);

@@ -91,7 +91,7 @@ impl<T> ValueBuilder<T> {
     }
 
     #[allow(clippy::wrong_self_convention)]
-    pub fn from_env(&mut self) -> &mut Self {
+    pub fn load_from_env(&mut self) -> &mut Self {
         self.from_env = true;
         self
     }
@@ -152,7 +152,7 @@ impl Into<Map<String, Value<serde_json::Value>>> for ValueDefinitionMap {
                         kv.required_at(step);
                     }
                     if from_env {
-                        kv.from_env();
+                        kv.load_from_env();
                     }
                     kv.build()
                 }
@@ -325,7 +325,7 @@ mod tests {
 
     #[test]
     fn build_from_env() {
-        let kv: Value<()> = Value::builder("key").from_env().build();
+        let kv: Value<()> = Value::builder("key").load_from_env().build();
         assert_eq!(kv.protected, false);
         assert_eq!(kv.key, "key");
         assert_eq!(

@@ -39,7 +39,7 @@ impl Default for Config {
         Config {
             project_root: Value::builder(PROJECT_ROOT).protected().build(),
             dry_run: Value::builder(DRY_RUN).protected().build(),
-            token: Value::builder("CARGO_TOKEN").from_env().build(),
+            token: Value::builder("CARGO_TOKEN").load_from_env().build(),
             next_version: Value::builder(NEXT_VERSION)
                 .required_at(PluginStep::Prepare)
                 .protected()
@@ -175,7 +175,7 @@ impl Cargo {
         log::debug!("searching for manifest in {}", manifest_path.display());
 
         if !manifest_path.exists() || !manifest_path.is_file() {
-            return Err(RustPluginError::CargoTomlNotFound(project_root.to_owned()).into());
+            return Err(Error::CargoTomlNotFound(project_root.to_owned()).into());
         }
 
         Ok(Cargo {
@@ -190,7 +190,7 @@ impl Cargo {
         let stderr = String::from_utf8(output.stderr)?;
 
         if !output.status.success() {
-            Err(RustPluginError::CargoCommandFailed(stdout, stderr).into())
+            Err(Error::CargoCommandFailed(stdout, stderr).into())
         } else {
             Ok((stdout, stderr))
         }
@@ -255,14 +255,14 @@ impl Cargo {
         {
             let root = manifest
                 .as_table_mut()
-                .ok_or(RustPluginError::InvalidManifest("expected table at root"))?;
+                .ok_or(Error::InvalidManifest("expected table at root"))?;
 
             let package = root
                 .get_mut("package")
-                .ok_or(RustPluginError::InvalidManifest("package section not present"))?;
-            let package = package.as_table_mut().ok_or(RustPluginError::InvalidManifest(
-                "package section is expected to be map",
-            ))?;
+                .ok_or(Error::InvalidManifest("package section not present"))?;
+            let package = package
+                .as_table_mut()
+                .ok_or(Error::InvalidManifest("package section is expected to be map"))?;
 
             package.insert("version".into(), toml::Value::String(format!("{}", version)));
         }
@@ -276,7 +276,7 @@ impl Cargo {
 }
 
 #[derive(Fail, Debug)]
-pub enum RustPluginError {
+enum Error {
     #[fail(display = "Cargo.toml not found in {}", _0)]
     CargoTomlNotFound(String),
     #[fail(display = "failed to invoke cargo:\n\t\tSTDOUT:\n{}\n\t\tSTDERR:\n{}", _0, _1)]

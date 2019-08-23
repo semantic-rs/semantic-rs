@@ -7,6 +7,7 @@ pub use self::traits::PluginInterface;
 
 use serde::{Deserialize, Serialize};
 use std::cell::{RefCell, RefMut};
+use strum::IntoEnumIterator;
 
 pub struct RawPlugin {
     name: String,
@@ -130,6 +131,14 @@ impl PluginStep {
         }
     }
 
+    pub fn dry_steps() -> impl Iterator<Item = PluginStep> {
+        PluginStep::iter().filter(|s| s.is_dry())
+    }
+
+    pub fn wet_steps() -> impl Iterator<Item = PluginStep> {
+        PluginStep::iter().filter(|s| s.is_wet())
+    }
+
     pub fn is_dry(self) -> bool {
         match self {
             PluginStep::PreFlight
@@ -140,6 +149,10 @@ impl PluginStep {
             | PluginStep::VerifyRelease => true,
             PluginStep::Publish | PluginStep::Notify | PluginStep::Commit => false,
         }
+    }
+
+    pub fn is_wet(self) -> bool {
+        !self.is_dry()
     }
 }
 

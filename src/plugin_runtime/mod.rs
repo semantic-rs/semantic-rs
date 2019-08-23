@@ -6,4 +6,4 @@ pub mod kernel;
 pub mod resolver;
 pub mod starter;
 
-pub use self::kernel::{Kernel, KernelError};
+pub use self::kernel::{Error, Kernel};

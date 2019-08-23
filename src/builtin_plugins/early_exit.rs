@@ -11,26 +11,26 @@ use crate::plugin_support::proto::{
 use crate::plugin_support::{PluginInterface, PluginStep};
 
 pub struct EarlyExitPlugin {
-    config: EarlyExitPluginConfig,
+    config: Config,
 }
 
 impl EarlyExitPlugin {
     pub fn new() -> Self {
         EarlyExitPlugin {
-            config: EarlyExitPluginConfig::default(),
+            config: Config::default(),
         }
     }
 }
 
 #[derive(Serialize, Deserialize)]
-struct EarlyExitPluginConfig {
+struct Config {
     current_version: Value<Version>,
     next_version: Value<semver::Version>,
 }
 
-impl Default for EarlyExitPluginConfig {
+impl Default for Config {
     fn default() -> Self {
-        EarlyExitPluginConfig {
+        Config {
             current_version: Value::builder(CURRENT_VERSION)
                 .required_at(PluginStep::DeriveNextVersion)
                 .build(),
@@ -74,7 +74,7 @@ impl PluginInterface for EarlyExitPlugin {
         {
             log::info!("No version bump is required, you're all set!");
             return PluginResponse::from_error(
-                EarlyExitError::EarlyExit("current and next versions are the same, nothing to do".into()).into(),
+                Error::EarlyExit("current and next versions are the same, nothing to do".into()).into(),
             );
         }
 
@@ -83,7 +83,7 @@ impl PluginInterface for EarlyExitPlugin {
 }
 
 #[derive(Debug, Fail)]
-pub enum EarlyExitError {
+pub enum Error {
     #[fail(display = "Early exit, reason: {}", _0)]
     EarlyExit(String),
 }
