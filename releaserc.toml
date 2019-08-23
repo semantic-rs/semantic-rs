@@ -26,7 +26,7 @@ verify_release = "discover"
 # Commit & push changes to the VCS
 commit = "git"
 # Publish to various platforms
-publish = [ "github", "docker" ]
+publish = ["github", "docker"]
 # Post-release step to notify users about release (e.g leave comments in issues resolved in this release)
 notify = "discover"
 
@@ -45,14 +45,15 @@ branch = "master"
 force_https = true
 
 [cfg.github]
+pre_release = false
 assets = [
     "/workspace/bin/*",
     "Changelog.md"
 ]
 
 [cfg.docker]
-repo_url = "https://github.com/etclabscore/semantic-rs.git"
-repo_branch = "master"
+repo_url = "from:git_remote_url"
+repo_branch = "from:git_branch"
 
 [[cfg.docker.images]]
 registry = "dockerhub"

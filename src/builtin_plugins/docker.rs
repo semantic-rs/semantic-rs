@@ -1,23 +1,20 @@
-use std::fmt::{Debug, Display};
+use std::fmt::Display;
 use std::io::Write;
 use std::ops::Try;
 use std::path::PathBuf;
-use std::process::{Command, Output, Stdio};
+use std::process::{Command, Stdio};
 
 use failure::Fail;
 
-use crate::config::CfgMapExt;
-use crate::plugin::proto::{
-    request,
-    response::{self, PluginResponse},
-    Error,
-};
-use crate::plugin::{PluginInterface, PluginStep};
-use serde::Deserialize;
+use crate::plugin_support::flow::{FlowError, Value};
+use crate::plugin_support::keys::{GIT_BRANCH, GIT_REMOTE_URL, NEXT_VERSION};
+use crate::plugin_support::proto::response::{self, PluginResponse};
+use crate::plugin_support::{PluginInterface, PluginStep};
+use serde::{Deserialize, Serialize};
 
 #[derive(Default)]
 pub struct DockerPlugin {
-    cfg: Option<Config>,
+    config: Config,
     state: Option<State>,
 }
 
@@ -27,16 +24,30 @@ impl DockerPlugin {
     }
 }
 
-#[derive(Deserialize, Debug, Clone)]
-#[serde(rename_all = "snake_case")]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 struct Config {
-    repo_url: String,
-    repo_branch: String,
-    images: Vec<Image>,
+    repo_url: Value<String>,
+    repo_branch: Value<String>,
+    next_version: Value<semver::Version>,
+    images: Value<Vec<Image>>,
+    docker_user: Value<String>,
+    docker_password: Value<String>,
 }
 
-#[derive(Deserialize, Debug, Clone)]
-#[serde(rename_all = "snake_case")]
+impl Default for Config {
+    fn default() -> Self {
+        Config {
+            repo_url: Value::builder(GIT_REMOTE_URL).required_at(PluginStep::Publish).build(),
+            repo_branch: Value::builder(GIT_BRANCH).required_at(PluginStep::Publish).build(),
+            next_version: Value::builder(NEXT_VERSION).required_at(PluginStep::Publish).build(),
+            images: Value::builder("images").default_value().build(),
+            docker_user: Value::builder("DOCKER_USER").load_from_env().build(),
+            docker_password: Value::builder("DOCKER_PASSWORD").load_from_env().build(),
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
 struct Image {
     registry: Registry,
     dockerfile: PathBuf,
@@ -49,7 +60,7 @@ struct Image {
     cleanup: bool,
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "snake_case")]
 enum Registry {
     Dockerhub,
@@ -57,7 +68,6 @@ enum Registry {
 
 struct State {
     credentials: Option<Credentials>,
-    version: Option<semver::Version>,
 }
 
 struct Credentials {
@@ -70,82 +80,63 @@ impl PluginInterface for DockerPlugin {
         PluginResponse::from_ok("docker".into())
     }
 
-    fn methods(&self, req: request::Methods) -> response::Methods {
-        PluginResponse::from_ok(vec![
-            PluginStep::PreFlight,
-            PluginStep::Prepare,
-            PluginStep::Publish,
-        ])
+    fn methods(&self) -> response::Methods {
+        PluginResponse::from_ok(vec![PluginStep::PreFlight, PluginStep::Publish])
     }
 
-    fn pre_flight(&mut self, req: request::PreFlight) -> response::PreFlight {
+    fn provision_capabilities(&self) -> response::ProvisionCapabilities {
+        PluginResponse::from_ok(vec![])
+    }
+
+    fn get_value(&self, key: &str) -> response::GetValue {
+        PluginResponse::from_error(FlowError::KeyNotSupported(key.to_owned()).into())
+    }
+
+    fn get_config(&self) -> response::Config {
+        PluginResponse::from_ok(serde_json::to_value(&self.config)?)
+    }
+
+    fn set_config(&mut self, config: serde_json::Value) -> response::Null {
+        self.config = serde_json::from_value(config)?;
+        PluginResponse::from_ok(())
+    }
+
+    fn pre_flight(&mut self) -> response::Null {
         let mut response = PluginResponse::builder();
 
-        let cfg: Config = toml::Value::Table(req.cfg_map.get_sub_table("docker")?).try_into()?;
-        self.cfg.replace(cfg);
-
         let credentials = {
-            let user = std::env::var("DOCKER_USER").ok();
-            let password = std::env::var("DOCKER_PASSWORD").ok();
-            user.and_then(|username| password.map(|password| Credentials { username, password }))
+            let username = self.config.docker_user.as_value().clone();
+            let password = self.config.docker_password.as_value().clone();
+            Some(Credentials { username, password })
         };
-
-        if credentials.is_none() {
-            response.warning(
-                "Docker registry credentials are undefined: won't be able to push the image",
-            );
-            response.warning("Please set DOCKER_USER and DOCKER_PASSWORD env vars");
-        }
 
         log::info!("Checking that docker daemon is running...");
         if let Err(err) = docker_info() {
             response.error(err);
         }
 
-        self.state.replace(State {
-            credentials,
-            version: None,
-        });
+        self.state.replace(State { credentials });
 
-        response.body(()).build()
+        response.body(())
     }
 
-    fn prepare(&mut self, req: request::Prepare) -> response::Prepare {
-        let cfg = self.cfg.as_ref().ok_or(DockerPluginError::MissingState)?;
+    fn publish(&mut self) -> response::Null {
+        let config = &self.config;
+        let state = self.state.as_ref().ok_or(Error::MissingState)?;
 
-        {
-            let state = self.state.as_mut().ok_or(DockerPluginError::MissingState)?;
-            state.version.replace(req.data.clone());
-        }
+        let credentials = state.credentials.as_ref().ok_or(Error::CredentialsUndefined)?;
 
-        PluginResponse::from_ok(vec![])
-    }
+        let version = config.next_version.as_value();
+        let version = format!("{}", version);
 
-    fn publish(&mut self, req: request::Publish) -> response::Publish {
-        let cfg = self.cfg.as_ref().ok_or(DockerPluginError::MissingState)?;
-
-        let state = self.state.as_ref().ok_or(DockerPluginError::MissingState)?;
-
-        let credentials = state
-            .credentials
-            .as_ref()
-            .ok_or(DockerPluginError::CredentialsUndefined)?;
-
-        let version = state
-            .version
-            .as_ref()
-            .ok_or(DockerPluginError::MissingVersion)?;
-
-        let version = version.to_string();
-
-        for image in &cfg.images {
+        for image in config.images.as_value() {
             let registry_url = match image.registry {
                 Registry::Dockerhub => None,
             };
 
             login(registry_url, &credentials)?;
 
-            build_image(&cfg, image)?;
+            build_image(&config, image)?;
 
             // Tag as namespace/name/tag and namespace/name/version
             let from = format!("{}:{}", image.name, image.tag);
@@ -173,16 +164,16 @@ fn docker_info() -> Result<(), failure::Error> {
     let status = Command::new("docker")
         .arg("info")
         .status()
-        .map_err(|_| DockerPluginError::DockerNotFound)?;
+        .map_err(|_| Error::DockerNotFound)?;
 
     if !status.success() {
-        Err(DockerPluginError::DockerReturnedError(status.code()))?
+        return Err(Error::DockerCommandFailed(status.code()).into());
     }
 
     Ok(())
 }
 
-fn build_image(cfg: &Config, image: &Image) -> Result<(), failure::Error> {
+fn build_image(config: &Config, image: &Image) -> Result<(), failure::Error> {
     let mut cmd = Command::new("docker");
 
     cmd.arg("build").arg(".docker").arg("--no-cache");
@@ -198,8 +189,8 @@ fn build_image(cfg: &Config, image: &Image) -> Result<(), failure::Error> {
     };
 
     // Set env vars
-    set_env_var("REPO_URL", &cfg.repo_url);
-    set_env_var("REPO_BRANCH", &cfg.repo_branch);
+    set_env_var("REPO_URL", &config.repo_url.as_value());
+    set_env_var("REPO_BRANCH", &config.repo_branch.as_value());
     set_env_var("BUILD_CMD", &image.build_cmd);
     set_env_var("BINARY_PATH", &image.binary_path);
     set_env_var("CLEANUP", &image.cleanup);
@@ -209,7 +200,7 @@ fn build_image(cfg: &Config, image: &Image) -> Result<(), failure::Error> {
 
     let status = cmd.status()?;
     if !status.success() {
-        Err(DockerPluginError::DockerReturnedError(status.code()))?
+        return Err(Error::DockerCommandFailed(status.code()).into());
     }
 
     log::info!("Built image {}:{}", image.name, image.tag);
@@ -225,7 +216,7 @@ fn tag_image(from: &str, to: &str) -> Result<(), failure::Error> {
     let status = cmd.arg("tag").arg(from).arg(to).status()?;
 
     if !status.success() {
-        Err(DockerPluginError::DockerReturnedError(status.code()))?
+        return Err(Error::DockerCommandFailed(status.code()).into());
     }
 
     Ok(())
@@ -248,14 +239,14 @@ fn login(registry_url: Option<&str>, credentials: &Credentials) -> Result<(), fa
     let mut child = cmd.stdin(Stdio::piped()).spawn()?;
 
     {
-        let mut stdin = child.stdin.as_mut().ok_or(DockerPluginError::StdioError)?;
+        let stdin = child.stdin.as_mut().ok_or(Error::StdioPasswordPassingFailed)?;
         stdin.write_all(credentials.password.as_bytes())?;
     }
 
     let status = child.wait()?;
 
     if !status.success() {
-        Err(DockerPluginError::DockerReturnedError(status.code()))?
+        return Err(Error::DockerCommandFailed(status.code()).into());
     }
 
     Ok(())
@@ -273,24 +264,22 @@ fn push_image(image: &Image, tag: &str) -> Result<(), failure::Error> {
     let status = cmd.status()?;
 
     if !status.success() {
-        Err(DockerPluginError::DockerReturnedError(status.code()))?
+        return Err(Error::DockerCommandFailed(status.code()).into());
     }
 
     Ok(())
 }
 
 #[derive(Fail, Debug)]
-enum DockerPluginError {
+enum Error {
     #[fail(display = "DOCKER_USER or DOCKER_PASSWORD are not set, cannot push the image.")]
     CredentialsUndefined,
     #[fail(display = "state is missing: forgot to call pre_flight?")]
     MissingState,
-    #[fail(display = "version is missing: forgot to call prepare?")]
-    MissingVersion,
     #[fail(display = "docker command exited with error {:?}", _0)]
-    DockerReturnedError(Option<i32>),
+    DockerCommandFailed(Option<i32>),
     #[fail(display = "stdio error: failed to pass password to docker process via stdin")]
-    StdioError,
+    StdioPasswordPassingFailed,
     #[fail(display = "'docker' not found in PATH: make sure you have the docker client installed")]
     DockerNotFound,
 }

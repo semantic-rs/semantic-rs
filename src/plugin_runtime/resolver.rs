@@ -1,7 +1,6 @@
 use failure::Fail;
 
-use crate::builtin_plugins::docker::DockerPlugin;
-use crate::plugin::{PluginInterface, RawPlugin, RawPluginState, ResolvedPlugin, UnresolvedPlugin};
+use crate::plugin_support::{PluginInterface, RawPlugin, RawPluginState, ResolvedPlugin, UnresolvedPlugin};
 
 pub struct PluginResolver {
     builtin: BuiltinResolver,
@@ -17,7 +16,7 @@ impl PluginResolver {
     }
 
     pub fn resolve(&self, plugin: RawPlugin) -> Result<RawPlugin, failure::Error> {
-        if plugin.state.is_resolved() {
+        if plugin.state().is_resolved() {
             return Ok(plugin);
         }
 
@@ -34,11 +33,7 @@ impl PluginResolver {
 }
 
 trait Resolver {
-    fn resolve(
-        &self,
-        name: &str,
-        meta: &UnresolvedPlugin,
-    ) -> Result<ResolvedPlugin, failure::Error>;
+    fn resolve(&self, name: &str, meta: &UnresolvedPlugin) -> Result<ResolvedPlugin, failure::Error>;
 }
 
 struct BuiltinResolver;
@@ -50,19 +45,15 @@ impl BuiltinResolver {
 }
 
 impl Resolver for BuiltinResolver {
-    fn resolve(
-        &self,
-        name: &str,
-        _meta: &UnresolvedPlugin,
-    ) -> Result<ResolvedPlugin, failure::Error> {
-        use crate::builtin_plugins::{ClogPlugin, GitPlugin, GithubPlugin, RustPlugin};
+    fn resolve(&self, name: &str, _meta: &UnresolvedPlugin) -> Result<ResolvedPlugin, failure::Error> {
+        use crate::builtin_plugins::{ClogPlugin, DockerPlugin, GitPlugin, GithubPlugin, RustPlugin};
         let plugin: Box<dyn PluginInterface> = match name {
             "git" => Box::new(GitPlugin::new()),
-            "github" => Box::new(GithubPlugin::new()),
             "clog" => Box::new(ClogPlugin::new()),
+            "github" => Box::new(GithubPlugin::new()),
             "rust" => Box::new(RustPlugin::new()),
             "docker" => Box::new(DockerPlugin::new()),
-            other => Err(ResolverError::BuiltinNotRegistered(other.to_string()))?,
+            other => return Err(Error::BuiltinNotRegistered(other.to_string()).into()),
         };
         Ok(ResolvedPlugin::Builtin(plugin))
     }
@@ -77,17 +68,13 @@ impl CargoResolver {
 }
 
 impl Resolver for CargoResolver {
-    fn resolve(
-        &self,
-        name: &str,
-        meta: &UnresolvedPlugin,
-    ) -> Result<ResolvedPlugin, failure::Error> {
+    fn resolve(&self, _name: &str, _meta: &UnresolvedPlugin) -> Result<ResolvedPlugin, failure::Error> {
         unimplemented!()
     }
 }
 
 #[derive(Fail, Debug)]
-pub enum ResolverError {
+pub enum Error {
     #[fail(display = "{} is not registered as built-in plugin", _0)]
     BuiltinNotRegistered(String),
 }
