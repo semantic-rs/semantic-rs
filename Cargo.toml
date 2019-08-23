@@ -8,10 +8,9 @@ authors = [
 description = 'Automatic crate publishing'
 license = 'MIT'
 edition = '2018'
-version = '2.8.2'
+version = '2.9.0'
 
 [dependencies]
-semver = { version = '0.9', features = ["serde"] }
 git2 = '0.9'
 clog = '0.9'
 hubcaps = '0.5'
@@ -30,8 +29,12 @@ strum_macros = '0.15'
 glob = '0.3'
 futures = '0.1'
 tokio = '0.1'
-pest = "2.1.1"
-pest_derive = "2.1.0"
+pest = '2.1.1'
+pest_derive = '2.1.0'
+
+[dependencies.semver]
+version = '0.9'
+features = ['serde']
 
 [dependencies.toml]
 version = '0.5'
@@ -44,7 +47,6 @@ features = ['derive']
 [dependencies.linked-hash-map]
 version = '0.5'
 features = ['serde_impl']
-
 [profile.release]
 debug = true
 overflow-checks = true

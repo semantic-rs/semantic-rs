@@ -1,3 +1,17 @@
+<a name="v2.9.0"></a>
+## v2.9.0 (2019-08-23)
+
+
+#### Features
+
+*   cross-plugin data flow system ([6f8a165e](6f8a165e))
+
+#### Bug Fixes
+
+*   incorrect plugin order when in-step order is different from global order ([21c15711](21c15711))
+
+
+
 <a name="v2.8.2"></a>
 ## v2.8.2 (2019-08-16)
 
