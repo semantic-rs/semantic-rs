@@ -23,7 +23,6 @@ extern crate clog;
 extern crate hyper;
 extern crate hubcaps;
 extern crate url;
-extern crate travis_after_all;
 extern crate env_logger;
 extern crate hyper_native_tls;
 extern crate clap;
@@ -38,7 +37,6 @@ use std::path::Path;
 use std::error::Error;
 use std::thread;
 use std::time::Duration;
-use travis_after_all::Build;
 use utils::user_repo_from_url;
 
 const VERSION: &'static str = env!("CARGO_PKG_VERSION");
@@ -364,25 +362,6 @@ fn main() {
 
     for warning in warnings {
         logger::warn(format!(">> {}", warning));
-    }
-
-    if config.release_mode && ci_env_set() {
-        let build_run = Build::from_env()
-            .unwrap_or_else(|e| print_exit!("CI mode, but can't check other builds. Error: {:?}", e));
-
-        if !build_run.is_leader() {
-            println!("Not the build leader. Nothing to do. Bye.");
-            process::exit(0);
-        }
-
-        println!("I am the build leader. Waiting for other jobs to finish.");
-        match build_run.wait_for_others() {
-            Ok(()) => println!("Other jobs finished and succeeded. Doing my work now."),
-            Err(travis_after_all::Error::FailedBuilds) => {
-                print_exit!("Some builds failed. Stopping here.");
-            },
-            Err(e) => print_exit!("Waiting for other builds failed. Reason: {:?}", e),
-        }
     }
 
     let version = toml_file::read_from_file(&config.repository_path)
