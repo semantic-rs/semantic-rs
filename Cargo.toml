@@ -17,9 +17,8 @@ hubcaps = "0.3"
 hyper = "0.10"
 url = "2.2.2"
 clippy = {version = "<0.1.0", optional = true}
-travis-after-all = "2.0.0"
 env_logger = "0.3.0"
-hyper-native-tls = "0.2.2"
+hyper-native-tls = "0.3.0"
 clap = "2.32.0"
 
 [features]
