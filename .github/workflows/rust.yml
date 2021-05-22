@@ -9,7 +9,7 @@ jobs:
   build:
     strategy:
       matrix:
-        os: [macos-latest, ubuntu-latest, windows-latest]
+        os: [macos-latest, ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
     - uses: actions/checkout@v2
@@ -17,7 +17,8 @@ jobs:
       run:   |
             if [ "$RUNNER_OS" == "macOS" ]; then
                 brew install libssh2;
-                export PKG_CONFIG_PATH=/usr/local/Cellar/openssl/1.0.2l/lib/pkgconfig;
+                export OPENSSL_INCLUDE_DIR=`brew --prefix openssl`/include;
+                export OPENSSL_LIB_DIR=`brew --prefix openssl`/lib;
             fi
       shell: bash
     - name: Build
