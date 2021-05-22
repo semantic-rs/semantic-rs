@@ -13,6 +13,13 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
     - uses: actions/checkout@v2
+    - name:  Install
+      run:   |
+            if [ "$RUNNER_OS" == "macOS" ]; then
+                brew install libssh2;
+                export PKG_CONFIG_PATH=/usr/local/Cellar/openssl/1.0.2l/lib/pkgconfig;
+            fi
+      shell: bash
     - name: Build
       run: cargo build --verbose
     - name: Run tests
