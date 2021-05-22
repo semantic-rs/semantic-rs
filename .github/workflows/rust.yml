@@ -28,7 +28,18 @@ jobs:
                 sudo apt-get install -y openssl libssl-dev pkg-config zlib1g-dev
             fi
       shell: bash
+    - name: Install bats
+      run:   |
+            git clone https://github.com/sstephenson/bats/ &&
+            export WORKSPACE=$HOME/workspace &&
+            mkdir $WORKSPACE &&
+            cp -a $GITHUB_WORKSPACE/tests/integration/fixtures/* $WORKSPACE &&
+            export PATH=$HOME/.local/bin:$(pwd)/bats/bin:$GITHUB_WORKSPACE/target/debug:$PATH &&
+            git config --global user.name semantic-rs &&
+            git config --global user.email semantic@rs
     - name: Build
       run: cargo build --verbose
     - name: Run tests
       run: cargo test --verbose
+    - name: Run Integration tests
+      run: pushd tests/integration && bats integration.bats && popd
