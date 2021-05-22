@@ -24,7 +24,7 @@ jobs:
     - name: Install Linux dependencies
       run:   |
             if [ "$RUNNER_OS" == "Linux" ]; then
-                sudo apt-get install -y libssl-dev pkg-config zlib1g-dev
+                sudo apt-get install -y openssl libssl-dev pkg-config zlib1g-dev
             fi
       shell: bash
     - name: Build
