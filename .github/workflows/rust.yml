@@ -28,18 +28,28 @@ jobs:
                 sudo apt-get install -y openssl libssl-dev pkg-config zlib1g-dev
             fi
       shell: bash
+    - name: Enhance PATH
+      run:   |
+            echo $HOME/.local/bin >> $GITHUB_PATH
+            echo $GITHUB_WORKSPACE/bats/bin >> $GITHUB_PATH
+            echo $GITHUB_WORKSPACE/target/debug >> $GITHUB_PATH
     - name: Install bats
+      env:
+        WORKSPACE: $HOME/workspace
       run:   |
             git clone https://github.com/sstephenson/bats/ &&
-            export WORKSPACE=$HOME/workspace &&
-            mkdir $WORKSPACE &&
-            cp -a $GITHUB_WORKSPACE/tests/integration/fixtures/* $WORKSPACE &&
-            export PATH=$HOME/.local/bin:$(pwd)/bats/bin:$GITHUB_WORKSPACE/target/debug:$PATH &&
+            mkdir $HOME/workspace &&
+            cp -a $GITHUB_WORKSPACE/tests/integration/fixtures/* $HOME/workspace &&
             git config --global user.name semantic-rs &&
             git config --global user.email semantic@rs
     - name: Build
       run: cargo build --verbose
     - name: Run tests
       run: cargo test --verbose
+    - name: Checking workspace
+      run: ls -al $HOME/workspace
+    - name: Do we have semantic-rs
+      run: which -a semantic-rs
+      shell: bash
     - name: Run Integration tests
       run: pushd tests/integration && bats integration.bats && popd
