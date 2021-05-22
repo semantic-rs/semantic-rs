@@ -13,12 +13,18 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
     - uses: actions/checkout@v2
-    - name:  Install
+    - name:  Install macOS dependencies
       run:   |
             if [ "$RUNNER_OS" == "macOS" ]; then
                 brew install libssh2;
                 export OPENSSL_INCLUDE_DIR=`brew --prefix openssl`/include;
                 export OPENSSL_LIB_DIR=`brew --prefix openssl`/lib;
+            fi
+      shell: bash
+    - name: Install Linux dependencies
+      run:   |
+            if [ "$RUNNER_OS" == "Linux" ]; then
+                sudo apt-get install -y libssl-dev pkg-config zlib1g-dev
             fi
       shell: bash
     - name: Build
